@@ -1,0 +1,158 @@
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import Layout from '../components/Layout';
+import { getPatient } from '../utils/api';
+import { differenceInYears, parseISO, format } from 'date-fns';
+import { fr } from 'date-fns/locale';
+
+export default function PatientDetail() {
+  const { id } = useParams();
+  const navigate = useNavigate();
+  const [patient, setPatient] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [tab, setTab] = useState('info');
+
+  useEffect(() => {
+    getPatient(id).then(r => setPatient(r.data)).catch(() => navigate('/patients')).finally(() => setLoading(false));
+  }, [id, navigate]);
+
+  if (loading) return <Layout title="Fiche Patient"><div className="loading-center"><div className="spinner" /></div></Layout>;
+  if (!patient) return null;
+
+  const age = patient.date_naissance ? differenceInYears(new Date(), parseISO(patient.date_naissance)) : '-';
+  const initials = `${patient.prenom[0]}${patient.nom[0]}`.toUpperCase();
+
+  const statusClass = (s) => ({ 'En traitement': 'badge badge-blue', 'Guéri': 'badge badge-green', 'Décédé': 'badge badge-red' }[s] || 'badge badge-gray');
+  const etatClass = (e) => ({ 'Localisé': 'badge badge-purple', 'Métastase': 'badge badge-orange' }[e] || 'badge badge-gray');
+
+  return (
+    <Layout title="Fiche Patient">
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
+        <button className="btn btn-outline" onClick={() => navigate('/patients')}>← Retour</button>
+        <Link to={`/patients/${id}/modifier`} className="btn btn-outline">✏️ Modifier</Link>
+        <Link to={`/cas-cancer/nouveau?patient=${id}`} className="btn btn-primary">+ Nouveau Cas de Cancer</Link>
+      </div>
+
+      {/* Patient header */}
+      <div className="card" style={{ marginBottom: 20 }}>
+        <div className="card-body">
+          <div className="patient-header">
+            <div className="patient-avatar-lg" style={{ background: patient.sexe === 'M' ? '#0f4c81' : '#e63946' }}>
+              {initials}
+            </div>
+            <div style={{ flex: 1 }}>
+              <div className="patient-name">{patient.prenom} {patient.nom}</div>
+              <div className="patient-meta">
+                <span className="patient-meta-item">📅 {age} ans · {patient.date_naissance ? format(parseISO(patient.date_naissance), 'dd/MM/yyyy') : '-'}</span>
+                <span className="patient-meta-item">{patient.sexe === 'M' ? '♂' : '♀'} {patient.sexe === 'M' ? 'Masculin' : 'Féminin'}</span>
+                {patient.telephone && <span className="patient-meta-item">📞 {patient.telephone}</span>}
+                {patient.wilaya && <span className="patient-meta-item">📍 {patient.commune ? `${patient.commune}, ` : ''}{patient.wilaya}</span>}
+              </div>
+              <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {patient.fumeur && <span className="badge badge-red">🚬 Fumeur</span>}
+                {patient.alcool && <span className="badge badge-orange">🍷 Alcool</span>}
+                {patient.activite_sportive && <span className="badge badge-green">🏃 Sport</span>}
+                <span className="badge badge-purple">{patient.cancer_cases?.length || 0} cas de cancer</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Tabs */}
+      <div className="tabs">
+        <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Informations</button>
+        <button className={`tab ${tab === 'cancers' ? 'active' : ''}`} onClick={() => setTab('cancers')}>Cancers ({patient.cancer_cases?.length || 0})</button>
+        <button className={`tab ${tab === 'rdv' ? 'active' : ''}`} onClick={() => setTab('rdv')}>Rendez-vous ({patient.rendez_vous?.length || 0})</button>
+      </div>
+
+      {tab === 'info' && (
+        <div className="card">
+          <div className="card-header"><h2>Informations Personnelles</h2></div>
+          <div className="card-body">
+            <div className="info-grid">
+              <div className="info-item"><label>Carte Nationale</label><span style={{ fontFamily: 'JetBrains Mono' }}>{patient.num_carte_nationale || '-'}</span></div>
+              <div className="info-item"><label>Carte Chifa</label><span style={{ fontFamily: 'JetBrains Mono' }}>{patient.num_carte_chifa || '-'}</span></div>
+              <div className="info-item"><label>Téléphone</label><span>{patient.telephone || '-'}</span></div>
+              <div className="info-item"><label>Wilaya</label><span>{patient.wilaya || '-'}</span></div>
+              <div className="info-item"><label>Commune</label><span>{patient.commune || '-'}</span></div>
+              <div className="info-item"><label>Adresse</label><span>{patient.adresse || '-'}</span></div>
+            </div>
+            {patient.autres_facteurs_risque && (
+              <div style={{ marginTop: 20 }}>
+                <div className="form-label">Autres facteurs de risque</div>
+                <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 13.5 }}>{patient.autres_facteurs_risque}</div>
+              </div>
+            )}
+            {patient.autres_medicaments && (
+              <div style={{ marginTop: 16 }}>
+                <div className="form-label">Autres médicaments</div>
+                <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 13.5 }}>{patient.autres_medicaments}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'cancers' && (
+        <div className="card">
+          <div className="card-header">
+            <h2>Historique des Cancers</h2>
+            <Link to={`/cas-cancer/nouveau?patient=${id}`} className="btn btn-primary btn-sm">+ Ajouter</Link>
+          </div>
+          {!patient.cancer_cases?.length ? (
+            <div className="empty-state"><h3>Aucun cas enregistré</h3></div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Type</th><th>Sous-type</th><th>État</th><th>Stade</th><th>Statut</th><th>Diagnostic</th><th>Actions</th></tr></thead>
+                <tbody>
+                  {patient.cancer_cases.map(c => (
+                    <tr key={c.id}>
+                      <td><span className="badge badge-blue">{c.type_cancer}</span></td>
+                      <td>{c.sous_type || '-'}</td>
+                      <td><span className={etatClass(c.etat)}>{c.etat}</span></td>
+                      <td>{c.stade || '-'}</td>
+                      <td><span className={statusClass(c.statut_patient)}>{c.statut_patient}</span></td>
+                      <td>{c.date_diagnostic ? format(parseISO(c.date_diagnostic), 'dd/MM/yyyy') : '-'}</td>
+                      <td>
+                        <button className="btn-icon" onClick={() => navigate(`/cas-cancer/${c.id}`)} title="Voir le dossier">
+                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {tab === 'rdv' && (
+        <div className="card">
+          <div className="card-header"><h2>Historique des Rendez-vous</h2></div>
+          {!patient.rendez_vous?.length ? (
+            <div className="empty-state"><h3>Aucun rendez-vous</h3></div>
+          ) : (
+            <div className="table-wrap">
+              <table>
+                <thead><tr><th>Date</th><th>Motif</th><th>Statut</th><th>Notes</th></tr></thead>
+                <tbody>
+                  {patient.rendez_vous.map(r => (
+                    <tr key={r.id}>
+                      <td>{r.date_rdv ? format(new Date(r.date_rdv), 'dd/MM/yyyy HH:mm') : '-'}</td>
+                      <td>{r.motif || '-'}</td>
+                      <td><span className={r.statut === 'Effectué' ? 'badge badge-green' : r.statut === 'Annulé' ? 'badge badge-red' : 'badge badge-blue'}>{r.statut}</span></td>
+                      <td>{r.notes || '-'}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </Layout>
+  );
+}
