@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
+const { createNotification } = require('./notificationsController');
 
 const getAllRCP = async (req, res) => {
   try {
@@ -38,7 +39,14 @@ const getRCPById = async (req, res) => {
       WHERE rc.rcp_id = ?
     `, [id]);
 
-    res.json({ ...rcp[0], dossiers });
+    const [participants] = await pool.execute(`
+      SELECT rp.*, u.nom, u.prenom, u.role
+      FROM rcp_participants rp
+      JOIN users u ON rp.user_id = u.id
+      WHERE rp.rcp_id = ?
+    `, [id]);
+
+    res.json({ ...rcp[0], dossiers, participants });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -47,11 +55,36 @@ const getRCPById = async (req, res) => {
 const createRCP = async (req, res) => {
   try {
     const id = uuidv4();
-    const { titre, date_reunion, statut, notes_globales } = req.body;
+    const { titre, date_reunion, statut, notes_globales, invitedMedecins } = req.body;
+    
     await pool.execute(
       'INSERT INTO reunions_rcp (id, titre, date_reunion, statut, notes_globales, created_by) VALUES (?, ?, ?, ?, ?, ?)',
       [id, titre, date_reunion, statut || 'Planifiée', notes_globales || null, req.user.id]
     );
+
+    // Get io from app for real-time notifications
+    const io = req.app.get('io');
+    
+    // Add creator to participants automatically
+    const creatorPartId = uuidv4();
+    await pool.execute('INSERT INTO rcp_participants (id, rcp_id, user_id) VALUES (?, ?, ?)', [creatorPartId, id, req.user.id]);
+
+    // Handle invitedMedecins array
+    if (invitedMedecins && Array.isArray(invitedMedecins)) {
+      for (const medecinId of invitedMedecins) {
+        if (medecinId === req.user.id) continue;
+        
+        const partId = uuidv4();
+        await pool.execute('INSERT INTO rcp_participants (id, rcp_id, user_id) VALUES (?, ?, ?)', [partId, id, medecinId]);
+        
+        // Create Notification
+        const notifTitle = "Invitation à une RCP";
+        const notifMsg = `Vous avez été invité à rejoindre la RCP : ${titre}`;
+        const notifLien = `/rcp/${id}`;
+        await createNotification(medecinId, notifTitle, notifMsg, notifLien, io);
+      }
+    }
+
     res.status(201).json({ message: 'RCP créée', id });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -131,6 +164,66 @@ const removeCaseFromRCP = async (req, res) => {
   }
 };
 
+const updateRCPDecisionFinale = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { decision_finale, statut } = req.body;
+    await pool.execute(
+      'UPDATE reunions_rcp SET decision_finale = ?, statut = ? WHERE id = ?',
+      [decision_finale, statut || 'Terminée', id]
+    );
+    res.json({ message: 'Décision finale enregistrée et réunion clôturée' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getRCPMessages = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [messages] = await pool.execute(`
+      SELECT m.*, u.nom, u.prenom, u.role
+      FROM rcp_messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.rcp_id = ?
+      ORDER BY m.created_at ASC
+    `, [id]);
+    res.json(messages);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const saveRCPMessage = async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { id: rcp_id } = req.params;
+    const { content } = req.body;
+    
+    await pool.execute(
+      'INSERT INTO rcp_messages (id, rcp_id, sender_id, content) VALUES (?, ?, ?, ?)',
+      [id, rcp_id, req.user.id, content]
+    );
+
+    const [msg] = await pool.execute(`
+      SELECT m.*, u.nom, u.prenom, u.role
+      FROM rcp_messages m
+      JOIN users u ON m.sender_id = u.id
+      WHERE m.id = ?
+    `, [id]);
+
+    // Emit real-time message to room
+    const io = req.app.get('io');
+    if (io) {
+      io.to(`rcp_${rcp_id}`).emit('new_rcp_message', msg[0]);
+    }
+
+    res.status(201).json(msg[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllRCP,
   getRCPById,
@@ -139,5 +232,8 @@ module.exports = {
   deleteRCP,
   addCaseToRCP,
   updateRCPCaseDecision,
-  removeCaseFromRCP
+  removeCaseFromRCP,
+  updateRCPDecisionFinale,
+  getRCPMessages,
+  saveRCPMessage
 };

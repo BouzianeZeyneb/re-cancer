@@ -14,17 +14,17 @@ const getAllUsers = async (req, res) => {
 
 const createUser = async (req, res) => {
   try {
-    const { nom, prenom, email, password, role } = req.body;
+    const { nom, prenom, email, password, role, actif = true } = req.body;
     const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [email]);
     if (existing.length) return res.status(400).json({ message: 'Email déjà utilisé' });
 
     const id = uuidv4();
     const hashed = await bcrypt.hash(password, 10);
     await pool.execute(
-      'INSERT INTO users (id, nom, prenom, email, password, role) VALUES (?,?,?,?,?,?)',
-      [id, nom, prenom, email, hashed, role]
+      'INSERT INTO users (id, nom, prenom, email, password, role, actif) VALUES (?,?,?,?,?,?,?)',
+      [id, nom, prenom, email, hashed, role, actif]
     );
-    await auditLog(req.user.id, 'CREATE_USER', 'users', id, { email, role }, req.ip);
+    await auditLog(req.user.id, 'CREATE_USER', 'users', id, { email, role, actif }, req.ip);
     res.status(201).json({ message: 'Utilisateur créé avec succès', id });
   } catch (error) {
     res.status(500).json({ message: error.message });

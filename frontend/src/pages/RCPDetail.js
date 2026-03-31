@@ -1,14 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
+import { io } from 'socket.io-client';
 
 export default function RCPDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const [rcp, setRcp] = useState(null);
   const [loading, setLoading] = useState(true);
+  
+  const { user } = useAuth();
   
   // Show modal for adding a new case
   const [showAddModal, setShowAddModal] = useState(false);
@@ -20,11 +24,57 @@ export default function RCPDetail() {
   const [currentDossier, setCurrentDossier] = useState(null);
   const [decisionText, setDecisionText] = useState('');
 
+  // Show modal for RCP Final Decision
+  const [showFinalDecisionModal, setShowFinalDecisionModal] = useState(false);
+
+  // Chat state
+  const [messages, setMessages] = useState([]);
+  const [newMessage, setNewMessage] = useState('');
+  const chatRef = useRef(null);
+
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     fetchRCP();
   }, [id]);
+
+  useEffect(() => {
+    if (id && user) {
+      fetchMessages();
+      const socket = io('http://localhost:5000');
+      socket.emit('join_rcp', id);
+      socket.on('new_rcp_message', (msg) => {
+        setMessages(prev => [...prev, msg]);
+        setTimeout(() => {
+          if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+        }, 100);
+      });
+      return () => socket.disconnect();
+    }
+  }, [id, user]);
+
+  const fetchMessages = async () => {
+    try {
+      const res = await api.get(`/rcp/${id}/messages`);
+      setMessages(res.data);
+      setTimeout(() => {
+        if (chatRef.current) chatRef.current.scrollTop = chatRef.current.scrollHeight;
+      }, 100);
+    } catch (err) {
+      console.error(err);
+    }
+  };
+
+  const handleSendMessage = async (e) => {
+    e.preventDefault();
+    if (!newMessage.trim()) return;
+    try {
+      await api.post(`/rcp/${id}/messages`, { content: newMessage });
+      setNewMessage('');
+    } catch (err) {
+      toast.error('Message non envoyé');
+    }
+  };
 
   const fetchRCP = async () => {
     try {
@@ -93,7 +143,28 @@ export default function RCPDetail() {
     }
   };
 
+  const handleFinalizeRCP = async (e) => {
+    e.preventDefault();
+    setSubmitting(true);
+    try {
+      await api.put(`/rcp/${id}/decision`, { decision_finale: decisionText, statut: 'Terminée' });
+      toast.success('RCP Clôturée avec décision finale');
+      setShowFinalDecisionModal(false);
+      fetchRCP();
+    } catch (err) {
+      toast.error('Erreur lors de la clôture');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const toggleStatus = async (newStatus) => {
+    if (newStatus === 'Terminée') {
+      setDecisionText(rcp.decision_finale || '');
+      setShowFinalDecisionModal(true);
+      return;
+    }
+    
     try {
       await api.put(`/rcp/${id}`, {
         titre: rcp.titre,
@@ -120,6 +191,9 @@ export default function RCPDetail() {
   if (loading) return <Layout title="Chargement..."><div className="loading-center"><div className="spinner"></div></div></Layout>;
   if (!rcp) return <Layout title="Erreur">RCP introuvable.</Layout>;
 
+  // Check if user is a participant or creator
+  const isParticipant = rcp.participants?.some(p => p.user_id === user?.id);
+
   return (
     <Layout title={`RCP : ${rcp.titre}`}>
       
@@ -132,10 +206,10 @@ export default function RCPDetail() {
             </h2>
           </div>
           <div className="actions" style={{ display: 'flex', gap: 8 }}>
-            {rcp.statut === 'Planifiée' && (
+            {rcp.statut === 'Planifiée' && user?.id === rcp.created_by && (
               <button className="btn btn-outline" onClick={() => toggleStatus('En cours')}>Démarrer</button>
             )}
-            {rcp.statut === 'En cours' && (
+            {rcp.statut === 'En cours' && user?.id === rcp.created_by && (
               <button className="btn btn-success" onClick={() => toggleStatus('Terminée')}>Clôturer la RCP</button>
             )}
           </div>
@@ -153,6 +227,20 @@ export default function RCPDetail() {
             <div className="info-item" style={{ gridColumn: '1 / -1' }}>
               <label>Notes globales</label>
               <span style={{ fontWeight: 400, color: '#475569' }}>{rcp.notes_globales || 'Aucune note'}</span>
+            </div>
+            {rcp.decision_finale && (
+              <div className="info-item" style={{ gridColumn: '1 / -1', background: '#ecfdf5', padding: 16, borderRadius: 8, border: '1px solid #a7f3d0' }}>
+                <label style={{ color: '#065f46' }}>Décision Finale</label>
+                <span style={{ fontWeight: 500, color: '#064e3b', display: 'block', marginTop: 4 }}>{rcp.decision_finale}</span>
+              </div>
+            )}
+            <div className="info-item" style={{ gridColumn: '1 / -1' }}>
+              <label>Participants</label>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+                {rcp.participants?.map(p => (
+                  <span key={p.id} className="badge badge-gray">{p.nom} {p.prenom}</span>
+                ))}
+              </div>
             </div>
           </div>
         </div>
@@ -215,6 +303,48 @@ export default function RCPDetail() {
           )}
         </div>
       </div>
+
+      {isParticipant && (
+        <div className="card" style={{ marginTop: 24 }}>
+          <div className="rcp-chat-panel">
+            <div className="rcp-chat-header">
+              <svg width="18" height="18" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24"><path d="M21 15a2 2 0 01-2 2H7l-4 4V5a2 2 0 012-2h14a2 2 0 012 2z"></path></svg>
+              Chat de la RCP
+            </div>
+            <div className="rcp-chat-messages" ref={chatRef}>
+              {messages.length === 0 ? (
+                <div style={{ textAlign: 'center', color: 'var(--text-muted)' }}>Aucun message pour le moment.</div>
+              ) : (
+                messages.map(msg => {
+                  const isMine = msg.sender_id === user.id;
+                  return (
+                    <div key={msg.id} className={`chat-msg ${isMine ? 'mine' : 'theirs'}`}>
+                      <div className="chat-msg-header">
+                        <span style={{ fontWeight: 600 }}>{isMine ? 'Vous' : `Dr. ${msg.nom}`}</span>
+                        <span>{new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</span>
+                      </div>
+                      <div className="chat-msg-bubble">{msg.content}</div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+            <form className="rcp-chat-input-area" onSubmit={handleSendMessage}>
+              <input 
+                type="text" 
+                className="form-control" 
+                placeholder="Écrivez un message..." 
+                value={newMessage}
+                onChange={e => setNewMessage(e.target.value)}
+                disabled={rcp.statut === 'Terminée'}
+              />
+              <button type="submit" className="btn btn-primary" disabled={!newMessage.trim() || rcp.statut === 'Terminée'}>
+                Envoyer
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
 
       {showAddModal && (
         <div className="modal-overlay">
@@ -286,6 +416,40 @@ export default function RCPDetail() {
               <button type="button" className="btn btn-outline" onClick={() => setShowDecisionModal(false)}>Annuler</button>
               <button type="submit" form="decision-form" className="btn btn-primary" disabled={submitting}>
                 {submitting ? 'Enregistrement...' : 'Enregistrer'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showFinalDecisionModal && (
+        <div className="modal-overlay">
+          <div className="modal">
+            <div className="modal-header">
+              <h3>Clôturer la RCP : Décision Finale</h3>
+              <button className="btn-icon" onClick={() => setShowFinalDecisionModal(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form id="final-decision-form" onSubmit={handleFinalizeRCP}>
+                <div className="form-group">
+                  <label className="form-label">Décision collégiale finale</label>
+                  <textarea
+                    className="form-control"
+                    rows="5"
+                    value={decisionText}
+                    onChange={e => setDecisionText(e.target.value)}
+                    placeholder="Saisissez le compte rendu final ou la décision globale de cette RCP..."
+                    required
+                  ></textarea>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-outline" onClick={() => setShowFinalDecisionModal(false)}>Annuler</button>
+              <button type="submit" form="final-decision-form" className="btn btn-success" disabled={submitting}>
+                {submitting ? 'Clôture...' : 'Clôturer la réunion'}
               </button>
             </div>
           </div>

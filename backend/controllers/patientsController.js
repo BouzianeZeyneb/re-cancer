@@ -171,4 +171,72 @@ const mergePatients = async (req, res) => {
   }
 };
 
-module.exports = { getAllPatients, getPatientById, createPatient, updatePatient, deletePatient, mergePatients };
+const checkDuplicateRealtime = async (req, res) => {
+  try {
+    const { nom, prenom, date_naissance, num_carte_nationale, num_carte_chifa } = req.body;
+    
+    if (num_carte_nationale) {
+      const [existing] = await pool.execute('SELECT * FROM patients WHERE num_carte_nationale = ? LIMIT 1', [num_carte_nationale]);
+      if (existing.length) return res.json({ duplicate: existing[0], reason: 'Même carte nationale' });
+    }
+    if (num_carte_chifa) {
+      const [existing] = await pool.execute('SELECT * FROM patients WHERE num_carte_chifa = ? LIMIT 1', [num_carte_chifa]);
+      if (existing.length) return res.json({ duplicate: existing[0], reason: 'Même carte chifa' });
+    }
+
+    if (nom && prenom && date_naissance) {
+      const [existing] = await pool.execute(
+        'SELECT * FROM patients WHERE LOWER(TRIM(nom)) = LOWER(TRIM(?)) AND LOWER(TRIM(prenom)) = LOWER(TRIM(?)) AND date_naissance = ? LIMIT 1',
+        [nom, prenom, date_naissance]
+      );
+      if (existing.length) return res.json({ duplicate: existing[0], reason: 'Identité similaire' });
+    }
+
+    res.json({ duplicate: null });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getPublicPatientInfo = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const [patients] = await pool.execute('SELECT id, nom, prenom FROM patients WHERE id = ?', [id]);
+    if (!patients.length) return res.status(404).json({ message: 'Patient non trouvé' });
+    res.json(patients[0]);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const updatePublicHabitudes = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { fumeur, alcool, activite_sportive, alimentation, antecedents_familiaux } = req.body;
+    
+    // Concaténer l'alimentation dans autres_facteurs_risque si renseigné
+    let queryAppendAlimentation = '';
+    const params = [fumeur, alcool, activite_sportive, antecedents_familiaux];
+    
+    if (alimentation) {
+      queryAppendAlimentation = `autres_facteurs_risque = CONCAT(IFNULL(autres_facteurs_risque, ''), ?),`;
+      params.push(`\nAlimentation étudiée: ${alimentation}\n`);
+    }
+    params.push(id);
+
+    await pool.execute(
+      `UPDATE patients SET 
+        fumeur = ?, alcool = ?, activite_sportive = ?, antecedents_familiaux = ?,
+        ${queryAppendAlimentation}
+        updated_at = CURRENT_TIMESTAMP
+       WHERE id = ?`,
+      params
+    );
+
+    res.json({ message: 'Habitudes enregistrées avec succès' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+module.exports = { getAllPatients, getPatientById, createPatient, updatePatient, deletePatient, mergePatients, checkDuplicateRealtime, getPublicPatientInfo, updatePublicHabitudes };

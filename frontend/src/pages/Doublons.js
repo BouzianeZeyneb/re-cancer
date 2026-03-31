@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -48,6 +48,7 @@ const fmt = (val, isDate, isBool) => {
 export default function Doublons() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
+  const location = useLocation();
   const [doublons, setDoublons] = useState([]);
   const [loading, setLoading] = useState(true);
   const [comparison, setComparison] = useState(null); // { p1, p2, similarity }
@@ -85,8 +86,23 @@ export default function Doublons() {
     const p2Id = searchParams.get('p2');
     if (p1Id && p2Id) {
       openComparisonById(p1Id, p2Id);
+    } else if (location.state?.draftPatient && location.state?.existingId) {
+      api.get(`/patients/${location.state.existingId}`).then(r => {
+        const draft = { ...location.state.draftPatient, id: 'DRAFT', isDraft: true };
+        const p1 = r.data;
+        const similarity = calcSimilarity(p1, draft);
+        const defaultChoices = {};
+        FIELDS.forEach(f => {
+          defaultChoices[f.key] = (p1[f.key] && !draft[f.key]) ? '1' : (!p1[f.key] && draft[f.key]) ? '2' : '1';
+        });
+        setChoices(defaultChoices);
+        setComparison({ p1, p2: draft, similarity, isDraft: true });
+      }).catch((err) => {
+        console.error(err);
+        toast.error('Erreur draft compare');
+      });
     }
-  }, [searchParams]);
+  }, [searchParams, location.state]);
 
   const openComparison = async (d) => {
     try {
@@ -102,12 +118,28 @@ export default function Doublons() {
     try {
       const mergedData = {};
       FIELDS.forEach(f => { mergedData[f.key] = choices[f.key] === '2' ? comparison.p2[f.key] : comparison.p1[f.key]; });
+      
       await api.put(`/patients/${comparison.p1.id}`, mergedData);
-      await api.post('/patients/merge', { sourceId: comparison.p2.id, targetId: comparison.p1.id });
-      toast.success('✅ Fusion réussie!');
+      
+      if (!comparison.isDraft) {
+        await api.post('/patients/merge', { sourceId: comparison.p2.id, targetId: comparison.p1.id });
+      }
+
+      if (comparison.isDraft && comparison.p2.stylesVieValeurs) {
+        const valeurs = Object.entries(comparison.p2.stylesVieValeurs).map(([style_vie_id, valeur]) => ({ style_vie_id, valeur }));
+        if (valeurs.length) await api.post('/styles-vie/patient', { patient_id: comparison.p1.id, valeurs });
+      }
+
+      toast.success(comparison.isDraft ? '✅ Dossier existant mis à jour!' : '✅ Fusion réussie!');
+      const targetId = comparison.p1.id;
       setComparison(null);
-      navigate('/doublons');
-      load();
+      
+      if (comparison.isDraft) {
+        navigate(`/patients/${targetId}`);
+      } else {
+        navigate('/doublons');
+        load();
+      }
     } catch (e) { toast.error('Erreur fusion'); }
     finally { setMerging(false); }
   };

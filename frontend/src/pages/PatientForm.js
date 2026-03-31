@@ -64,6 +64,35 @@ export default function PatientForm() {
     api.get('/parametres').then(r => setParametres(r.data)).catch(()=>{});
   }, [id, isEdit]);
 
+  // Real-time duplicate check
+  useEffect(() => {
+    if (isEdit) return; // Only check during patient creation
+    
+    const { nom, prenom, date_naissance, num_carte_nationale, num_carte_chifa } = form;
+    const canCheck = 
+      (num_carte_nationale && num_carte_nationale.trim().length >= 4) || 
+      (num_carte_chifa && num_carte_chifa.trim().length >= 4) || 
+      (nom && nom.trim().length >= 2 && prenom && prenom.trim().length >= 2 && date_naissance);
+    
+    if (!canCheck) return;
+
+    const timer = setTimeout(async () => {
+      try {
+        const res = await api.post('/patients/check-duplicate', { nom, prenom, date_naissance, num_carte_nationale, num_carte_chifa });
+        if (res.data.duplicate) {
+          toast('⚠️ Patient déjà existant détecté!', { icon: '🔍', duration: 4000 });
+          // Temporarily save styles too in case we need them
+          const draftToPass = { ...form, stylesVieValeurs };
+          navigate('/doublons', { state: { draftPatient: draftToPass, existingId: res.data.duplicate.id } });
+        }
+      } catch (err) {
+        console.error('Erreur vérification doublon:', err);
+      }
+    }, 1000); // 1s debounce
+
+    return () => clearTimeout(timer);
+  }, [form.nom, form.prenom, form.date_naissance, form.num_carte_nationale, form.num_carte_chifa, isEdit, navigate]);
+
   const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
 
   const startVoice = () => {

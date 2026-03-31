@@ -29,6 +29,7 @@ export const changePassword = (data) => api.put('/auth/password', data);
 
 // Users
 export const getUsers = () => api.get('/users');
+export const getLabos = () => api.get('/users/role/laboratoire');
 export const createUser = (data) => api.post('/users', data);
 export const updateUser = (id, data) => api.put(`/users/${id}`, data);
 export const deleteUser = (id) => api.delete(`/users/${id}`);
@@ -39,7 +40,12 @@ export const getPatient = (id) => api.get(`/patients/${id}`);
 export const createPatient = (data) => api.post('/patients', data);
 export const updatePatient = (id, data) => api.put(`/patients/${id}`, data);
 export const deletePatient = (id) => api.delete(`/patients/${id}`);
-export const mergePatients = (data) => api.post('/patients/merge', data);
+export const mergePatients = (sourceId, targetId) => api.post('/patients/merge', { sourceId, targetId });
+export const checkDuplicate = (data) => api.post('/patients/check-duplicate', data);
+
+// Public endpoints
+export const getPublicPatient = (id) => axios.get(`${API_URL}/public/patients/${id}`);
+export const submitPublicHabitudes = (id, data) => axios.put(`${API_URL}/public/patients/${id}/habitudes`, data);
 
 // Cases
 export const getCases = (params) => api.get('/cases', { params });
@@ -53,5 +59,11 @@ export const addRendezVous = (data) => api.post('/rendez-vous', data);
 // Stats
 export const getDashboardStats = (params) => api.get('/stats/dashboard', { params });
 export const getAuditLogs = () => api.get('/stats/audit');
+
+// Lab Requests
+export const getLabRequestsByCase = (caseId) => api.get(`/lab-requests/case/${caseId}`);
+export const getLabRequestsForLabo = () => api.get('/lab-requests/labo');
+export const createLabRequest = (data) => api.post('/lab-requests', data);
+export const uploadLabPdf = (id, data) => api.put(`/lab-requests/${id}/upload`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
 
 export default api;

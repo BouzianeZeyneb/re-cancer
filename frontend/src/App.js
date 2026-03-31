@@ -24,16 +24,38 @@ import { AuditLogs } from './pages/AuditLogs';
 import AdminSettings from './pages/AdminSettings';
 import RCPList from './pages/RCPList';
 import RCPDetail from './pages/RCPDetail';
+import DemandesLabo from './pages/DemandesLabo';
+import PatientFormulairePublic from './pages/PatientFormulairePublic';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
-  if (allowedRoles && !allowedRoles.includes(user.role)) {
-    if (user.role === 'admin') return <Navigate to="/" replace />;
-    if (user.role === 'medecin') return <Navigate to="/patients" replace />;
-    if (user.role === 'laboratoire' || user.role === 'anapath') return <Navigate to="/cas-cancer" replace />;
-    return <Navigate to="/" replace />;
+  
+  // Normalize role to lowercase, default to 'anapath' if somehow empty/corrupted in DB
+  const safeRole = (user.role && typeof user.role === 'string' && user.role.trim() !== '') 
+    ? user.role.toLowerCase() 
+    : 'anapath';
+
+  if (allowedRoles && !allowedRoles.includes(safeRole)) {
+    const path = window.location.pathname;
+    if (path === '/') {
+      if (safeRole === 'laboratoire') return <Navigate to="/demandes-labo" replace />;
+      if (safeRole === 'medecin' || safeRole === 'anapath') return <Navigate to="/patients" replace />;
+    }
+    
+    return (
+      <div style={{ padding: 50, textAlign: 'center', fontFamily: 'Sora' }}>
+        <h2 style={{ color: '#e63946' }}>Accès Refusé</h2>
+        <p>Votre rôle (<strong>{user.role || 'anapath'}</strong>) ne vous permet pas d'accéder à cette page.</p>
+        <button 
+          onClick={() => window.location.href = '/'} 
+          style={{ padding: '8px 16px', background: '#0f4c81', color: 'white', borderRadius: 6, border: 'none', cursor: 'pointer', marginTop: 16 }}
+        >
+          Retour à l'accueil
+        </button>
+      </div>
+    );
   }
   return children;
 };
@@ -44,21 +66,24 @@ function AppRoutes() {
   return (
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
+      <Route path="/patient-forms/:id" element={<PatientFormulairePublic />} />
       <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Dashboard /></ProtectedRoute>} />
       
-      {/* Medecin uniquement */}
-      <Route path="/patients" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Patients /></ProtectedRoute>} />
+      {/* Patients: Admin, Medecin, Labo, Anapath */}
+      <Route path="/patients" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><Patients /></ProtectedRoute>} />
       <Route path="/patients/nouveau" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><PatientForm /></ProtectedRoute>} />
-      <Route path="/patients/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><PatientDetail /></ProtectedRoute>} />
+      <Route path="/patients/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><PatientDetail /></ProtectedRoute>} />
       <Route path="/patients/:id/modifier" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><PatientForm /></ProtectedRoute>} />
       <Route path="/cas-cancer" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><CasCancer /></ProtectedRoute>} />
       <Route path="/cas-cancer/nouveau" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><CasForm /></ProtectedRoute>} />
       <Route path="/cas-cancer/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><CasDetail /></ProtectedRoute>} />
+      <Route path="/demandes-labo" element={<ProtectedRoute allowedRoles={['admin', 'laboratoire']}><DemandesLabo /></ProtectedRoute>} />
       <Route path="/rcp" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><RCPList /></ProtectedRoute>} />
       <Route path="/rcp/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><RCPDetail /></ProtectedRoute>} />
       
       {/* Admin uniquement */}
       <Route path="/doublons" element={<ProtectedRoute allowedRoles={['admin']}><Doublons /></ProtectedRoute>} />
+      <Route path="/carte-sig" element={<ProtectedRoute allowedRoles={['admin']}><CarteSIG /></ProtectedRoute>} />
       <Route path="/utilisateurs" element={<ProtectedRoute allowedRoles={['admin']}><Utilisateurs /></ProtectedRoute>} />
       <Route path="/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
       

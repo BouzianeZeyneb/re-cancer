@@ -4,6 +4,7 @@ import Layout from '../components/Layout';
 import { getPatient } from '../utils/api';
 import { differenceInYears, parseISO, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
+import { QRCodeCanvas } from 'qrcode.react';
 
 export default function PatientDetail() {
   const { id } = useParams();
@@ -11,16 +12,33 @@ export default function PatientDetail() {
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('info');
+  const [showQR, setShowQR] = useState(false);
 
   useEffect(() => {
     getPatient(id).then(r => setPatient(r.data)).catch(() => navigate('/patients')).finally(() => setLoading(false));
   }, [id, navigate]);
+
+  useEffect(() => {
+    let interval;
+    if (tab === 'styles_vie') {
+      interval = setInterval(() => {
+        getPatient(id).then(r => {
+          if (r.data) setPatient(r.data);
+        }).catch(() => {});
+      }, 3000); // Polling every 3s
+    }
+    return () => clearInterval(interval);
+  }, [tab, id]);
 
   if (loading) return <Layout title="Fiche Patient"><div className="loading-center"><div className="spinner" /></div></Layout>;
   if (!patient) return null;
 
   const age = patient.date_naissance ? differenceInYears(new Date(), parseISO(patient.date_naissance)) : '-';
   const initials = `${patient.prenom[0]}${patient.nom[0]}`.toUpperCase();
+  
+  const hasLifestyleData = patient.fumeur || patient.alcool || patient.activite_sportive || 
+    (patient.autres_facteurs_risque && patient.autres_facteurs_risque.includes('Alimentation étudiée:')) || 
+    (patient.antecedents_familiaux && patient.antecedents_familiaux.trim() !== '');
 
   const statusClass = (s) => ({ 'En traitement': 'badge badge-blue', 'Guéri': 'badge badge-green', 'Décédé': 'badge badge-red' }[s] || 'badge badge-gray');
   const etatClass = (e) => ({ 'Localisé': 'badge badge-purple', 'Métastase': 'badge badge-orange' }[e] || 'badge badge-gray');
@@ -62,6 +80,7 @@ export default function PatientDetail() {
       {/* Tabs */}
       <div className="tabs">
         <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Informations</button>
+        <button className={`tab ${tab === 'styles_vie' ? 'active' : ''}`} onClick={() => setTab('styles_vie')}>Styles de Vie</button>
         <button className={`tab ${tab === 'cancers' ? 'active' : ''}`} onClick={() => setTab('cancers')}>Cancers ({patient.cancer_cases?.length || 0})</button>
         <button className={`tab ${tab === 'rdv' ? 'active' : ''}`} onClick={() => setTab('rdv')}>Rendez-vous ({patient.rendez_vous?.length || 0})</button>
       </div>
@@ -88,6 +107,80 @@ export default function PatientDetail() {
               <div style={{ marginTop: 16 }}>
                 <div className="form-label">Autres médicaments</div>
                 <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 13.5 }}>{patient.autres_medicaments}</div>
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'styles_vie' && (
+        <div className="card">
+          <div className="card-header">
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+              <h2>Styles de Vie & Antécédents</h2>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: 20, fontWeight: 600 }}>
+                <span style={{ width: 8, height: 8, background: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span> Mise à jour en direct
+              </div>
+            </div>
+          </div>
+          <div className="card-body">
+            {!hasLifestyleData ? (
+              <div style={{ background: '#f8fafc', padding: 40, borderRadius: 16, border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>Questionnaire Patient</div>
+                <p style={{ fontSize: 15, color: '#64748b', marginBottom: 30, maxWidth: 500 }}>Demandez au patient de scanner ce code depuis son téléphone pour remplir lui-même ses informations de style de vie (Tabac, Alcool, Alimentation, Antécédents). Celles-ci apparaîtront automatiquement ici après le scan.</p>
+                <div style={{ background: 'white', padding: 24, display: 'flex', justifyContent: 'center', borderRadius: 20, border: '2px solid #cbd5e1', width: 260, height: 260 }}>
+                  <div style={{ margin: "0 auto", alignSelf: "center" }}>
+                    <QRCodeCanvas size={208} value={`${window.location.origin}/patient-forms/${patient.id}`} level="H" />
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 24 }}>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
+                    <div style={{ padding: 16, background: patient.fumeur ? '#fee2e2' : '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ fontSize: 24 }}>🚬</div>
+                      <div>
+                        <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Tabagisme</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: patient.fumeur ? '#b91c1c' : '#0f172a' }}>{patient.fumeur ? 'Oui' : 'Non'}</div>
+                      </div>
+                    </div>
+                    <div style={{ padding: 16, background: patient.alcool ? '#ffedd5' : '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ fontSize: 24 }}>🍷</div>
+                      <div>
+                        <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Alcool</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: patient.alcool ? '#c2410c' : '#0f172a' }}>{patient.alcool ? 'Oui' : 'Non'}</div>
+                      </div>
+                    </div>
+                    <div style={{ padding: 16, background: patient.activite_sportive ? '#dcfce7' : '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
+                      <div style={{ fontSize: 24 }}>🏃</div>
+                      <div>
+                        <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Sport / Activité</div>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: patient.activite_sportive ? '#15803d' : '#0f172a' }}>{patient.activite_sportive ? 'Oui' : 'Non'}</div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f4c81', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>🍽️ Habitudes alimentaires</div>
+                    <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap' }}>{(patient.autres_facteurs_risque?.includes('Alimentation étudiée:') ? patient.autres_facteurs_risque.split('Alimentation étudiée:')[1].trim() : patient.autres_facteurs_risque) || 'Non renseigné'}</div>
+                  </div>
+
+                  <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f4c81', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>👨‍👩‍👧‍👦 Antécédents familiaux</div>
+                    <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap' }}>{patient.antecedents_familiaux || 'Aucun antécédent renseigné'}</div>
+                  </div>
+                </div>
+
+                <div style={{ background: '#f8fafc', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Mettre à jour</div>
+                  <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Le patient peut scanner ce code pour mettre à jour ses informations.</p>
+                  <div style={{ background: 'white', padding: 16, display: 'flex', justifyContent: 'center', borderRadius: 16, border: '2px solid #cbd5e1', marginBottom: 8, width: 192, height: 192 }}>
+                    <div style={{ margin: "0 auto", alignSelf: 'center' }}>
+                      <QRCodeCanvas size={160} value={`${window.location.origin}/patient-forms/${patient.id}`} level="H" />
+                    </div>
+                  </div>
+                </div>
               </div>
             )}
           </div>

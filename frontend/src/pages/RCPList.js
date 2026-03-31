@@ -3,18 +3,33 @@ import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 export default function RCPList() {
+  const { user } = useAuth();
   const [rcps, setRcps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
-  const [form, setForm] = useState({ titre: '', date_reunion: '', statut: 'Planifiée', notes_globales: '' });
+  const [form, setForm] = useState({ titre: '', date_reunion: '', statut: 'Planifiée', notes_globales: '', invitedMedecins: [] });
   const [submitting, setSubmitting] = useState(false);
+  const [medecins, setMedecins] = useState([]);
   const navigate = useNavigate();
 
   useEffect(() => {
     fetchRCPs();
-  }, []);
+    if (user?.role === 'medecin') {
+      fetchMedecins();
+    }
+  }, [user]);
+
+  const fetchMedecins = async () => {
+    try {
+      const res = await api.get('/users/role/medecins');
+      setMedecins(res.data);
+    } catch (err) {
+      console.error(err);
+    }
+  };
 
   const fetchRCPs = async () => {
     try {
@@ -34,7 +49,7 @@ export default function RCPList() {
       await api.post('/rcp', form);
       toast.success('RCP créée avec succès');
       setShowModal(false);
-      setForm({ titre: '', date_reunion: '', statut: 'Planifiée', notes_globales: '' });
+      setForm({ titre: '', date_reunion: '', statut: 'Planifiée', notes_globales: '', invitedMedecins: [] });
       fetchRCPs();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Erreur lors de la création');
@@ -57,10 +72,12 @@ export default function RCPList() {
       <div className="card">
         <div className="card-header">
           <h2>Liste des RCP</h2>
-          <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-            Nouvelle RCP
-          </button>
+          {user?.role === 'medecin' && (
+            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+              Nouvelle RCP
+            </button>
+          )}
         </div>
         <div className="card-body">
           {loading ? (
@@ -72,7 +89,9 @@ export default function RCPList() {
               </svg>
               <h3>Aucune RCP programmée</h3>
               <p>Commencez par créer une nouvelle Réunion de Concertation Pluridisciplinaire.</p>
-              <button className="btn btn-outline" style={{ marginTop: 16 }} onClick={() => setShowModal(true)}>Créer une RCP</button>
+              {user?.role === 'medecin' && (
+                <button className="btn btn-outline" style={{ marginTop: 16 }} onClick={() => setShowModal(true)}>Créer une RCP</button>
+              )}
             </div>
           ) : (
             <div className="table-wrap">
@@ -156,13 +175,38 @@ export default function RCPList() {
                   </div>
                 </div>
                 <div className="form-group">
+                  <label className="form-label">Médecins invités (optionnel)</label>
+                  <div className="toggle-group" style={{ maxHeight: 150, overflowY: 'auto', border: '1px solid var(--border)', padding: 10, borderRadius: 8 }}>
+                    {medecins.filter(m => m.id !== user.id).map(m => (
+                      <label key={m.id} className="toggle-item" style={{ minWidth: '45%' }}>
+                        <input
+                          type="checkbox"
+                          checked={form.invitedMedecins.includes(m.id)}
+                          onChange={(e) => {
+                            if (e.target.checked) {
+                              setForm(f => ({ ...f, invitedMedecins: [...f.invitedMedecins, m.id] }));
+                            } else {
+                              setForm(f => ({ ...f, invitedMedecins: f.invitedMedecins.filter(id => id !== m.id) }));
+                            }
+                          }}
+                        />
+                        <span className="toggle-label">{m.nom} {m.prenom}</span>
+                      </label>
+                    ))}
+                    {medecins.filter(m => m.id !== user.id).length === 0 && (
+                      <span className="text-muted" style={{ fontSize: 12 }}>Aucun autre médecin trouvé</span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="form-group">
                   <label className="form-label">Notes globales (Optionnel)</label>
                   <textarea
                     className="form-control"
                     rows="3"
                     value={form.notes_globales}
                     onChange={e => setForm({ ...form, notes_globales: e.target.value })}
-                    placeholder="Objectifs de la réunion, participants invités..."
+                    placeholder="Objectifs de la réunion..."
                   ></textarea>
                 </div>
               </form>
