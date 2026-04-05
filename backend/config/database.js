@@ -156,49 +156,30 @@ const initDatabase = async () => {
 const initDynamicTables = async () => {
   const conn = await pool.getConnection();
   try {
-    // Dynamic descriptors for cancer
+    // Universal Dynamic Fields Table (Entity-Attribute-Value)
     await conn.execute(`
-      CREATE TABLE IF NOT EXISTS descripteurs_cancer (
+      CREATE TABLE IF NOT EXISTS champs_dynamiques (
         id VARCHAR(36) PRIMARY KEY,
+        entite ENUM('patient', 'cancer', 'habitudes_vie') NOT NULL,
         nom VARCHAR(200) NOT NULL,
-        type_champ ENUM('texte','nombre','date','booleen','liste') DEFAULT 'texte',
+        type_champ ENUM('texte', 'nombre', 'date', 'booleen', 'liste') DEFAULT 'texte',
         options_liste TEXT,
         obligatoire BOOLEAN DEFAULT false,
         actif BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
-    // Values for dynamic descriptors per case
+
+    // Values for those dynamic fields
     await conn.execute(`
-      CREATE TABLE IF NOT EXISTS valeurs_descripteurs (
+      CREATE TABLE IF NOT EXISTS valeurs_dynamiques (
         id VARCHAR(36) PRIMARY KEY,
-        case_id VARCHAR(36) NOT NULL,
-        descripteur_id VARCHAR(36) NOT NULL,
+        record_id VARCHAR(36) NOT NULL,
+        champ_id VARCHAR(36) NOT NULL,
         valeur TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (case_id) REFERENCES cancer_cases(id) ON DELETE CASCADE,
-        FOREIGN KEY (descripteur_id) REFERENCES descripteurs_cancer(id) ON DELETE CASCADE
-      )
-    `);
-    // Dynamic lifestyle fields
-    await conn.execute(`
-      CREATE TABLE IF NOT EXISTS styles_vie_types (
-        id VARCHAR(36) PRIMARY KEY,
-        nom VARCHAR(200) NOT NULL,
-        type_champ ENUM('booleen','texte','nombre') DEFAULT 'booleen',
-        actif BOOLEAN DEFAULT true,
-        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-      )
-    `);
-    // Values for dynamic lifestyle per patient
-    await conn.execute(`
-      CREATE TABLE IF NOT EXISTS styles_vie_valeurs (
-        id VARCHAR(36) PRIMARY KEY,
-        patient_id VARCHAR(36) NOT NULL,
-        style_vie_id VARCHAR(36) NOT NULL,
-        valeur TEXT,
-        FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
-        FOREIGN KEY (style_vie_id) REFERENCES styles_vie_types(id) ON DELETE CASCADE
+        INDEX idx_record (record_id),
+        FOREIGN KEY (champ_id) REFERENCES champs_dynamiques(id) ON DELETE CASCADE
       )
     `);
 
@@ -209,10 +190,13 @@ const initDynamicTables = async () => {
         categorie ENUM('cancer', 'localite', 'antecedent', 'comorbidite', 'effet_indesirable') NOT NULL,
         valeur VARCHAR(200) NOT NULL,
         code VARCHAR(50),
+        obligatoire BOOLEAN DEFAULT false,
         actif BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
       )
     `);
+
+    try { await conn.execute(`ALTER TABLE parametres_globaux ADD COLUMN obligatoire BOOLEAN DEFAULT false`); } catch(e) {}
 
     console.log('✅ Dynamic tables initialized');
   } catch(e) {
@@ -260,13 +244,7 @@ const initMedicalTables = async () => {
     await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS grade_toxicite VARCHAR(50)`);
     await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS description_toxicite TEXT`);
 
-    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS type_prelevement VARCHAR(100)`);
-    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS pathologiste VARCHAR(100)`);
-    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS marges_chirurgicales VARCHAR(50)`);
-    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS grade_tumoral VARCHAR(50)`);
-    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS pd_l1 VARCHAR(50)`);
-    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS mmr_msi VARCHAR(50)`);
-    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS autres_marqueurs_custom TEXT`);
+    // Lignes déplacées après la création de la table
 
     // Update patients table with new fields
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS groupe_sanguin VARCHAR(10)`);
@@ -295,6 +273,14 @@ const initMedicalTables = async () => {
         FOREIGN KEY (case_id) REFERENCES cancer_cases(id) ON DELETE CASCADE
       )
     `);
+
+    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS type_prelevement VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS pathologiste VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS marges_chirurgicales VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS grade_tumoral VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS pd_l1 VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS mmr_msi VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE anapath ADD COLUMN IF NOT EXISTS autres_marqueurs_custom TEXT`);
 
     // Biology/Lab results table
     await conn.execute(`
@@ -396,6 +382,7 @@ const initMedicalTables = async () => {
         statut ENUM('Planifiée','En cours','Terminée') DEFAULT 'Planifiée',
         notes_globales TEXT,
         decision_finale TEXT,
+        invite_code VARCHAR(20) UNIQUE,
         created_by VARCHAR(36),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
@@ -408,6 +395,15 @@ const initMedicalTables = async () => {
     } catch (err) {
       if (err.code !== 'ER_DUP_FIELDNAME') {
         console.warn('Could not add decision_finale to reunions_rcp:', err.message);
+      }
+    }
+
+    // Add invite_code column if it doesn't exist
+    try {
+      await conn.execute(`ALTER TABLE reunions_rcp ADD COLUMN invite_code VARCHAR(20) UNIQUE`);
+    } catch (err) {
+      if (err.code !== 'ER_DUP_FIELDNAME') {
+        console.warn('Could not add invite_code to reunions_rcp:', err.message);
       }
     }
 

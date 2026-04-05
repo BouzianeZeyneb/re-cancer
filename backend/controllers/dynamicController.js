@@ -1,133 +1,90 @@
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 
-// ===== DESCRIPTEURS CANCER =====
-const getDescripteurs = async (req, res) => {
+// ===== CHAMPS DYNAMIQUES UNIFIES =====
+const getChampsDynamiques = async (req, res) => {
   try {
-    const [rows] = await pool.execute('SELECT * FROM descripteurs_cancer WHERE actif = true ORDER BY nom');
+    const { entite } = req.query;
+    let query = 'SELECT * FROM champs_dynamiques WHERE actif = true';
+    let params = [];
+    if (entite) {
+      query += ' AND entite = ?';
+      params.push(entite);
+    }
+    query += ' ORDER BY entite, nom';
+    const [rows] = await pool.execute(query, params);
     res.json(rows);
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
-const createDescripteur = async (req, res) => {
+const createChampDynamique = async (req, res) => {
   try {
     const id = uuidv4();
-    const { nom, type_champ, options_liste, obligatoire } = req.body;
+    const { entite, nom, type_champ, options_liste, obligatoire } = req.body;
     await pool.execute(
-      'INSERT INTO descripteurs_cancer (id, nom, type_champ, options_liste, obligatoire) VALUES (?,?,?,?,?)',
-      [id, nom, type_champ || 'texte', options_liste || null, obligatoire || false]
+      'INSERT INTO champs_dynamiques (id, entite, nom, type_champ, options_liste, obligatoire) VALUES (?,?,?,?,?,?)',
+      [id, entite, nom, type_champ || 'texte', options_liste || null, obligatoire || false]
     );
-    res.status(201).json({ message: 'Descripteur créé', id });
+    res.status(201).json({ message: 'Champ dynamique créé', id });
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
-const updateDescripteur = async (req, res) => {
+const updateChampDynamique = async (req, res) => {
   try {
     const { id } = req.params;
-    const { nom, type_champ, options_liste, obligatoire, actif } = req.body;
+    const { entite, nom, type_champ, options_liste, obligatoire, actif } = req.body;
     await pool.execute(
-      'UPDATE descripteurs_cancer SET nom=?, type_champ=?, options_liste=?, obligatoire=?, actif=? WHERE id=?',
-      [nom, type_champ, options_liste || null, obligatoire || false, actif !== undefined ? actif : true, id]
+      'UPDATE champs_dynamiques SET entite=?, nom=?, type_champ=?, options_liste=?, obligatoire=?, actif=? WHERE id=?',
+      [entite, nom, type_champ, options_liste || null, obligatoire || false, actif !== undefined ? actif : true, id]
     );
-    res.json({ message: 'Descripteur modifié' });
+    res.json({ message: 'Champ dynamique modifié' });
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
-const deleteDescripteur = async (req, res) => {
+const deleteChampDynamique = async (req, res) => {
   try {
-    await pool.execute('UPDATE descripteurs_cancer SET actif = false WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Descripteur supprimé' });
+    await pool.execute('UPDATE champs_dynamiques SET actif = false WHERE id = ?', [req.params.id]);
+    res.json({ message: 'Champ dynamique supprimé' });
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
-// Values per case
-const getValeursDescripteurs = async (req, res) => {
+// Values per record (patient or cancer case)
+const posValeursDynamiques = async (req, res) => {
   try {
-    const [rows] = await pool.execute(`
-      SELECT vd.*, dc.nom, dc.type_champ, dc.options_liste
-      FROM valeurs_descripteurs vd
-      JOIN descripteurs_cancer dc ON vd.descripteur_id = dc.id
-      WHERE vd.case_id = ?
-    `, [req.params.caseId]);
-    res.json(rows);
+    res.status(400).json({ message: 'Please use GET endpoint with param recordId instead' });
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
-const saveValeursDescripteurs = async (req, res) => {
-  try {
-    const { case_id, valeurs } = req.body;
-    // valeurs = [{ descripteur_id, valeur }]
-    for (const v of valeurs) {
-      const [existing] = await pool.execute(
-        'SELECT id FROM valeurs_descripteurs WHERE case_id = ? AND descripteur_id = ?',
-        [case_id, v.descripteur_id]
-      );
-      if (existing.length) {
-        await pool.execute('UPDATE valeurs_descripteurs SET valeur = ? WHERE case_id = ? AND descripteur_id = ?',
-          [v.valeur, case_id, v.descripteur_id]);
-      } else {
-        await pool.execute('INSERT INTO valeurs_descripteurs (id, case_id, descripteur_id, valeur) VALUES (?,?,?,?)',
-          [uuidv4(), case_id, v.descripteur_id, v.valeur]);
-      }
-    }
-    res.json({ message: 'Valeurs sauvegardées' });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-};
-
-// ===== STYLES DE VIE DYNAMIQUES =====
-const getStylesVieTypes = async (req, res) => {
-  try {
-    const [rows] = await pool.execute('SELECT * FROM styles_vie_types WHERE actif = true ORDER BY nom');
-    res.json(rows);
-  } catch (e) { res.status(500).json({ message: e.message }); }
-};
-
-const createStyleVieType = async (req, res) => {
-  try {
-    const id = uuidv4();
-    const { nom, type_champ } = req.body;
-    await pool.execute('INSERT INTO styles_vie_types (id, nom, type_champ) VALUES (?,?,?)',
-      [id, nom, type_champ || 'booleen']);
-    res.status(201).json({ message: 'Style de vie créé', id });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-};
-
-const deleteStyleVieType = async (req, res) => {
-  try {
-    await pool.execute('UPDATE styles_vie_types SET actif = false WHERE id = ?', [req.params.id]);
-    res.json({ message: 'Style de vie supprimé' });
-  } catch (e) { res.status(500).json({ message: e.message }); }
-};
-
-const getStylesViePatient = async (req, res) => {
+const getValeursDynamiques = async (req, res) => {
   try {
     const [rows] = await pool.execute(`
-      SELECT svv.*, svt.nom, svt.type_champ
-      FROM styles_vie_valeurs svv
-      JOIN styles_vie_types svt ON svv.style_vie_id = svt.id
-      WHERE svv.patient_id = ?
-    `, [req.params.patientId]);
+      SELECT vd.*, cd.entite, cd.nom, cd.type_champ, cd.options_liste
+      FROM valeurs_dynamiques vd
+      JOIN champs_dynamiques cd ON vd.champ_id = cd.id
+      WHERE vd.record_id = ?
+    `, [req.params.recordId]);
     res.json(rows);
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
-const saveStylesViePatient = async (req, res) => {
+const saveValeursDynamiques = async (req, res) => {
   try {
-    const { patient_id, valeurs } = req.body;
+    const { record_id, valeurs } = req.body;
+    // valeurs = [{ champ_id, valeur }]
     for (const v of valeurs) {
       const [existing] = await pool.execute(
-        'SELECT id FROM styles_vie_valeurs WHERE patient_id = ? AND style_vie_id = ?',
-        [patient_id, v.style_vie_id]
+        'SELECT id FROM valeurs_dynamiques WHERE record_id = ? AND champ_id = ?',
+        [record_id, v.champ_id]
       );
-      if (existing.length) {
-        await pool.execute('UPDATE styles_vie_valeurs SET valeur = ? WHERE patient_id = ? AND style_vie_id = ?',
-          [v.valeur, patient_id, v.style_vie_id]);
+      if (existing.length > 0) {
+        await pool.execute('UPDATE valeurs_dynamiques SET valeur = ? WHERE record_id = ? AND champ_id = ?',
+          [v.valeur, record_id, v.champ_id]);
       } else {
-        await pool.execute('INSERT INTO styles_vie_valeurs (id, patient_id, style_vie_id, valeur) VALUES (?,?,?,?)',
-          [uuidv4(), patient_id, v.style_vie_id, v.valeur]);
+        await pool.execute('INSERT INTO valeurs_dynamiques (id, record_id, champ_id, valeur) VALUES (?,?,?,?)',
+          [uuidv4(), record_id, v.champ_id, v.valeur]);
       }
     }
-    res.json({ message: 'Styles de vie sauvegardés' });
+    res.json({ message: 'Valeurs dynamiques sauvegardées' });
   } catch (e) { res.status(500).json({ message: e.message }); }
 };
 
@@ -199,10 +156,8 @@ const detectDoublons = async (req, res) => {
 };
 
 module.exports = {
-  getDescripteurs, createDescripteur, updateDescripteur, deleteDescripteur,
-  getValeursDescripteurs, saveValeursDescripteurs,
-  getStylesVieTypes, createStyleVieType, deleteStyleVieType,
-  getStylesViePatient, saveStylesViePatient,
+  getChampsDynamiques, createChampDynamique, updateChampDynamique, deleteChampDynamique,
+  getValeursDynamiques, saveValeursDynamiques,
   getParametresGlobaux, createParametreGlobal, updateParametreGlobal, deleteParametreGlobal,
   detectDoublons
 };

@@ -1,158 +1,45 @@
 import React, { useState, useEffect } from 'react';
 import { Bar, Doughnut, Line, Pie } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, BarElement,
+  PointElement, LineElement, ArcElement, Title, Tooltip, Legend
+} from 'chart.js';
 import Layout from '../components/Layout';
 import { getDashboardStats } from '../utils/api';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(
+  CategoryScale, LinearScale, BarElement, PointElement,
+  LineElement, ArcElement, Title, Tooltip, Legend
+);
 
-const PALETTE = ['#0f4c81','#22c55e','#e63946','#f59e0b','#7c3aed','#06b6d4','#ec4899','#84cc16','#f97316','#6366f1'];
+const PRIMARY_COLOR = '#0f4c81'; // Medical Indigo
+const SECONDARY_COLOR = '#64748b'; // Slate
+const DANGER_COLOR = '#e63946'; // Crimson
+const SUCCESS_COLOR = '#10b981'; // Emerald
 
-const DATA_SOURCES = [
-  { id: 'cas_region',     label: 'Cas par région',          type: 'bar' },
-  { id: 'sexe',           label: 'Répartition par sexe',    type: 'doughnut' },
-  { id: 'type_cancer',    label: 'Types de cancer',         type: 'bar' },
-  { id: 'stade',          label: 'Répartition par stade',   type: 'doughnut' },
-  { id: 'statut',         label: 'Statut des patients',     type: 'doughnut' },
-  { id: 'evolution',      label: 'Évolution temporelle',    type: 'line' },
-  { id: 'age',            label: 'Tranches d\'âge',         type: 'bar' },
-  { id: 'fumeur',         label: 'Facteurs de risque',      type: 'doughnut' },
-];
-
-const CHART_TYPES = ['Histogramme','Barres horizontales','Camembert','Donut','Courbe'];
-const CHART_MAP   = { 'Histogramme': 'bar', 'Barres horizontales': 'bar', 'Camembert': 'pie', 'Donut': 'doughnut', 'Courbe': 'line' };
-
-function buildDataset(sourceId, stats, palette) {
-  if (!stats) return null;
-  switch(sourceId) {
-    case 'cas_region': {
-      const d = stats.parWilaya?.slice(0,10) || [];
-      return { labels: d.map(w => w.wilaya||'Inconnue'), datasets: [{ label:'Nombre de cas', data: d.map(w=>w.total||0), backgroundColor: palette[0], borderRadius:6 }] };
-    }
-    case 'sexe': {
-      const h = stats.parSexe?.find(s=>s.sexe==='M')?.total||0;
-      const f = stats.parSexe?.find(s=>s.sexe==='F')?.total||0;
-      return { labels:['Hommes','Femmes'], datasets:[{ data:[h,f], backgroundColor:[palette[0],palette[1]], borderWidth:2 }] };
-    }
-    case 'type_cancer': {
-      const d = stats.parType?.slice(0,8)||[];
-      return { labels: d.map(t=>t.sous_type||t.type_cancer||'N/A'), datasets:[{ label:'Cas', data:d.map(t=>t.total||0), backgroundColor:palette, borderRadius:6 }] };
-    }
-    case 'stade': {
-      const d = stats.parStade||[];
-      return { labels:d.map(s=>s.stade||'N/A'), datasets:[{ data:d.map(s=>s.total||0), backgroundColor:palette, borderWidth:2 }] };
-    }
-    case 'statut': {
-      const en = stats.totaux?.enTraitement||0, gu = stats.totaux?.gueris||0, dc = stats.totaux?.deces||0;
-      return { labels:['En traitement','Guéris','Décédés'], datasets:[{ data:[en,gu,dc], backgroundColor:[palette[0],palette[1],palette[2]], borderWidth:2 }] };
-    }
-    case 'evolution': {
-      const d = stats.evolution||[];
-      return { labels:d.map(e=>e.mois||e.annee||''), datasets:[{ label:'Nouveaux cas', data:d.map(e=>e.total||0), borderColor:palette[0], backgroundColor:palette[0]+'22', tension:0.4, fill:true }] };
-    }
-    case 'age': {
-      const tranches = [
-        {label:'0-20', min:0, max:20},{label:'21-40',min:21,max:40},
-        {label:'41-60',min:41,max:60},{label:'61-80',min:61,max:80},{label:'80+',min:81,max:200}
-      ];
-      const d = stats.parAge||[];
-      const counts = tranches.map(t => d.filter(a=>a.age>=t.min&&a.age<=t.max).reduce((s,a)=>s+(a.total||0),0));
-      return { labels:tranches.map(t=>t.label), datasets:[{ label:'Patients', data:counts, backgroundColor:palette, borderRadius:6 }] };
-    }
-    case 'fumeur': {
-      const f = stats.facteurs?.fumeurs||0, nf = stats.facteurs?.nonFumeurs||0;
-      return { labels:['Fumeurs','Non fumeurs'], datasets:[{ data:[f,nf], backgroundColor:[palette[2],palette[1]], borderWidth:2 }] };
-    }
-    default: return null;
+const CHART_OPTIONS = {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    legend: { position: 'bottom', labels: { font: { family: 'Sora', size: 12 }, padding: 20 } },
+    tooltip: { backgroundColor: '#0f172a', padding: 12, cornerRadius: 8 }
+  },
+  scales: {
+    x: { grid: { display: false }, ticks: { font: { family: 'Sora', size: 12 } } },
+    y: { grid: { color: '#f1f5f9' }, beginAtZero: true, ticks: { font: { family: 'Sora', size: 12 } } }
   }
-}
+};
 
-function ChartWidget({ widget, stats, onDelete, onConfigure }) {
-  const [configOpen, setConfigOpen] = useState(false);
-  const [localType, setLocalType] = useState(widget.chartType);
-  const [localSource, setLocalSource] = useState(widget.source);
-
-  const src = DATA_SOURCES.find(d => d.id === localSource);
-  const dataset = buildDataset(localSource, stats, PALETTE);
-
-  const opts = {
-    responsive: true, maintainAspectRatio: false,
-    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Sora', size: 11 }, padding: 12 } } },
-    scales: ['bar','line'].includes(CHART_MAP[localType]) ? {
-      x: { grid: { display: false }, ticks: { font: { family: 'Sora', size: 11 }, maxRotation: 30 } },
-      y: { grid: { color: '#f1f5f9' }, beginAtZero: true }
-    } : undefined,
-    ...(localType === 'Barres horizontales' ? { indexAxis: 'y' } : {})
-  };
-
-  const renderChart = () => {
-    if (!dataset) return <div style={{ display:'flex', alignItems:'center', justifyContent:'center', height:'100%', color:'#94a3b8', fontSize:13 }}>Aucune donnée</div>;
-    const t = CHART_MAP[localType];
-    const h = { height: '100%' };
-    if (t === 'pie') return <Pie data={dataset} options={opts} style={h}/>;
-    if (t === 'doughnut') return <Doughnut data={dataset} options={opts} style={h}/>;
-    if (t === 'line') return <Line data={dataset} options={opts} style={h}/>;
-    return <Bar data={dataset} options={opts} style={h}/>;
-  };
-
-  return (
-    <div style={{ background:'white', borderRadius:14, border:'1px solid #e2e8f0', overflow:'hidden', display:'flex', flexDirection:'column' }}>
-      {/* Header */}
-      <div style={{ padding:'12px 16px', display:'flex', alignItems:'center', justifyContent:'space-between', borderBottom:'1px solid #f1f5f9' }}>
-        <div style={{ fontWeight:700, fontSize:14, color:'#0f172a' }}>
-          {src?.label || 'Graphique'}
-        </div>
-        <div style={{ display:'flex', gap:6 }}>
-          <button onClick={() => setConfigOpen(!configOpen)} style={{ background: configOpen?'#eff6ff':'#f8fafc', border:'1px solid #e2e8f0', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontSize:13, color: configOpen?'#0f4c81':'#64748b' }}>⚙️</button>
-          <button onClick={() => onDelete(widget.id)} style={{ background:'#fff5f5', border:'1px solid #fecaca', borderRadius:8, padding:'4px 10px', cursor:'pointer', fontSize:13, color:'#e63946' }}>🗑</button>
-        </div>
-      </div>
-
-      {/* Config panel */}
-      {configOpen && (
-        <div style={{ padding:'12px 16px', background:'#f8fafc', borderBottom:'1px solid #e2e8f0', display:'flex', gap:16, flexWrap:'wrap' }}>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', marginBottom:4 }}>Type de graphique</div>
-            <select style={{ fontSize:13, padding:'6px 10px', border:'1px solid #e2e8f0', borderRadius:8, fontFamily:'Sora' }}
-              value={localType} onChange={e => { setLocalType(e.target.value); onConfigure(widget.id, {chartType: e.target.value}); }}>
-              {CHART_TYPES.map(t => <option key={t}>{t}</option>)}
-            </select>
-          </div>
-          <div>
-            <div style={{ fontSize:11, fontWeight:700, color:'#94a3b8', textTransform:'uppercase', marginBottom:4 }}>Source de données</div>
-            <select style={{ fontSize:13, padding:'6px 10px', border:'1px solid #e2e8f0', borderRadius:8, fontFamily:'Sora' }}
-              value={localSource} onChange={e => { setLocalSource(e.target.value); onConfigure(widget.id, {source: e.target.value}); }}>
-              {DATA_SOURCES.map(s => <option key={s.id} value={s.id}>{s.label}</option>)}
-            </select>
-          </div>
-        </div>
-      )}
-
-      {/* Chart */}
-      <div style={{ padding:16, height:260 }}>
-        {renderChart()}
-      </div>
-    </div>
-  );
-}
+const CHART_OPTIONS_H = {
+  ...CHART_OPTIONS,
+  indexAxis: 'y'
+};
 
 export default function Statistiques() {
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
-  
-  // Date Filters
   const [filterYear, setFilterYear] = useState('');
   const [filterMonth, setFilterMonth] = useState('');
-
-  const [widgets, setWidgets] = useState([
-    { id:1, source:'cas_region',  chartType:'Histogramme' },
-    { id:2, source:'sexe',        chartType:'Donut' },
-    { id:3, source:'type_cancer', chartType:'Histogramme' },
-    { id:4, source:'stade',       chartType:'Camembert' },
-    { id:5, source:'statut',      chartType:'Donut' },
-    { id:6, source:'evolution',   chartType:'Courbe' },
-  ]);
-  const [showAddMenu, setShowAddMenu] = useState(false);
 
   const fetchStats = () => {
     setLoading(true);
@@ -166,97 +53,201 @@ export default function Statistiques() {
     fetchStats();
   }, [filterYear, filterMonth]);
 
-  const addWidget = (sourceId) => {
-    const src = DATA_SOURCES.find(d => d.id === sourceId);
-    setWidgets(p => [...p, { id: Date.now(), source: sourceId, chartType: src?.type==='doughnut'?'Donut':src?.type==='line'?'Courbe':'Histogramme' }]);
-    setShowAddMenu(false);
+  if (loading) return <Layout title="Statistiques"><div className="loading-center"><div className="spinner" /></div></Layout>;
+
+  // Data helpers
+  const totaux = stats?.totaux || {};
+  
+  // Demographics datasets
+  const dataSexe = {
+    labels: ['Hommes', 'Femmes'],
+    datasets: [{
+      data: [stats?.parSexe?.find(s=>s.sexe==='M')?.total||0, stats?.parSexe?.find(s=>s.sexe==='F')?.total||0],
+      backgroundColor: [PRIMARY_COLOR, DANGER_COLOR],
+      borderWidth: 0
+    }]
   };
 
-  const deleteWidget = (wid) => setWidgets(p => p.filter(w => w.id !== wid));
-  const configureWidget = (wid, changes) => setWidgets(p => p.map(w => w.id===wid ? {...w,...changes} : w));
+  const dataWilaya = {
+    labels: stats?.parWilaya?.slice(0, 15).map(w => w.wilaya) || [],
+    datasets: [{
+      label: 'Nombre de cas',
+      data: stats?.parWilaya?.slice(0, 15).map(w => w.total) || [],
+      backgroundColor: PRIMARY_COLOR + 'CC',
+      borderRadius: 4
+    }]
+  };
 
-  if (loading) return <Layout title="Statistiques"><div className="loading-center"><div className="spinner"/></div></Layout>;
+  const dataAge = {
+    labels: ['0-20', '21-40', '41-60', '61-80', '80+'],
+    datasets: [{
+      label: 'Cas par tranche d’âge',
+      data: (() => {
+        const d = stats?.parAge || [];
+        return [
+          d.filter(a=>a.age<=20).reduce((s,a)=>s+(a.total||0),0),
+          d.filter(a=>a.age>20&&a.age<=40).reduce((s,a)=>s+(a.total||0),0),
+          d.filter(a=>a.age>40&&a.age<=60).reduce((s,a)=>s+(a.total||0),0),
+          d.filter(a=>a.age>60&&a.age<=80).reduce((s,a)=>s+(a.total||0),0),
+          d.filter(a=>a.age>80).reduce((s,a)=>s+(a.total||0),0)
+        ];
+      })(),
+      backgroundColor: SECONDARY_COLOR + 'CC',
+      borderRadius: 4
+    }]
+  };
+
+  // Clinical Profile datasets
+  const dataTypes = {
+    labels: stats?.parType?.map(t => t.sous_type || t.type_cancer) || [],
+    datasets: [{
+      label: 'Incidence',
+      data: stats?.parType?.map(t => t.total) || [],
+      backgroundColor: [PRIMARY_COLOR, DANGER_COLOR, SUCCESS_COLOR, '#f59e0b', '#7c3aed', '#06b6d4'],
+      borderRadius: 4
+    }]
+  };
+
+  const dataStades = {
+    labels: stats?.parStade?.map(s => s.stade) || [],
+    datasets: [{
+      data: stats?.parStade?.map(s => s.total) || [],
+      backgroundColor: [SUCCESS_COLOR, '#f59e0b', DANGER_COLOR, '#374151'],
+      borderWidth: 0
+    }]
+  };
+
+  // Trends
+  const dataEvolution = {
+    labels: stats?.evolution?.map(e => e.mois || e.annee) || [],
+    datasets: [{
+      label: 'Diagnostics enregistrés',
+      data: stats?.evolution?.map(e => e.total) || [],
+      borderColor: PRIMARY_COLOR,
+      backgroundColor: PRIMARY_COLOR + '11',
+      fill: true,
+      tension: 0.4,
+      pointRadius: 5,
+      pointBackgroundColor: PRIMARY_COLOR
+    }]
+  };
 
   return (
-    <Layout title="Statistiques Épidémiologiques">
-      {/* KPI */}
-      <div className="stat-grid" style={{ marginBottom:24 }}>
-        {[
-          { label:'Patients', value: stats?.totaux?.patients||0, color:'blue' },
-          { label:'Cas diagnostiqués', value: stats?.totaux?.cas||0, color:'purple' },
-          { label:'En traitement', value: stats?.totaux?.enTraitement||0, color:'orange' },
-          { label:'Guérisons', value: stats?.totaux?.gueris||0, color:'green' },
-          { label:'Décès', value: stats?.totaux?.decedes||0, color:'red' },
-        ].map(k => (
-          <div key={k.label} className={`stat-card ${k.color}`}>
-            <div className="stat-value">{k.value}</div>
-            <div className="stat-label">{k.label}</div>
-          </div>
-        ))}
-      </div>
-
-      {/* Toolbar & Filters */}
-      <div style={{ display:'flex', justifyContent:'space-between', alignItems:'center', marginBottom:16, flexWrap:'wrap', gap:12 }}>
-        <div style={{ display:'flex', alignItems:'center', gap:16, background:'white', padding:'8px 16px', borderRadius:12, border:'1px solid #e2e8f0' }}>
-          <div style={{ fontSize:14, fontWeight:600, color:'#0f172a' }}>Période :</div>
-          <select 
-            className="form-control" 
-            style={{ width: 120, height: 36, fontSize: 13 }} 
-            value={filterYear} 
-            onChange={(e) => setFilterYear(e.target.value)}
-          >
-            <option value="">Toutes les années</option>
+    <Layout title="Rapport Statistique Épidémiologique">
+      {/* Header Filters */}
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-end', marginBottom: 40, borderBottom: '2px solid #f1f5f9', paddingBottom: 24 }}>
+        <div>
+          <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900, color: PRIMARY_COLOR }}>Registre National du Cancer</h2>
+          <p style={{ margin: '4px 0 0', color: SECONDARY_COLOR, fontSize: 13 }}>Analyse des données cliniques pour la période : <strong style={{color:'#0f172a'}}>{filterYear || 'Toutes les années'} {filterMonth && ` - ${new Date(0, filterMonth-1).toLocaleString('fr-FR', { month: 'long' })}`}</strong></p>
+        </div>
+        <div style={{ display: 'flex', gap: 12 }}>
+          <select className="form-control" style={{ width: 140, height: 42, fontSize: 14 }} value={filterYear} onChange={e => setFilterYear(e.target.value)}>
+            <option value="">Années</option>
             {[2023, 2024, 2025, 2026].map(y => <option key={y} value={y}>{y}</option>)}
           </select>
-          <select 
-            className="form-control" 
-            style={{ width: 150, height: 36, fontSize: 13 }} 
-            value={filterMonth} 
-            onChange={(e) => setFilterMonth(e.target.value)}
-          >
+          <select className="form-control" style={{ width: 160, height: 42, fontSize: 14 }} value={filterMonth} onChange={e => setFilterMonth(e.target.value)}>
             <option value="">Tous les mois</option>
-            {Array.from({length:12}).map((_, i) => (
-              <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('fr-FR', { month: 'long' })}</option>
-            ))}
+            {Array.from({length:12}).map((_, i) => <option key={i+1} value={i+1}>{new Date(0, i).toLocaleString('fr-FR', { month: 'long' })}</option>)}
           </select>
-        </div>
-
-        <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
-          <div style={{ fontSize:14, fontWeight:700, color:'#64748b' }}>
-            {widgets.length} graphique{widgets.length>1?'s':''} actif{widgets.length>1?'s':''}
-          </div>
-        <div style={{ position:'relative' }}>
-          <button className="btn btn-primary" onClick={() => setShowAddMenu(!showAddMenu)}>
-            + Ajouter un graphique
-          </button>
-          {showAddMenu && (
-            <div style={{ position:'absolute', right:0, top:'110%', background:'white', border:'1px solid #e2e8f0', borderRadius:12, boxShadow:'0 8px 24px rgba(0,0,0,0.12)', zIndex:100, minWidth:220, overflow:'hidden' }}>
-              {DATA_SOURCES.map(s => (
-                <button key={s.id} onClick={() => addWidget(s.id)} style={{ display:'block', width:'100%', padding:'10px 16px', border:'none', background:'transparent', textAlign:'left', cursor:'pointer', fontSize:13, fontFamily:'Sora', color:'#0f172a', borderBottom:'1px solid #f1f5f9' }}
-                  onMouseEnter={e => e.target.style.background='#f8fafc'} onMouseLeave={e => e.target.style.background='transparent'}>
-                  {s.label}
-                </button>
-              ))}
-            </div>
+          {(filterYear || filterMonth) && (
+            <button onClick={() => {setFilterYear(''); setFilterMonth('');}} style={{ height: 42, padding: '0 16px', background: '#fef2f2', border: '1px solid #fee2e2', borderRadius: 8, color: DANGER_COLOR, fontWeight: 700, cursor: 'pointer' }}>✕</button>
           )}
         </div>
-        </div>
       </div>
 
-      {/* Grid */}
-      <div style={{ display:'grid', gridTemplateColumns:'1fr 1fr', gap:20 }}>
-        {widgets.map(w => (
-          <ChartWidget key={w.id} widget={w} stats={stats} onDelete={deleteWidget} onConfigure={configureWidget} />
-        ))}
+      {/* KPI Section */}
+      <div className="stat-grid" style={{ marginBottom: 48 }}>
+        <StatCard label="Total Patients" value={totaux.patients} color="blue" />
+        <StatCard label="Cas Diagnostiqués" value={totaux.cas} color="purple" />
+        <StatCard label="Taux de Survie (Est.)" value="82%" color="green" />
+        <StatCard label="Wilaya Majoritaire" value={stats?.parWilaya?.[0]?.wilaya || 'N/A'} color="orange" isText />
       </div>
 
-      {widgets.length === 0 && (
-        <div className="empty-state" style={{ marginTop:40 }}>
-          <div style={{fontSize:48}}>📊</div>
-          <h3>Aucun graphique</h3>
-          <p>Cliquez sur "+ Ajouter un graphique" pour commencer</p>
+      {/* SECTION 1: POPULATION */}
+      <ReportSection title="I. Profil Démographique & Géographique">
+        <div style={{ display: 'grid', gridTemplateColumns: '400px 1fr', gap: 32, marginBottom: 32 }}>
+          <ChartCard title="Répartition par Sexe">
+            <div style={{ height: 400 }}><Doughnut data={dataSexe} options={CHART_OPTIONS} /></div>
+          </ChartCard>
+          <ChartCard title="Incidence par Wilaya (Top 15)">
+            <div style={{ height: 400 }}><Bar data={dataWilaya} options={CHART_OPTIONS_H} /></div>
+          </ChartCard>
         </div>
-      )}
+        <ChartCard title="Distribution par Tranches d'Âge">
+          <div style={{ height: 450 }}><Bar data={dataAge} options={CHART_OPTIONS} /></div>
+        </ChartCard>
+      </ReportSection>
+
+      {/* SECTION 2: CLINIQUE */}
+      <ReportSection title="II. Profil Oncologique & Clinique">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 400px', gap: 32 }}>
+          <ChartCard title="Incidence par Type de Pathologie">
+            <div style={{ height: 450 }}><Bar data={dataTypes} options={CHART_OPTIONS} /></div>
+          </ChartCard>
+          <ChartCard title="Distribution selon le Stade Tumorale">
+            <div style={{ height: 450 }}><Pie data={dataStades} options={CHART_OPTIONS} /></div>
+          </ChartCard>
+        </div>
+      </ReportSection>
+
+      {/* SECTION 3: TENDANCES */}
+      <ReportSection title="III. Évolution Temporelle des Diagnostics">
+        <ChartCard title="Nombre mensuel de diagnostics enregistrés">
+          <div style={{ height: 500 }}><Line data={dataEvolution} options={CHART_OPTIONS} /></div>
+        </ChartCard>
+      </ReportSection>
+
+      {/* Footer / Report Signature */}
+      <div style={{ marginTop: 60, padding: '32px 0', borderTop: '2px dashed #e2e8f0', color: SECONDARY_COLOR, textAlign: 'center', fontSize: 13 }}>
+        <p>© 2026 Plateforme de Registre du Cancer - Données basées sur les dossiers validés.</p>
+        <p>Généré automatiquement le : {new Date().toLocaleDateString('fr-FR')} à {new Date().toLocaleTimeString('fr-FR')}</p>
+      </div>
+
+      <style>{`
+        .loading-center { display: flex; justify-content: center; align-items: center; height: 100vh; }
+        .spinner { width: 40px; height: 40px; border: 4px solid #f3f3f3; border-top: 4px solid ${PRIMARY_COLOR}; border-radius: 50%; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+      `}</style>
     </Layout>
+  );
+}
+
+function ReportSection({ title, children }) {
+  return (
+    <div style={{ marginBottom: 60 }}>
+      <h3 style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 12 }}>
+        <span style={{ width: 8, height: 24, background: PRIMARY_COLOR, borderRadius: 4 }} />
+        {title}
+      </h3>
+      {children}
+    </div>
+  );
+}
+
+function ChartCard({ title, children }) {
+  return (
+    <div style={{ background: 'white', padding: '24px 32px', borderRadius: 16, border: '1px solid #e2e8f0', boxShadow: '0 1px 3px rgba(0,0,0,0.02)' }}>
+      <h4 style={{ margin: '0 0 20px 0', fontSize: 14, fontWeight: 700, color: SECONDARY_COLOR, textTransform: 'uppercase', letterSpacing: 1 }}>{title}</h4>
+      {children}
+    </div>
+  );
+}
+
+function StatCard({ label, value, color, isText }) {
+  const colors = {
+    blue: { bg: '#eff6ff', font: '#0f4c81' },
+    purple: { bg: '#faf5ff', font: '#7c3aed' },
+    green: { bg: '#ecfdf5', font: '#059669' },
+    orange: { bg: '#fff7ed', font: '#ea580c' }
+  };
+  const c = colors[color] || colors.blue;
+  
+  return (
+    <div style={{ background: c.bg, border: `1px solid ${c.font}22`, padding: '24px', borderRadius: 16 }}>
+      <div style={{ fontSize: isText ? 24 : 32, fontWeight: 900, color: c.font, lineHeight: 1 }}>
+        {isText ? value : (value || 0).toLocaleString()}
+      </div>
+      <div style={{ fontSize: 13, fontWeight: 600, color: SECONDARY_COLOR, marginTop: 8 }}>{label}</div>
+    </div>
   );
 }

@@ -11,6 +11,8 @@ export default function CarteSIG() {
   const [selectedWilaya, setSelectedWilaya] = useState(null);
   const [maxCases, setMaxCases] = useState(1);
   const [isMounted, setIsMounted] = useState(false);
+  const [isAnalyzingIA, setIsAnalyzingIA] = useState(false);
+  const [aiReport, setAiReport] = useState(null);
 
   useEffect(() => {
     setIsMounted(true);
@@ -53,6 +55,31 @@ export default function CarteSIG() {
     return isNaN(radius) ? 5 : radius;
   };
 
+  const handleAnalyzeIA = async () => {
+    if (!selectedWilaya) return;
+    setIsAnalyzingIA(true);
+    setAiReport(null);
+    try {
+      const payload = {
+        wilaya: selectedWilaya.nom,
+        count: selectedWilaya.count,
+        zones: selectedWilaya.zones || []
+      };
+      const res = await api.post('/stats/ia-analysis', payload);
+      setAiReport(res.data);
+    } catch (err) {
+      console.error(err);
+    } finally {
+      setIsAnalyzingIA(false);
+    }
+  };
+
+  const closeSidebar = () => {
+    setSelectedWilaya(null);
+    setAiReport(null);
+    setIsAnalyzingIA(false);
+  };
+
   return (
     <Layout title="Carte SIG (Système d'Information Géographique)">
       <div style={{ display: 'flex', gap: 20, height: 'calc(100vh - 120px)' }}>
@@ -83,7 +110,11 @@ export default function CarteSIG() {
                      weight: 2
                    }}
                    eventHandlers={{
-                     click: () => setSelectedWilaya(w)
+                     click: () => {
+                       setSelectedWilaya(w);
+                       setAiReport(null);
+                       setIsAnalyzingIA(false);
+                     }
                    }}
                  >
                    <Popup>
@@ -107,7 +138,7 @@ export default function CarteSIG() {
                 <div style={{ color: '#64748b', fontSize: 13 }}>Wilaya d'Algérie</div>
               </div>
               <button 
-                onClick={() => setSelectedWilaya(null)} 
+                onClick={closeSidebar} 
                 style={{ background: '#f1f5f9', border: 'none', width: 30, height: 30, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', color: '#64748b' }}
               >
                 ✕
@@ -136,7 +167,7 @@ export default function CarteSIG() {
               )}
 
               {selectedWilaya.communes && selectedWilaya.communes.length > 0 && (
-                <div>
+                <div style={{ marginBottom: 20 }}>
                   <div style={{ fontSize: 13, fontWeight: 700, color: '#475569', textTransform: 'uppercase', marginBottom: 12 }}>
                     🏙️ Communes principales ({selectedWilaya.communes.length})
                   </div>
@@ -149,6 +180,58 @@ export default function CarteSIG() {
                   </div>
                 </div>
               )}
+
+              {/* SECTION INTELLIGENCE ARTIFICIELLE */}
+              <div style={{ marginTop: 10, paddingTop: 20, borderTop: '2px dashed #e2e8f0' }}>
+                {!aiReport && !isAnalyzingIA && selectedWilaya.count > 0 && (
+                  <button 
+                    onClick={handleAnalyzeIA}
+                    className="btn btn-primary" 
+                    style={{ width: '100%', display: 'flex', justifyContent: 'center', gap: 8, background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', border: 'none' }}
+                  >
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                    Analyser les causes avec l'IA
+                  </button>
+                )}
+
+                {isAnalyzingIA && (
+                  <div style={{ textAlign: 'center', padding: '20px 0' }}>
+                    <div className="spinner" style={{ borderColor: '#7c3aed', borderRightColor: 'transparent', margin: '0 auto 15px' }}></div>
+                    <div style={{ color: '#4f46e5', fontWeight: 600, fontSize: 14 }}>L'Agent IA analyse les données environnementales...</div>
+                  </div>
+                )}
+
+                {aiReport && (
+                  <div style={{ animation: 'slideIn 0.3s ease' }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 16 }}>
+                      <div style={{ background: '#7c3aed', color: '#fff', padding: '4px 8px', borderRadius: 6, fontSize: 12, fontWeight: 'bold' }}>IA ACTIF</div>
+                      <h4 style={{ margin: 0, color: '#334155', fontSize: 15 }}>Rapport Prédictif</h4>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#0f766e', textTransform: 'uppercase', marginBottom: 8 }}>🌿 Environnement</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, color: '#334155', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {aiReport.environmental.map((fact, idx) => <li key={idx}>{fact}</li>)}
+                      </ul>
+                    </div>
+
+                    <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 8, padding: 12, marginBottom: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#b45309', textTransform: 'uppercase', marginBottom: 8 }}>👤 Comportement Local</div>
+                      <ul style={{ margin: 0, paddingLeft: 18, color: '#334155', fontSize: 13, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                        {aiReport.behavioral.map((fact, idx) => <li key={idx}>{fact}</li>)}
+                      </ul>
+                    </div>
+
+                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: 8, padding: 12 }}>
+                      <div style={{ fontSize: 12, fontWeight: 700, color: '#166534', textTransform: 'uppercase', marginBottom: 4 }}>💡 Recommandation IA</div>
+                      <div style={{ fontSize: 13, color: '#14532d', lineHeight: 1.5 }}>
+                        {aiReport.recommendation}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
             </div>
           </div>
         )}

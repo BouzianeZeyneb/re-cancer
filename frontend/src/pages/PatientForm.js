@@ -29,17 +29,31 @@ export default function PatientForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [activeTab, setActiveTab] = useState('infos');
-  const [stylesVieTypes, setStylesVieTypes] = useState([]);
-  const [stylesVieValeurs, setStylesVieValeurs] = useState({});
-  const [newStyleNom, setNewStyleNom] = useState('');
-  const [newStyleType, setNewStyleType] = useState('booleen');
-  const [showAddStyle, setShowAddStyle] = useState(false);
+  const [champsDynamiques, setChampsDynamiques] = useState([]);
+  const [valeursDynamiques, setValeursDynamiques] = useState({});
   const [isListening, setIsListening] = useState(false);
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [activeVoiceField, setActiveVoiceField] = useState(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const recognitionRef = useRef(null);
   const [parametres, setParametres] = useState([]);
+  
+  // États pour la gestion des doublons
+  const [duplicateInfo, setDuplicateInfo] = useState(null);
+  const [mergeChoices, setMergeChoices] = useState({});
+
+  const MERGE_FIELDS = [
+    { key: 'nom', label: 'Nom' },
+    { key: 'prenom', label: 'Prénom' },
+    { key: 'date_naissance', label: 'Date de naissance', type: 'date' },
+    { key: 'sexe', label: 'Sexe', type: 'sexe' },
+    { key: 'telephone', label: 'Téléphone' },
+    { key: 'num_carte_nationale', label: 'N° Carte Nationale' },
+    { key: 'num_carte_chifa', label: 'N° Carte Chifa' },
+    { key: 'wilaya', label: 'Wilaya' },
+    { key: 'commune', label: 'Commune' },
+    { key: 'adresse', label: 'Adresse' },
+  ];
 
   useEffect(() => {
     if (isEdit) {
@@ -53,14 +67,14 @@ export default function PatientForm() {
           fumeur: Boolean(p.fumeur), alcool: Boolean(p.alcool), activite_sportive: Boolean(p.activite_sportive),
           autres_medicaments: p.autres_medicaments||'', autres_facteurs_risque: p.autres_facteurs_risque||''
         });
-        api.get(`/styles-vie/patient/${id}`).then(r => {
+        api.get(`/valeurs-dynamiques/${id}`).then(r => {
           const vals = {};
-          r.data.forEach(v => { vals[v.style_vie_id] = v.valeur; });
-          setStylesVieValeurs(vals);
+          r.data.forEach(v => { vals[v.champ_id] = v.valeur; });
+          setValeursDynamiques(vals);
         }).catch(()=>{});
       });
     }
-    api.get('/styles-vie/types').then(r => setStylesVieTypes(r.data)).catch(()=>{});
+    api.get('/champs-dynamiques').then(r => setChampsDynamiques(r.data)).catch(()=>{});
     api.get('/parametres').then(r => setParametres(r.data)).catch(()=>{});
   }, [id, isEdit]);
 
@@ -238,27 +252,45 @@ export default function PatientForm() {
 
 
 
-  const addStyleVie = async () => {
-    if (!newStyleNom.trim()) return;
-    try {
-      await api.post('/styles-vie/types', { nom: newStyleNom, type_champ: newStyleType });
-      const r = await api.get('/styles-vie/types');
-      setStylesVieTypes(r.data);
-      setNewStyleNom(''); setShowAddStyle(false);
-      toast.success('Facteur ajouté!');
-    } catch(e) { toast.error('Erreur'); }
-  };
+  // Dynamic Styles Add Logic removed from here since it is now managed centrally via AdminSettings
 
-  const deleteStyleVie = async (styleId) => {
-    await api.delete(`/styles-vie/types/${styleId}`);
-    setStylesVieTypes(prev => prev.filter(s => s.id !== styleId));
-    toast.success('Supprimé');
+  const handleForceSubmit = async () => {
+    setDuplicateInfo(null);
+    setLoading(true);
+    try {
+      const payload = { ...form, forceSave: true };
+      let patientId = id;
+      if (isEdit) {
+        await updatePatient(id, payload);
+        toast.success('Patient modifié (Doublon forcé)', { icon: '✅' });
+      } else {
+        const res = await createPatient(payload);
+        patientId = res.data.id;
+        toast.success('Patient créé (Doublon forcé)', { icon: '✅' });
+      }
+      const valeurs = Object.entries(valeursDynamiques).map(([c_id, v]) => ({ champ_id: c_id, valeur: v }));
+      if (valeurs.length) await api.post('/valeurs-dynamiques', { record_id: patientId, valeurs });
+      navigate(`/patients/${patientId}`);
+    } catch(err) {
+      setError(err.response?.data?.message || 'Erreur lors du forçage');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    if (!form.nom || !form.prenom || !form.date_naissance) return setError('Champs obligatoires manquants');
+    // Champs obligatoires
+    const missingFields = [];
+    if (!form.nom) missingFields.push('Nom');
+    if (!form.prenom) missingFields.push('Prénom');
+    if (!form.date_naissance) missingFields.push('Date de naissance');
+    if (!form.num_carte_nationale) missingFields.push('N° Carte Nationale');
+    if (!form.num_carte_chifa) missingFields.push('N° Carte Chifa');
+    if (missingFields.length > 0) {
+      return setError(`Champs obligatoires manquants : ${missingFields.join(', ')}`);
+    }
     setLoading(true);
     try {
       let patientId = id;
@@ -268,38 +300,23 @@ export default function PatientForm() {
       } else {
         const res = await createPatient(form);
         patientId = res.data.id;
-        // If similar patient found — redirect to doublons comparison
-        if (res.data.code === 'SIMILAR_FOUND' && res.data.similar) {
-          toast('⚠️ Doublon potentiel détecté!', { icon: '🔍', duration: 3000 });
-          const valeurs = Object.entries(stylesVieValeurs).map(([style_vie_id, valeur]) => ({ style_vie_id, valeur }));
-          if (valeurs.length) await api.post('/styles-vie/patient', { patient_id: patientId, valeurs });
-          navigate(`/doublons?p1=${res.data.similar.id}&p2=${patientId}`);
-          return;
-        }
         toast.success('Patient créé');
       }
-      const valeurs = Object.entries(stylesVieValeurs).map(([style_vie_id, valeur]) => ({ style_vie_id, valeur }));
-      if (valeurs.length) await api.post('/styles-vie/patient', { patient_id: patientId, valeurs });
+      const valeurs = Object.entries(valeursDynamiques).map(([champ_id, valeur]) => ({ champ_id, valeur }));
+      if (valeurs.length) await api.post('/valeurs-dynamiques', { record_id: patientId, valeurs });
       navigate(`/patients/${patientId}`);
     } catch(err) {
-      console.log('ERROR CODE:', err.response?.data?.code);
-      console.log('ERROR DATA:', JSON.stringify(err.response?.data));
       const code = err.response?.data?.code;
-      if (code === 'SIMILAR_FOUND') {
-        const newId = err.response.data.id;
-        const similarId = err.response.data.similar.id;
-        toast('🔍 Doublon détecté! Redirection...', { duration: 2000 });
-        setTimeout(() => navigate(`/doublons?p1=${similarId}&p2=${newId}`), 500);
+      if (code === 'DUPLICATE_SUSPECTED') {
+        const info = err.response.data.similarityInfo;
+        // Initialiser tous les choix sur 'new' par défaut
+        const initialChoices = {};
+        MERGE_FIELDS.forEach(f => { initialChoices[f.key] = 'new'; });
+        setMergeChoices(initialChoices);
+        setDuplicateInfo(info);
         return;
       }
-      if (code === 'DUPLICATE') {
-        const dup = err.response.data.duplicate;
-        toast('🔍 Doublon détecté! Redirection...', { duration: 2000 });
-        // Need to create patient first then redirect — or just go to doublons list
-        setTimeout(() => navigate(`/doublons`), 500);
-        return;
-      }
-      setError(err.response?.data?.message || 'Erreur');
+      setError(err.response?.data?.message || 'Erreur inconnue');
     } finally { setLoading(false); }
   };
 
@@ -383,12 +400,30 @@ export default function PatientForm() {
                 </div>
                 <div className="form-row">
                   <div className="form-group">
-                    <label className="form-label">N° Carte Nationale</label>
-                    <input className="form-control" value={form.num_carte_nationale} onChange={e => set('num_carte_nationale', e.target.value)} />
+                    <label className="form-label">
+                      N° Carte Nationale <span style={{ color: '#ef4444', fontWeight: 800 }}>*</span>
+                    </label>
+                    <input
+                      className="form-control"
+                      value={form.num_carte_nationale}
+                      onChange={e => set('num_carte_nationale', e.target.value)}
+                      required
+                      style={!form.num_carte_nationale ? { borderColor: '#fca5a5' } : {}}
+                      placeholder="Numéro obligatoire"
+                    />
                   </div>
                   <div className="form-group">
-                    <label className="form-label">N° Carte Chifa</label>
-                    <input className="form-control" value={form.num_carte_chifa} onChange={e => set('num_carte_chifa', e.target.value)} />
+                    <label className="form-label">
+                      N° Carte Chifa <span style={{ color: '#ef4444', fontWeight: 800 }}>*</span>
+                    </label>
+                    <input
+                      className="form-control"
+                      value={form.num_carte_chifa}
+                      onChange={e => set('num_carte_chifa', e.target.value)}
+                      required
+                      style={!form.num_carte_chifa ? { borderColor: '#fca5a5' } : {}}
+                      placeholder="Numéro obligatoire"
+                    />
                   </div>
                 </div>
                 <div className="form-row">
@@ -418,6 +453,35 @@ export default function PatientForm() {
                     <textarea className="form-control" rows={2} value={form.adresse} onChange={e => set('adresse', e.target.value)} style={activeVoiceField === 'adresse' ? { border:'2px solid #e63946', background:'#fef2f2' } : {}} />
                   </div>
                 </div>
+
+                {champsDynamiques.filter(c => c.entite === 'patient').length > 0 && (
+                  <div style={{ marginTop:20, paddingTop: 20, borderTop: '1px dashed #cbd5e1' }}>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:10 }}>Informations Supplémentaires (Dynamiques)</div>
+                    <div className="form-row">
+                      {champsDynamiques.filter(c => c.entite === 'patient').map(s => (
+                        <div className="form-group" key={s.id}>
+                          <label className="form-label">{s.nom} {s.obligatoire && '*'}</label>
+                          {s.type_champ === 'booleen' ? (
+                            <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
+                              <option value="">Choisir...</option>
+                              <option value="true">Oui</option>
+                              <option value="false">Non</option>
+                            </select>
+                          ) : s.type_champ === 'liste' ? (
+                             <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
+                                <option value="">Choisir...</option>
+                                {s.options_liste.split(',').map(opt => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}
+                             </select>
+                          ) : s.type_champ === 'date' ? (
+                             <input type="date" className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
+                          ) : (
+                            <input type={s.type_champ === 'nombre' ? 'number' : 'text'} className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 
@@ -435,53 +499,48 @@ export default function PatientForm() {
                   </div>
                 </div>
 
-                {stylesVieTypes.length > 0 && (
+                {champsDynamiques.filter(c => c.entite === 'habitudes_vie').length > 0 && (
                   <div style={{ marginBottom:20 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:10 }}>Facteurs dynamiques</div>
+                    <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:10 }}>Méta-données (via Générateur)</div>
                     <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                      {stylesVieTypes.map(s => (
+                      {champsDynamiques.filter(c => c.entite === 'habitudes_vie').map(s => (
                         <div key={s.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', background:'#f8fafc', borderRadius:8, border:'1px solid #e2e8f0' }}>
-                          <div style={{ flex:1, fontSize:13.5, fontWeight:600 }}>{s.nom}</div>
+                          <div style={{ flex:1, fontSize:13.5, fontWeight:600 }}>{s.nom} {s.obligatoire && <span style={{color:'red'}}>*</span>}</div>
                           {s.type_champ === 'booleen' ? (
                             <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
                               <input type="checkbox"
-                                checked={stylesVieValeurs[s.id] === 'true'}
-                                onChange={e => setStylesVieValeurs(prev => ({ ...prev, [s.id]: String(e.target.checked) }))}
+                                checked={valeursDynamiques[s.id] === 'true'}
+                                onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: String(e.target.checked) }))}
                               />
-                              <span style={{ fontSize:13 }}>{stylesVieValeurs[s.id] === 'true' ? 'Oui' : 'Non'}</span>
+                              <span style={{ fontSize:13 }}>{valeursDynamiques[s.id] === 'true' ? 'Oui' : 'Non'}</span>
                             </label>
+                          ) : s.type_champ === 'liste' ? (
+                             <select className="form-control" style={{ width:180 }}
+                               value={valeursDynamiques[s.id] || ''}
+                               onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))}
+                               required={s.obligatoire}
+                             >
+                                <option value="">Choisir...</option>
+                                {s.options_liste.split(',').map(opt => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}
+                             </select>
+                          ) : s.type_champ === 'date' ? (
+                             <input type="date" className="form-control" style={{ width:180 }}
+                               value={valeursDynamiques[s.id] || ''}
+                               onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))}
+                               required={s.obligatoire}
+                             />
                           ) : (
-                            <input className="form-control" style={{ width:180 }}
-                              value={stylesVieValeurs[s.id] || ''}
-                              onChange={e => setStylesVieValeurs(prev => ({ ...prev, [s.id]: e.target.value }))}
+                            <input type={s.type_champ === 'nombre' ? 'number' : 'text'} className="form-control" style={{ width:180 }}
+                              value={valeursDynamiques[s.id] || ''}
+                              onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))}
                               placeholder="Valeur..."
+                              required={s.obligatoire}
                             />
                           )}
-                          <button type="button" onClick={() => deleteStyleVie(s.id)} style={{ background:'none', border:'none', color:'#e63946', cursor:'pointer', fontSize:16 }}>✕</button>
                         </div>
                       ))}
                     </div>
                   </div>
-                )}
-
-                {showAddStyle ? (
-                  <div style={{ padding:16, background:'#f0f9ff', borderRadius:10, border:'1px solid #bae6fd', marginBottom:16 }}>
-                    <div style={{ fontSize:13, fontWeight:700, marginBottom:10 }}>+ Nouveau facteur</div>
-                    <div className="form-row">
-                      <input className="form-control" value={newStyleNom} onChange={e => setNewStyleNom(e.target.value)} placeholder="Ex: Exposition aux pesticides, Stress chronique..." />
-                      <select className="form-control" value={newStyleType} onChange={e => setNewStyleType(e.target.value)}>
-                        <option value="booleen">Oui / Non</option>
-                        <option value="texte">Texte</option>
-                        <option value="nombre">Nombre</option>
-                      </select>
-                    </div>
-                    <div style={{ display:'flex', gap:8, marginTop:10 }}>
-                      <button type="button" className="btn btn-primary btn-sm" onClick={addStyleVie}>Ajouter</button>
-                      <button type="button" className="btn btn-outline btn-sm" onClick={() => setShowAddStyle(false)}>Annuler</button>
-                    </div>
-                  </div>
-                ) : (
-                  <button type="button" className="btn btn-outline" onClick={() => setShowAddStyle(true)}>+ Ajouter facteur dynamique</button>
                 )}
 
                 <div style={{ marginTop:30, marginBottom: 20 }}>
@@ -555,7 +614,139 @@ export default function PatientForm() {
             )}
           </div>
         </div>
+        {/* ========== MODAL DE FUSION DE DOUBLONS ========== */}
+        {duplicateInfo && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(15,23,42,0.75)', backdropFilter: 'blur(6px)', zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
+            <div style={{ background: '#ffffff', width: '100%', maxWidth: 920, maxHeight: '92vh', borderRadius: 20, overflow: 'hidden', boxShadow: '0 30px 60px rgba(0,0,0,0.35)', display: 'flex', flexDirection: 'column' }}>
+
+              {/* En-tête */}
+              <div style={{ padding: '22px 28px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderBottom: '1px solid #e2e8f0', background: 'linear-gradient(135deg, #fef2f2 0%, #fff7ed 100%)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                  <div style={{ width: 46, height: 46, borderRadius: '50%', background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22 }}>⚠️</div>
+                  <div>
+                    <div style={{ fontSize: 19, fontWeight: 800, color: '#0f172a' }}>Doublon détecté — Choisissez les valeurs à conserver</div>
+                    <div style={{ fontSize: 13, color: '#64748b', marginTop: 3 }}>Patient similaire : <strong style={{ color: '#3b82f6' }}>{duplicateInfo.existingRef}</strong> — {duplicateInfo.existingPatient}</div>
+                  </div>
+                </div>
+                <div style={{ textAlign: 'right', flexShrink: 0 }}>
+                  <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1 }}>Similarité</div>
+                  <div style={{ fontSize: 28, fontWeight: 900, color: duplicateInfo.global >= 90 ? '#ef4444' : duplicateInfo.global >= 75 ? '#f97316' : '#eab308' }}>{duplicateInfo.global}%</div>
+                </div>
+              </div>
+
+              {/* En-têtes des colonnes */}
+              <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 0, padding: '10px 28px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1 }}>Champ</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#2563eb', textTransform: 'uppercase', letterSpacing: 1, paddingLeft: 14 }}>◉ Nouvelle valeur (saisie)</div>
+                <div style={{ fontSize: 11, fontWeight: 800, color: '#7c3aed', textTransform: 'uppercase', letterSpacing: 1, paddingLeft: 14 }}>◉ Valeur existante (base)</div>
+              </div>
+
+              {/* Corps : champs sélectionnables */}
+              <div style={{ overflowY: 'auto', flex: 1, padding: '14px 28px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                {MERGE_FIELDS.map(({ key, label, type }) => {
+                  const rawNew = form[key];
+                  const rawOld = (duplicateInfo.existingData || {})[key];
+
+                  const fmt = (v) => {
+                    if (!v) return '';
+                    if (type === 'date') return String(v).substring(0, 10);
+                    if (type === 'sexe') return v === 'M' ? 'Masculin' : (v === 'F' ? 'Féminin' : v);
+                    return v;
+                  };
+
+                  const dNew = fmt(rawNew);
+                  const dOld = fmt(rawOld);
+                  const isIdentical = (dNew.toLowerCase().trim() === dOld.toLowerCase().trim());
+                  const choice = mergeChoices[key] || 'new';
+
+                  if (!dNew && !dOld) return null;
+
+                  const cardBtn = (side, val, color, bg) => (
+                    <div
+                      onClick={() => setMergeChoices(prev => ({ ...prev, [key]: side }))}
+                      style={{
+                        display: 'flex', alignItems: 'center', gap: 12, padding: '11px 16px',
+                        background: choice === side ? bg : 'white',
+                        border: `2px solid ${choice === side ? color : '#e2e8f0'}`,
+                        borderRadius: 10, cursor: 'pointer', transition: 'all 0.15s', minHeight: 48
+                      }}
+                    >
+                      <div style={{
+                        width: 18, height: 18, borderRadius: '50%', flexShrink: 0,
+                        border: `2px solid ${choice === side ? color : '#cbd5e1'}`,
+                        background: choice === side ? color : 'white',
+                        display: 'flex', alignItems: 'center', justifyContent: 'center',
+                        transition: 'all 0.15s'
+                      }}>
+                        {choice === side && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+                      </div>
+                      <span style={{
+                        fontSize: 14, wordBreak: 'break-word',
+                        fontWeight: choice === side ? 700 : 400,
+                        color: choice === side ? color : '#374151'
+                      }}>
+                        {val || <em style={{ opacity: 0.35, fontSize: 12 }}>Vide</em>}
+                      </span>
+                    </div>
+                  );
+
+                  return (
+                    <div key={key} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 1fr', gap: 10, alignItems: 'stretch' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', padding: '0 14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: 10, fontSize: 12, fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: 0.5, minHeight: 48 }}>
+                        {label}
+                      </div>
+                      {isIdentical ? (
+                        <div style={{ gridColumn: 'span 2', display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px', background: '#f0fdf4', border: '1px solid #86efac', borderRadius: 10 }}>
+                          <span>✅</span>
+                          <span style={{ fontSize: 14, fontWeight: 600, color: '#15803d' }}>{dNew || <em style={{ opacity: 0.5 }}>Vide</em>}</span>
+                          <span style={{ fontSize: 11, color: '#4ade80', marginLeft: 6 }}>Identique</span>
+                        </div>
+                      ) : (
+                        <>
+                          {cardBtn('new', dNew, '#2563eb', '#eff6ff')}
+                          {cardBtn('old', dOld, '#7c3aed', '#faf5ff')}
+                        </>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Footer */}
+              <div style={{ padding: '16px 28px', display: 'flex', gap: 12, background: '#f8fafc', borderTop: '1px solid #e2e8f0' }}>
+                <button type="button" onClick={() => setDuplicateInfo(null)} style={{ flex: 1, padding: '14px 20px', borderRadius: 12, border: '1.5px solid #cbd5e1', background: 'white', color: '#475569', fontSize: 14, fontWeight: 700, cursor: 'pointer' }}>
+                  Annuler
+                </button>
+                <button type="button" onClick={async () => {
+                  // Construire le payload final selon les choix (sans jamais modifier form)
+                  const oldData = duplicateInfo.existingData || {};
+                  const mergedPayload = { ...form };
+                  MERGE_FIELDS.forEach(({ key }) => {
+                    mergedPayload[key] = (mergeChoices[key] === 'old') ? oldData[key] : form[key];
+                  });
+                  mergedPayload.forceSave = true;
+
+                  setDuplicateInfo(null);
+                  setLoading(true);
+                  try {
+                    await api.put(`/patients/${oldData.id}`, mergedPayload);
+                    toast.success('Patient fusionné avec succès !', { icon: '🤝' });
+                    navigate(`/patients/${oldData.id}`);
+                  } catch(err2) {
+                    setError('Erreur fusion : ' + (err2.response?.data?.message || err2.message));
+                  } finally { setLoading(false); }
+                }} style={{ flex: 2, padding: '14px 20px', borderRadius: 12, border: 'none', background: 'linear-gradient(135deg, #2563eb 0%, #7c3aed 100%)', color: 'white', fontSize: 14, fontWeight: 700, cursor: 'pointer', boxShadow: '0 4px 15px rgba(37,99,235,0.35)', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <span style={{ fontSize: 18 }}>🤝</span> Fusionner avec les valeurs sélectionnées
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
       </form>
     </Layout>
   );
 }
+
+

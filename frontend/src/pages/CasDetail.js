@@ -6,7 +6,9 @@ import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
-ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend);
+import zoomPlugin from 'chartjs-plugin-zoom';
+import 'hammerjs';
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, zoomPlugin);
 
 const TABS = [
   { id: 'resume', label: 'Résumé' },
@@ -18,6 +20,7 @@ const TABS = [
   { id: 'consultations', label: 'Consultations' },
   { id: 'effets', label: 'Effets secondaires' },
   { id: 'documents', label: 'Documents' },
+  { id: 'ia', label: '✨ Assistant IA' },
 ];
 
 const GRADE_COLORS = { 'Grade 1': '#22c55e', 'Grade 2': '#f59e0b', 'Grade 3': '#e63946', 'Grade 4': '#7c3aed' };
@@ -276,6 +279,12 @@ export default function CasDetail() {
   const [parametres, setParametres] = useState([]);
   const [labRequests, setLabRequests] = useState([]);
   const [labos, setLabos] = useState([]);
+  const [champsDynamiques, setChampsDynamiques] = useState([]);
+  const [valeursDynamiques, setValeursDynamiques] = useState({});
+
+  // AI states
+  const [isAnalyzingPatient, setIsAnalyzingPatient] = useState(false);
+  const [patientAiReport, setPatientAiReport] = useState(null);
 
   // Form states
   const [showForm, setShowForm] = useState(false);
@@ -291,7 +300,7 @@ export default function CasDetail() {
   const loadAll = async () => {
     setLoading(true);
     try {
-      const [casRes, aRes, bRes, iRes, cRes, eRes, chRes, pRes, lrRes, labosRes] = await Promise.all([
+      const [casRes, aRes, bRes, iRes, cRes, eRes, chRes, pRes, lrRes, labosRes, champsRes, valeursRes] = await Promise.all([
         getCase(id),
         api.get(`/anapath/${id}`),
         api.get(`/biologie/${id}`),
@@ -301,7 +310,9 @@ export default function CasDetail() {
         api.get(`/chimio-seances/${id}`),
         api.get('/parametres'),
         getLabRequestsByCase(id).catch(() => ({ data: [] })),
-        getLabos().catch(() => ({ data: [] }))
+        getLabos().catch(() => ({ data: [] })),
+        api.get('/champs-dynamiques?entite=cancer').catch(() => ({ data: [] })),
+        api.get(`/valeurs-dynamiques/${id}`).catch(() => ({ data: [] }))
       ]);
       setCas(casRes.data);
       setAnapath(aRes.data);
@@ -313,6 +324,10 @@ export default function CasDetail() {
       setParametres(pRes.data);
       setLabRequests(lrRes.data || []);
       setLabos(labosRes.data || []);
+      setChampsDynamiques(champsRes.data || []);
+      const vals = {};
+      (valeursRes.data || []).forEach(v => { vals[v.champ_id] = v.valeur; });
+      setValeursDynamiques(vals);
     } catch(e) { toast.error('Erreur chargement'); }
     finally { setLoading(false); }
   };
@@ -371,6 +386,28 @@ export default function CasDetail() {
       setLabReqData({ labo_id: '', analyses_demandees: [] });
       loadAll();
     } catch(e) { toast.error('Erreur lors de la demande: ' + (e.response?.data?.message || e.message)); }
+  };
+
+  const handleAnalyzePatientIA = async () => {
+    setIsAnalyzingPatient(true);
+    setPatientAiReport(null);
+    try {
+      const payload = {
+        cas,
+        anapath,
+        biologie,
+        imagerie,
+        traitements: cas.traitements || [],
+        consultations,
+        effets
+      };
+      const res = await api.post('/stats/analyze-patient', payload);
+      setPatientAiReport(res.data);
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Erreur de connexion à l'IA");
+    } finally {
+      setIsAnalyzingPatient(false);
+    }
   };
 
   if (loading) return <Layout title="Dossier"><div className="loading-center"><div className="spinner"/></div></Layout>;
@@ -496,6 +533,25 @@ export default function CasDetail() {
                 </div>
               ) : null)}
             </div>
+
+            {champsDynamiques.length > 0 && (
+              <div style={{ marginTop: 24 }}>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#0f172a', marginBottom: 12, borderBottom: '1px solid #e2e8f0', paddingBottom: 8 }}>⚡ Paramètres Spécifiques (Dynamiques)</div>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                  {champsDynamiques.map(s => {
+                    const val = valeursDynamiques[s.id];
+                    if (!val) return null;
+                    return (
+                      <div key={s.id} style={{ padding: '12px 16px', background: '#faf5ff', borderRadius: 8, border: '1px solid #e9d5ff' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#9333ea', textTransform: 'uppercase', marginBottom: 4 }}>{s.nom}</div>
+                        <div style={{ fontSize: 14, fontWeight: 600, color: '#4c1d95' }}>{s.type_champ === 'booleen' ? (val === 'true' ? 'Oui' : 'Non') : val}</div>
+                      </div>
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+
             {cas.rapport_anatomopathologique && (
               <div style={{ marginTop: 16, padding: 16, background: '#f0f9ff', borderRadius: 10, border: '1px solid #bae6fd' }}>
                 <div style={{ fontSize: 12, fontWeight: 700, color: '#0369a1', marginBottom: 8 }}>RAPPORT ANATOMOPATHOLOGIQUE</div>
@@ -623,7 +679,17 @@ export default function CasDetail() {
               {biologie.length >= 2 && (
                 <div style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
                   <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📈 Évolution des paramètres</div>
-                  <Line data={bioChartData()} options={{ responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } }, y: { beginAtZero: false } } }} />
+                  <Line data={bioChartData()} options={{ 
+                    responsive: true, 
+                    plugins: { 
+                      legend: { position: 'bottom' },
+                      zoom: {
+                        pan: { enabled: true, mode: 'x' },
+                        zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                      }
+                    }, 
+                    scales: { x: { grid: { display: false } }, y: { beginAtZero: false } } 
+                  }} />
                 </div>
               )}
               {biologie.length === 0 ? <div className="empty-state"><div style={{fontSize:36}}>🧪</div><p>Aucun résultat biologique</p></div> :
@@ -982,7 +1048,89 @@ export default function CasDetail() {
             </div>
           </div>
         )}
+
+        {/* ===== ASSISTANT IA ===== */}
+        {activeTab === 'ia' && (
+          <div className="card-body">
+            {!patientAiReport && !isAnalyzingPatient && (
+              <div style={{ textAlign: 'center', padding: '60px 20px', animation: 'slideIn 0.3s ease' }}>
+                <div style={{ fontSize: 60, marginBottom: 20 }}>🤖</div>
+                <h3 style={{ color: '#0f4c81', marginBottom: 10 }}>Assistant Médical IA</h3>
+                <p style={{ color: '#64748b', maxWidth: 600, margin: '0 auto 30px', lineHeight: 1.6 }}>
+                  L'intelligence artificielle va scanner instantanément l'ensemble du profil de ce patient (Traitements, Biologie, Anapath, Actes chirurgicaux) pour synthétiser son parcours, détecter d'éventuels risques systémiques et formuler des propositions diagnostiques basées sur les derniers guidelines oncologiques.
+                </p>
+                <button 
+                  onClick={handleAnalyzePatientIA} 
+                  className="btn btn-primary" 
+                  style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', border: 'none', padding: '12px 24px', fontSize: 16 }}
+                >
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginRight: 8, verticalAlign: 'middle' }}><path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/></svg>
+                  Générer le rapport IA complet
+                </button>
+              </div>
+            )}
+
+            {isAnalyzingPatient && (
+              <div style={{ textAlign: 'center', padding: '80px 20px' }}>
+                <div className="spinner" style={{ borderColor: '#7c3aed', borderRightColor: 'transparent', margin: '0 auto 20px', width: 40, height: 40, borderWidth: 4 }}></div>
+                <h4 style={{ color: '#4f46e5', margin: 0 }}>Analyse croisée du dossier en cours...</h4>
+                <div style={{ color: '#94a3b8', fontSize: 13, marginTop: 8 }}>Veuillez patienter pendant l'extraction des signaux cliniques et biologiques.</div>
+              </div>
+            )}
+
+            {patientAiReport && (
+              <div style={{ animation: 'slideIn 0.4s ease' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24, paddingBottom: 16, borderBottom: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                    <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', color: '#fff', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 'bold' }}>IA ACTIF</div>
+                    <h2 style={{ margin: 0, color: '#0f172a', fontSize: 20 }}>Synthèse Intelligente de Dossier</h2>
+                  </div>
+                  <button onClick={() => setPatientAiReport(null)} className="btn btn-outline btn-sm">Réanalyser</button>
+                </div>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: 20 }}>
+                  <div style={{ background: '#f8fafc', padding: 24, borderRadius: 12, border: '1px solid #e2e8f0', borderLeft: '4px solid #6366f1' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: '#4338ca', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                      Résumé Clinique
+                    </h4>
+                    <p style={{ margin: 0, color: '#334155', lineHeight: 1.6, fontSize: 14 }}>{patientAiReport.synthese}</p>
+                  </div>
+
+                  {patientAiReport.alertes.length > 0 && (
+                    <div style={{ background: '#fef2f2', padding: 24, borderRadius: 12, border: '1px solid #fecaca', borderLeft: '4px solid #ef4444' }}>
+                      <h4 style={{ margin: '0 0 12px 0', color: '#b91c1c', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                        Points d'Alerte & Risques Médicaux
+                      </h4>
+                      <ul style={{ margin: 0, paddingLeft: 20, color: '#7f1d1d', lineHeight: 1.6, fontSize: 14 }}>
+                        {patientAiReport.alertes.map((al, idx) => <li key={idx} style={{ marginBottom: 6 }}>{al}</li>)}
+                      </ul>
+                    </div>
+                  )}
+
+                  <div style={{ background: '#f0fdf4', padding: 24, borderRadius: 12, border: '1px solid #bbf7d0', borderLeft: '4px solid #10b981' }}>
+                    <h4 style={{ margin: '0 0 12px 0', color: '#047857', display: 'flex', alignItems: 'center', gap: 8 }}>
+                      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
+                      Propositions Thérapeutiques
+                    </h4>
+                    <ul style={{ margin: 0, paddingLeft: 20, color: '#064e3b', lineHeight: 1.6, fontSize: 14 }}>
+                      {patientAiReport.recommandations.map((rec, idx) => <li key={idx} style={{ marginBottom: 6 }}>{rec}</li>)}
+                    </ul>
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+
       </div>
+      <style>{`
+        @keyframes slideIn {
+          from { opacity: 0; transform: translateY(15px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
+      `}</style>
     </Layout>
   );
 }

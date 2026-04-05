@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
@@ -64,6 +64,37 @@ export default function Layout({ children, title }) {
   };
 
   const unreadCount = notifications.filter(n => !n.lu).length;
+
+  // Global AI Chat logics
+  const [isAiChatOpen, setIsAiChatOpen] = useState(false);
+  const [chatInput, setChatInput] = useState('');
+  const [isAiTyping, setIsAiTyping] = useState(false);
+  const [chatMsgs, setChatMsgs] = useState([
+    { sender: 'ia', text: "👋 Bonjour ! Je suis l'Assistant IA du Registre (Normes SEER & ICD-O-3). Posez-moi des questions sur les zones (SIG), les statistiques ou l'abstraction des dossiers." }
+  ]);
+  const chatEndRef = useRef(null);
+
+  useEffect(() => {
+    if (chatEndRef.current) chatEndRef.current.scrollIntoView({ behavior: 'smooth' });
+  }, [chatMsgs, isAiTyping, isAiChatOpen]);
+
+  const handleSendChat = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+    const userMsg = { sender: 'user', text: chatInput };
+    setChatMsgs(prev => [...prev, userMsg]);
+    setChatInput('');
+    setIsAiTyping(true);
+
+    try {
+      const res = await api.post('/chat-ia', { message: userMsg.text });
+      setChatMsgs(prev => [...prev, { sender: 'ia', text: res.data.reply }]);
+    } catch (err) {
+      setChatMsgs(prev => [...prev, { sender: 'ia', text: "❌ Erreur de connexion au Cerveau IA." }]);
+    } finally {
+      setIsAiTyping(false);
+    }
+  };
 
   const handleLogout = () => {
     logout();
@@ -138,10 +169,78 @@ export default function Layout({ children, title }) {
         </div>
       </aside>
 
+      {/* --- GLOBAL AI CHAT DRAWER --- */}
+      {isAiChatOpen && <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', background: 'rgba(0,0,0,0.3)', zIndex: 9998 }} onClick={() => setIsAiChatOpen(false)} />}
+      <div style={{ position: 'fixed', top: 0, right: isAiChatOpen ? 0 : '-400px', width: 380, height: '100vh', background: 'white', boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', zIndex: 9999, display: 'flex', flexDirection: 'column', transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
+        <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', color: 'white', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div style={{ fontSize: 24, animation: isAiTyping ? 'pulse 1s infinite' : 'none' }}>🤖</div>
+            <div>
+              <div style={{ fontWeight: 700, fontSize: 16 }}>Assistant IA Global</div>
+              <div style={{ fontSize: 11, opacity: 0.8 }}>SEER & ICD-O-3 v3.2</div>
+            </div>
+          </div>
+          <button onClick={() => setIsAiChatOpen(false)} style={{ background: 'transparent', border: 'none', color: 'white', cursor: 'pointer', fontSize: 18 }}>✕</button>
+        </div>
+
+        <div style={{ flex: 1, padding: '20px 16px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, background: '#f8fafc' }}>
+          <div style={{ textAlign: 'center', fontSize: 10, color: '#94a3b8', marginBottom: 10 }}>Aujourd'hui, {new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}</div>
+          {chatMsgs.map((m, i) => (
+            <div key={i} style={{ alignSelf: m.sender === 'user' ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
+              {m.sender === 'ia' && <div style={{ fontSize: 11, color: '#64748b', marginBottom: 4, marginLeft: 4 }}>Cancer AI</div>}
+              <div style={{ padding: '10px 14px', borderRadius: 16, background: m.sender === 'user' ? '#0f4c81' : 'white', color: m.sender === 'user' ? 'white' : '#1e293b', border: m.sender === 'ia' ? '1px solid #e2e8f0' : 'none', fontSize: 13, lineHeight: 1.5, borderTopRightRadius: m.sender === 'user' ? 4 : 16, borderTopLeftRadius: m.sender === 'ia' ? 4 : 16 }}>
+                {m.text}
+              </div>
+            </div>
+          ))}
+          {isAiTyping && (
+             <div style={{ alignSelf: 'flex-start', background: 'white', border: '1px solid #e2e8f0', padding: '10px 14px', borderRadius: 16, borderTopLeftRadius: 4 }}>
+               <div className="spinner" style={{ width: 16, height: 16, borderWidth: 2, borderColor: '#7c3aed', borderRightColor: 'transparent' }} />
+             </div>
+          )}
+          <div ref={chatEndRef} />
+        </div>
+
+        <div style={{ padding: 16, background: 'white', borderTop: '1px solid #e2e8f0' }}>
+          <form onSubmit={handleSendChat} style={{ display: 'flex', gap: 10 }}>
+            <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Posez une question (SIG, patients...)" className="form-control" style={{ flex: 1, borderRadius: 20, fontSize: 13 }} />
+            <button type="submit" disabled={isAiTyping || !chatInput.trim()} className="btn btn-primary" style={{ borderRadius: '50%', width: 40, height: 40, padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#7c3aed', border: 'none' }}>
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="22" y1="2" x2="11" y2="13"></line><polygon points="22 2 15 22 11 13 2 9 22 2"></polygon></svg>
+            </button>
+          </form>
+        </div>
+      </div>
+      {/* --- END GLOBAL AI CHAT --- */}
+
       <main className="main-content">
         <div className="topbar">
           <h1 className="topbar-title">{title}</h1>
           <div className="topbar-actions">
+            
+            {/* Global UI Zoom Controls */}
+            <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '20px', overflow: 'hidden' }}>
+              <button 
+                onClick={() => { const el = document.querySelector('.page'); el.style.zoom = Math.max(0.5, (parseFloat(el.style.zoom) || 1) - 0.1); }} 
+                style={{ border: 'none', background: 'transparent', padding: '4px 12px', cursor: 'pointer', fontSize: 16, color: '#64748b' }}
+                title="Dézoomer la page"
+              >
+                -
+              </button>
+              <span style={{ fontSize: 12, fontWeight: 700, color: '#0f4c81', minWidth: 20, textAlign: 'center' }}>A</span>
+              <button 
+                onClick={() => { const el = document.querySelector('.page'); el.style.zoom = Math.min(2, (parseFloat(el.style.zoom) || 1) + 0.1); }} 
+                style={{ border: 'none', background: 'transparent', padding: '4px 12px', cursor: 'pointer', fontSize: 16, color: '#64748b' }}
+                title="Zoomer la page"
+              >
+                +
+              </button>
+            </div>
+
+            <button className="notification-btn" onClick={() => setIsAiChatOpen(true)} style={{ position: 'relative', marginRight: 15 }} title="Discuter avec l'IA du Registre">
+              <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#7c3aed" strokeWidth="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+              <span className="notification-badge" style={{ background: '#7c3aed', right: -5, top: -5 }}>IA</span>
+            </button>
+
             <button className="notification-btn" onClick={() => setShowNotifications(!showNotifications)}>
               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 006 8c0 7-3 9-3 9h18s-3-2-3-9"></path><path d="M13.73 21a2 2 0 01-3.46 0"></path></svg>
               {unreadCount > 0 && <span className="notification-badge">{unreadCount > 9 ? '9+' : unreadCount}</span>}

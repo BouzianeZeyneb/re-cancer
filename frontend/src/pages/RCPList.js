@@ -10,6 +10,8 @@ export default function RCPList() {
   const [rcps, setRcps] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showModal, setShowModal] = useState(false);
+  const [showJoinModal, setShowJoinModal] = useState(false);
+  const [joinCode, setJoinCode] = useState('');
   const [form, setForm] = useState({ titre: '', date_reunion: '', statut: 'Planifiée', notes_globales: '', invitedMedecins: [] });
   const [submitting, setSubmitting] = useState(false);
   const [medecins, setMedecins] = useState([]);
@@ -58,6 +60,22 @@ export default function RCPList() {
     }
   };
 
+  const handleJoinRCP = async (e) => {
+    e.preventDefault();
+    if (!joinCode) return;
+    setSubmitting(true);
+    try {
+      const res = await api.post('/rcp/join', { code: joinCode });
+      toast.success(res.data.message);
+      setShowJoinModal(false);
+      navigate(`/rcp/${res.data.rcp_id}`);
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Code invalide');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
   const getStatusBadge = (status) => {
     switch (status) {
       case 'Planifiée': return <span className="badge badge-blue">Planifiée</span>;
@@ -72,12 +90,18 @@ export default function RCPList() {
       <div className="card">
         <div className="card-header">
           <h2>Liste des RCP</h2>
-          {user?.role === 'medecin' && (
-            <button className="btn btn-primary" onClick={() => setShowModal(true)}>
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
-              Nouvelle RCP
+          <div style={{ display: 'flex', gap: '8px' }}>
+            <button className="btn btn-outline" onClick={() => setShowJoinModal(true)}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><polyline points="10 17 15 12 10 7"/><line x1="15" y1="12" x2="3" y2="12"/></svg>
+              Rejoindre avec un code
             </button>
-          )}
+            {user?.role === 'medecin' && (
+              <button className="btn btn-primary" onClick={() => setShowModal(true)}>
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                Nouvelle RCP
+              </button>
+            )}
+          </div>
         </div>
         <div className="card-body">
           {loading ? (
@@ -220,6 +244,43 @@ export default function RCPList() {
           </div>
         </div>
       )}
+
+      {showJoinModal && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Rejoindre une RCP</h3>
+              <button className="btn-icon" onClick={() => setShowJoinModal(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form id="join-form" onSubmit={handleJoinRCP}>
+                <div className="form-group">
+                  <label className="form-label">Code d'invitation</label>
+                  <input
+                    type="text"
+                    className="form-control"
+                    value={joinCode}
+                    onChange={e => setJoinCode(e.target.value.toUpperCase())}
+                    placeholder="Ex: A1B2C3"
+                    required
+                    style={{ textAlign: 'center', letterSpacing: '2px', fontSize: '18px', fontWeight: 'bold' }}
+                    maxLength="10"
+                  />
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-outline" onClick={() => setShowJoinModal(false)}>Annuler</button>
+              <button type="submit" form="join-form" className="btn btn-primary" disabled={submitting || !joinCode}>
+                {submitting ? 'Validation...' : 'Valider'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </Layout>
   );
 }

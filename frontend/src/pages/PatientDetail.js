@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getPatient } from '../utils/api';
+import api from '../utils/api';
 import { differenceInYears, parseISO, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { QRCodeCanvas } from 'qrcode.react';
@@ -14,8 +15,17 @@ export default function PatientDetail() {
   const [tab, setTab] = useState('info');
   const [showQR, setShowQR] = useState(false);
 
+  const [champsDynamiques, setChampsDynamiques] = useState([]);
+  const [valeursDynamiques, setValeursDynamiques] = useState({});
+
   useEffect(() => {
     getPatient(id).then(r => setPatient(r.data)).catch(() => navigate('/patients')).finally(() => setLoading(false));
+    api.get('/champs-dynamiques').then(r => setChampsDynamiques(r.data)).catch(() => {});
+    api.get(`/valeurs-dynamiques/${id}`).then(r => {
+      const vals = {};
+      r.data.forEach(v => vals[v.champ_id] = v.valeur);
+      setValeursDynamiques(vals);
+    }).catch(() => {});
   }, [id, navigate]);
 
   useEffect(() => {
@@ -24,6 +34,11 @@ export default function PatientDetail() {
       interval = setInterval(() => {
         getPatient(id).then(r => {
           if (r.data) setPatient(r.data);
+        }).catch(() => {});
+        api.get(`/valeurs-dynamiques/${id}`).then(r => {
+          const vals = {};
+          r.data.forEach(v => vals[v.champ_id] = v.valeur);
+          setValeursDynamiques(vals);
         }).catch(() => {});
       }, 3000); // Polling every 3s
     }
@@ -96,6 +111,14 @@ export default function PatientDetail() {
               <div className="info-item"><label>Wilaya</label><span>{patient.wilaya || '-'}</span></div>
               <div className="info-item"><label>Commune</label><span>{patient.commune || '-'}</span></div>
               <div className="info-item"><label>Adresse</label><span>{patient.adresse || '-'}</span></div>
+              {champsDynamiques.filter(c => c.entite === 'patient').map(c => (
+                 <div className="info-item" key={c.id}>
+                    <label>{c.nom} <span style={{ color: '#8b5cf6', fontSize: 10, fontWeight: 'normal' }}>(Dynamique)</span></label>
+                    <span style={{ fontWeight: 600, color: '#4c1d95' }}>
+                       {c.type_champ === 'booleen' ? (valeursDynamiques[c.id] === 'true' ? 'Oui' : valeursDynamiques[c.id] === 'false' ? 'Non' : '-') : (valeursDynamiques[c.id] || '-')}
+                    </span>
+                 </div>
+              ))}
             </div>
             {patient.autres_facteurs_risque && (
               <div style={{ marginTop: 20 }}>
@@ -170,6 +193,25 @@ export default function PatientDetail() {
                     <div style={{ fontSize: 14, fontWeight: 700, color: '#0f4c81', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>👨‍👩‍👧‍👦 Antécédents familiaux</div>
                     <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap' }}>{patient.antecedents_familiaux || 'Aucun antécédent renseigné'}</div>
                   </div>
+
+                  {champsDynamiques.filter(c => c.entite === 'habitudes_vie').length > 0 && (
+                    <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #bae6fd' }}>
+                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0369a1', marginBottom: 12 }}>⚡ Facteurs Dynamiques (Méta-données)</div>
+                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                        {champsDynamiques.filter(c => c.entite === 'habitudes_vie').map(c => {
+                           const val = valeursDynamiques[c.id];
+                           return (
+                             <div key={c.id} style={{ padding: '10px 14px', background: 'white', borderRadius: 8, border: '1px solid #e0f2fe' }}>
+                               <div style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', marginBottom: 4 }}>{c.nom}</div>
+                               <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>
+                                 {c.type_champ === 'booleen' ? (val === 'true' ? 'Oui' : val === 'false' ? 'Non' : '-') : (val || '-')}
+                               </div>
+                             </div>
+                           )
+                        })}
+                      </div>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ background: '#f8fafc', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>

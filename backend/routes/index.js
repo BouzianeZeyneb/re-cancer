@@ -70,9 +70,12 @@ router.get('/rendez-vous', authMiddleware, async (req, res) => {
   } catch (e) { res.status(500).json({ message: e.message }); }
 });
 
-// Statistics routes
-const { getDashboardStats, getAuditLogs } = require('../controllers/statsController');
+// Statistics & AI routes
+const { getDashboardStats, getAuditLogs, analyzeWilayaIA, analyzePatientIA, askGlobalIA } = require('../controllers/statsController');
 router.get('/stats/dashboard', authMiddleware, getDashboardStats);
+router.post('/stats/ia-analysis', authMiddleware, analyzeWilayaIA);
+router.post('/stats/analyze-patient', authMiddleware, analyzePatientIA);
+router.post('/chat-ia', authMiddleware, askGlobalIA);
 router.get('/stats/audit', authMiddleware, requireRole('admin'), getAuditLogs);
 
 // Chat routes
@@ -93,11 +96,14 @@ router.put('/notifications/read-all', authMiddleware, markAllAsRead);
 const { 
   getAllRCP, getRCPById, createRCP, updateRCP, deleteRCP, 
   addCaseToRCP, updateRCPCaseDecision, removeCaseFromRCP,
-  getRCPMessages, saveRCPMessage, updateRCPDecisionFinale
+  getRCPMessages, saveRCPMessage, updateRCPDecisionFinale,
+  joinRCPByCode, inviteDoctorToRCP
 } = require('../controllers/rcpController');
 
 router.get('/rcp', authMiddleware, getAllRCP);
+router.post('/rcp/join', authMiddleware, joinRCPByCode);
 router.get('/rcp/:id', authMiddleware, getRCPById);
+router.post('/rcp/:id/invite', authMiddleware, requireRole('admin', 'medecin'), inviteDoctorToRCP);
 router.post('/rcp', authMiddleware, createRCP);
 router.put('/rcp/:id', authMiddleware, updateRCP);
 router.put('/rcp/:id/decision', authMiddleware, updateRCPDecisionFinale);
@@ -112,26 +118,21 @@ router.post('/rcp/:id/messages', authMiddleware, saveRCPMessage);
 
 // Dynamic descriptors & styles de vie
 const {
-  getDescripteurs, createDescripteur, updateDescripteur, deleteDescripteur,
-  getValeursDescripteurs, saveValeursDescripteurs,
-  getStylesVieTypes, createStyleVieType, deleteStyleVieType,
-  getStylesViePatient, saveStylesViePatient,
+  getChampsDynamiques, createChampDynamique, updateChampDynamique, deleteChampDynamique,
+  getValeursDynamiques, saveValeursDynamiques,
   getParametresGlobaux, createParametreGlobal, updateParametreGlobal, deleteParametreGlobal,
   detectDoublons
 } = require('../controllers/dynamicController');
 
-router.get('/descripteurs', authMiddleware, getDescripteurs);
-router.post('/descripteurs', authMiddleware, requireRole('admin','medecin'), createDescripteur);
-router.put('/descripteurs/:id', authMiddleware, requireRole('admin','medecin'), updateDescripteur);
-router.delete('/descripteurs/:id', authMiddleware, requireRole('admin'), deleteDescripteur);
-router.get('/descripteurs/valeurs/:caseId', authMiddleware, getValeursDescripteurs);
-router.post('/descripteurs/valeurs', authMiddleware, saveValeursDescripteurs);
+// Unified Dynamic Fields Endpoints
+router.get('/champs-dynamiques', authMiddleware, getChampsDynamiques);
+router.post('/champs-dynamiques', authMiddleware, requireRole('admin','medecin'), createChampDynamique);
+router.put('/champs-dynamiques/:id', authMiddleware, requireRole('admin','medecin'), updateChampDynamique);
+router.delete('/champs-dynamiques/:id', authMiddleware, requireRole('admin'), deleteChampDynamique);
 
-router.get('/styles-vie/types', authMiddleware, getStylesVieTypes);
-router.post('/styles-vie/types', authMiddleware, requireRole('admin','medecin'), createStyleVieType);
-router.delete('/styles-vie/types/:id', authMiddleware, requireRole('admin'), deleteStyleVieType);
-router.get('/styles-vie/patient/:patientId', authMiddleware, getStylesViePatient);
-router.post('/styles-vie/patient', authMiddleware, saveStylesViePatient);
+// Unified Dynamic Values Endpoints
+router.get('/valeurs-dynamiques/:recordId', authMiddleware, getValeursDynamiques);
+router.post('/valeurs-dynamiques', authMiddleware, saveValeursDynamiques);
 
 router.get('/parametres', authMiddleware, getParametresGlobaux);
 router.post('/parametres', authMiddleware, requireRole('admin'), createParametreGlobal);

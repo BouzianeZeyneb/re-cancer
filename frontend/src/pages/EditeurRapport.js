@@ -3,9 +3,11 @@ import Layout from '../components/Layout';
 import { getDashboardStats } from '../utils/api';
 import { Bar, Pie, Line, Doughnut } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
+import 'hammerjs';
 import toast from 'react-hot-toast';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, zoomPlugin);
 
 const WIDGET_TYPES = [
   { id: 'kpi_patients', label: '👥 Total Patients', type: 'kpi', color: 'blue' },
@@ -119,7 +121,20 @@ export default function EditeurRapport() {
 
   const getChartData = (id) => {
     if (!stats) return null;
-    const opts = { responsive: true, plugins: { legend: { position: 'bottom', labels: { font: { family: 'Sora', size: 11 } } } } };
+    const opts = { 
+      responsive: true, 
+      plugins: { 
+        legend: { position: 'bottom', labels: { font: { family: 'Sora', size: 11 } } },
+        zoom: {
+          pan: { enabled: true, mode: 'x' },
+          zoom: {
+            wheel: { enabled: true },
+            pinch: { enabled: true },
+            mode: 'x',
+          }
+        }
+      } 
+    };
     const barOpts = { ...opts, scales: { x: { grid: { display: false } }, y: { beginAtZero: true, grid: { color: '#f1f5f9' } } } };
 
     switch (id) {

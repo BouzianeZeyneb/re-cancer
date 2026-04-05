@@ -5,10 +5,12 @@ import {
   Chart as ChartJS, CategoryScale, LinearScale, BarElement, PointElement,
   LineElement, ArcElement, Title, Tooltip, Legend
 } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
+import 'hammerjs';
 import Layout from '../components/Layout';
 import { getDashboardStats } from '../utils/api';
 
-ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend);
+ChartJS.register(CategoryScale, LinearScale, BarElement, PointElement, LineElement, ArcElement, Title, Tooltip, Legend, zoomPlugin);
 
 export default function Dashboard() {
   const [stats, setStats] = useState(null);
@@ -24,7 +26,18 @@ export default function Dashboard() {
 
   const chartOptions = {
     responsive: true,
-    plugins: { legend: { position: 'bottom', labels: { font: { family: 'Sora', size: 12 } } } },
+    maintainAspectRatio: false,
+    plugins: { 
+      legend: { position: 'bottom', labels: { font: { family: 'Sora', size: 12 } } },
+      zoom: {
+        pan: { enabled: true, mode: 'x' },
+        zoom: {
+          wheel: { enabled: true },
+          pinch: { enabled: true },
+          mode: 'x',
+        }
+      }
+    },
     scales: { x: { grid: { display: false } }, y: { grid: { color: '#f1f5f9' } } }
   };
 
@@ -120,7 +133,7 @@ export default function Dashboard() {
                 data: stats.parType.map(d => d.count),
                 backgroundColor: ['#0f4c81', '#e63946'],
               }]
-            }} options={{ plugins: { legend: { position: 'bottom' } } }} />
+            }} options={{ plugins: { legend: { position: 'bottom' }, zoom: chartOptions.plugins.zoom } }} />
           </div>
         )}
 
@@ -133,7 +146,7 @@ export default function Dashboard() {
                 data: stats.parSexe.map(d => d.count),
                 backgroundColor: ['#1a6bb5', '#e63946'],
               }]
-            }} options={{ plugins: { legend: { position: 'bottom' } } }} />
+            }} options={{ plugins: { legend: { position: 'bottom' }, zoom: chartOptions.plugins.zoom } }} />
           </div>
         )}
 
@@ -191,7 +204,7 @@ export default function Dashboard() {
                 data: stats.parEtat.map(d => d.count),
                 backgroundColor: ['#6366f1', '#f59e0b'],
               }]
-            }} options={{ plugins: { legend: { position: 'bottom' } } }} />
+            }} options={{ plugins: { legend: { position: 'bottom' }, zoom: chartOptions.plugins.zoom } }} />
           </div>
         )}
       </div>

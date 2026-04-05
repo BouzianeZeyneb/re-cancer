@@ -24,6 +24,11 @@ export default function RCPDetail() {
   const [currentDossier, setCurrentDossier] = useState(null);
   const [decisionText, setDecisionText] = useState('');
 
+  // Show modal for Inviting participant
+  const [showInviteModal, setShowInviteModal] = useState(false);
+  const [medecins, setMedecins] = useState([]);
+  const [selectedMedecin, setSelectedMedecin] = useState('');
+
   // Show modal for RCP Final Decision
   const [showFinalDecisionModal, setShowFinalDecisionModal] = useState(false);
 
@@ -97,6 +102,39 @@ export default function RCPDetail() {
       setAvailableCases(res.data.filter(c => !existingIds.includes(c.id)));
     } catch (err) {
       toast.error('Erreur chargement des cas');
+    }
+  };
+
+  const extractMedecinsList = async () => {
+    try {
+      const res = await api.get('/users/role/medecins'); // Requires proper backend endpoint for medecins list
+      // Filter out those already participants
+      const existingIds = rcp.participants?.map(p => p.user_id) || [];
+      setMedecins(res.data.filter(m => !existingIds.includes(m.id)));
+    } catch (err) {
+      toast.error('Erreur chargement des médecins');
+    }
+  };
+
+  const handleOpenInviteModal = () => {
+    extractMedecinsList();
+    setShowInviteModal(true);
+  };
+
+  const handleInviteDoctor = async (e) => {
+    e.preventDefault();
+    if (!selectedMedecin) return;
+    setSubmitting(true);
+    try {
+      await api.post(`/rcp/${id}/invite`, { medecinId: selectedMedecin });
+      toast.success('Médecin invité avec succès');
+      setShowInviteModal(false);
+      setSelectedMedecin('');
+      fetchRCP(); // refresh participants
+    } catch (err) {
+      toast.error(err.response?.data?.message || "Erreur d'invitation");
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -228,6 +266,17 @@ export default function RCPDetail() {
               <label>Notes globales</label>
               <span style={{ fontWeight: 400, color: '#475569' }}>{rcp.notes_globales || 'Aucune note'}</span>
             </div>
+            
+            {rcp.invite_code && isParticipant && (
+              <div className="info-item" style={{ gridColumn: '1 / -1', background: '#eef2ff', padding: 12, borderRadius: 8, border: '1px dashed #6366f1', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <div>
+                  <label style={{ color: '#4338ca' }}>Code d'invitation RCP</label>
+                  <span style={{ fontWeight: 700, fontSize: '18px', color: '#3730a3', letterSpacing: '2px' }}>{rcp.invite_code}</span>
+                </div>
+                <div style={{ fontSize: '12px', color: '#4f46e5' }}>Partagez ce code pour inviter un confrère</div>
+              </div>
+            )}
+
             {rcp.decision_finale && (
               <div className="info-item" style={{ gridColumn: '1 / -1', background: '#ecfdf5', padding: 16, borderRadius: 8, border: '1px solid #a7f3d0' }}>
                 <label style={{ color: '#065f46' }}>Décision Finale</label>
@@ -235,8 +284,15 @@ export default function RCPDetail() {
               </div>
             )}
             <div className="info-item" style={{ gridColumn: '1 / -1' }}>
-              <label>Participants</label>
-              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 4 }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                <label>Participants</label>
+                {rcp.statut !== 'Terminée' && isParticipant && (
+                  <button className="btn btn-outline btn-sm" onClick={handleOpenInviteModal}>
+                     Inviter
+                  </button>
+                )}
+              </div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginTop: 8 }}>
                 {rcp.participants?.map(p => (
                   <span key={p.id} className="badge badge-gray">{p.nom} {p.prenom}</span>
                 ))}
@@ -450,6 +506,45 @@ export default function RCPDetail() {
               <button type="button" className="btn btn-outline" onClick={() => setShowFinalDecisionModal(false)}>Annuler</button>
               <button type="submit" form="final-decision-form" className="btn btn-success" disabled={submitting}>
                 {submitting ? 'Clôture...' : 'Clôturer la réunion'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showInviteModal && (
+        <div className="modal-overlay">
+          <div className="modal" style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h3>Inviter un médecin</h3>
+              <button className="btn-icon" onClick={() => setShowInviteModal(false)}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+              </button>
+            </div>
+            <div className="modal-body">
+              <form id="invite-form" onSubmit={handleInviteDoctor}>
+                <div className="form-group">
+                  <label className="form-label">Sélectionner un collaborateur</label>
+                  <select
+                    className="form-control"
+                    value={selectedMedecin}
+                    onChange={e => setSelectedMedecin(e.target.value)}
+                    required
+                  >
+                    <option value="">Sélectionnez un médecin...</option>
+                    {medecins.map(m => (
+                      <option key={m.id} value={m.id}>
+                        {m.nom} {m.prenom}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </form>
+            </div>
+            <div className="modal-footer">
+              <button type="button" className="btn btn-outline" onClick={() => setShowInviteModal(false)}>Annuler</button>
+              <button type="submit" form="invite-form" className="btn btn-primary" disabled={submitting || !selectedMedecin}>
+                {submitting ? 'Invitation...' : 'Inviter'}
               </button>
             </div>
           </div>

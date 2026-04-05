@@ -2,6 +2,10 @@ const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
 const { createNotification } = require('./notificationsController');
 
+const generateInviteCode = () => {
+  return Math.random().toString(36).substring(2, 8).toUpperCase();
+};
+
 const getAllRCP = async (req, res) => {
   try {
     const [rcps] = await pool.execute(`
@@ -55,11 +59,12 @@ const getRCPById = async (req, res) => {
 const createRCP = async (req, res) => {
   try {
     const id = uuidv4();
+    const invite_code = generateInviteCode();
     const { titre, date_reunion, statut, notes_globales, invitedMedecins } = req.body;
     
     await pool.execute(
-      'INSERT INTO reunions_rcp (id, titre, date_reunion, statut, notes_globales, created_by) VALUES (?, ?, ?, ?, ?, ?)',
-      [id, titre, date_reunion, statut || 'Planifiée', notes_globales || null, req.user.id]
+      'INSERT INTO reunions_rcp (id, titre, date_reunion, statut, notes_globales, invite_code, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)',
+      [id, titre, date_reunion, statut || 'Planifiée', notes_globales || null, invite_code, req.user.id]
     );
 
     // Get io from app for real-time notifications
@@ -224,6 +229,57 @@ const saveRCPMessage = async (req, res) => {
   }
 };
 
+const joinRCPByCode = async (req, res) => {
+  try {
+    const { code } = req.body;
+    if (!code) return res.status(400).json({ message: 'Code requis' });
+
+    const [rcps] = await pool.execute('SELECT id, titre FROM reunions_rcp WHERE invite_code = ?', [code.toUpperCase()]);
+    if (rcps.length === 0) return res.status(404).json({ message: 'Code invalide ou RCP introuvable' });
+
+    const rcp_id = rcps[0].id;
+
+    // Check if already a participant
+    const [existing] = await pool.execute('SELECT id FROM rcp_participants WHERE rcp_id = ? AND user_id = ?', [rcp_id, req.user.id]);
+    if (existing.length > 0) return res.status(400).json({ message: 'Vous êtes déjà participant à cette RCP' });
+
+    const partId = uuidv4();
+    await pool.execute('INSERT INTO rcp_participants (id, rcp_id, user_id) VALUES (?, ?, ?)', [partId, rcp_id, req.user.id]);
+
+    res.json({ message: 'Vous avez rejoint la RCP avec succès', rcp_id });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const inviteDoctorToRCP = async (req, res) => {
+  try {
+    const { id: rcp_id } = req.params;
+    const { medecinId } = req.body;
+
+    const [rcps] = await pool.execute('SELECT titre FROM reunions_rcp WHERE id = ?', [rcp_id]);
+    if (rcps.length === 0) return res.status(404).json({ message: 'RCP introuvable' });
+
+    // Check if already a participant
+    const [existing] = await pool.execute('SELECT id FROM rcp_participants WHERE rcp_id = ? AND user_id = ?', [rcp_id, medecinId]);
+    if (existing.length > 0) return res.status(400).json({ message: 'Médecin déjà invité ou participant' });
+
+    const partId = uuidv4();
+    await pool.execute('INSERT INTO rcp_participants (id, rcp_id, user_id) VALUES (?, ?, ?)', [partId, rcp_id, medecinId]);
+
+    // Send notification
+    const io = req.app.get('io');
+    const notifTitle = "Nouvelle invitation à une RCP";
+    const notifMsg = `Vous avez été invité à la RCP : ${rcps[0].titre}`;
+    const notifLien = `/rcp/${rcp_id}`;
+    await createNotification(medecinId, notifTitle, notifMsg, notifLien, io);
+
+    res.status(201).json({ message: 'Médecin invité' });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 module.exports = {
   getAllRCP,
   getRCPById,
@@ -235,5 +291,7 @@ module.exports = {
   removeCaseFromRCP,
   updateRCPDecisionFinale,
   getRCPMessages,
-  saveRCPMessage
+  saveRCPMessage,
+  joinRCPByCode,
+  inviteDoctorToRCP
 };

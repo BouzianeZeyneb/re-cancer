@@ -183,9 +183,10 @@ export default function CasForm() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [patientSearch, setPatientSearch] = useState('');
-  const [customType, setCustomType] = useState('');
   const [showCustomType, setShowCustomType] = useState(false);
   const [parametres, setParametres] = useState([]);
+  const [champsDynamiques, setChampsDynamiques] = useState([]);
+  const [valeursDynamiques, setValeursDynamiques] = useState({});
 
   // Voice Dictation States
   const [isListening, setIsListening] = useState(false);
@@ -198,6 +199,7 @@ export default function CasForm() {
     getPatients({ limit: 200 }).then(r => setPatients(r.data.patients || r.data));
     getUsers().then(r => setMedecins(r.data.filter(u => u.role === 'medecin' || u.role === 'admin')));
     api.get('/parametres').then(r => setParametres(r.data)).catch(()=>{});
+    api.get('/champs-dynamiques?entite=cancer').then(r => setChampsDynamiques(r.data)).catch(()=>{});
   }, []);
 
   const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
@@ -335,8 +337,13 @@ export default function CasForm() {
     try {
       const payload = { ...form, type_cancer: showCustomType ? customType : form.type_cancer };
       const res = await createCase(payload);
+      const caseId = res.data.id || res.data; // Depending on API response shape
+
+      const valeurs = Object.entries(valeursDynamiques).map(([champ_id, valeur]) => ({ champ_id, valeur }));
+      if (valeurs.length) await api.post('/valeurs-dynamiques', { record_id: caseId, valeurs });
+
       toast.success('Cas de cancer enregistré');
-      navigate(`/cas-cancer/${res.data.id}`);
+      navigate(`/cas-cancer/${caseId}`);
     } catch (err) {
       setError(err.response?.data?.message || 'Erreur');
     } finally { setLoading(false); }
@@ -583,6 +590,34 @@ export default function CasForm() {
           </div>
         </div>
       </Section>
+
+      {champsDynamiques.length > 0 && (
+        <Section title="Spécificités (Champs Dynamiques)" icon="⚡">
+          <div className="form-row">
+            {champsDynamiques.map(s => (
+              <div className="form-group" key={s.id}>
+                <label className="form-label">{s.nom} {s.obligatoire && <span style={{color:'red'}}>*</span>}</label>
+                {s.type_champ === 'booleen' ? (
+                  <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
+                    <option value="">Choisir...</option>
+                    <option value="true">Oui</option>
+                    <option value="false">Non</option>
+                  </select>
+                ) : s.type_champ === 'liste' ? (
+                   <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
+                      <option value="">Choisir...</option>
+                      {s.options_liste.split(',').map(opt => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}
+                   </select>
+                ) : s.type_champ === 'date' ? (
+                   <input type="date" className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
+                ) : (
+                  <input type={s.type_champ === 'nombre' ? 'number' : 'text'} className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
+                )}
+              </div>
+            ))}
+          </div>
+        </Section>
+      )}
 
       <Section title="Informations complémentaires" icon="📋">
         <div className="form-row">
