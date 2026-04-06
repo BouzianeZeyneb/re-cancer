@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { getCase, getLabos, getLabRequestsByCase, createLabRequest } from '../utils/api';
+import { getCase } from '../utils/api';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Line } from 'react-chartjs-2';
@@ -277,8 +277,6 @@ export default function CasDetail() {
   const [effets, setEffets] = useState([]);
   const [chimio, setChimio] = useState([]);
   const [parametres, setParametres] = useState([]);
-  const [labRequests, setLabRequests] = useState([]);
-  const [labos, setLabos] = useState([]);
   const [champsDynamiques, setChampsDynamiques] = useState([]);
   const [valeursDynamiques, setValeursDynamiques] = useState({});
 
@@ -289,8 +287,6 @@ export default function CasDetail() {
   // Form states
   const [showForm, setShowForm] = useState(false);
   const [showChimioForm, setShowChimioForm] = useState(false);
-  const [showLabReqForm, setShowLabReqForm] = useState(false);
-  const [labReqData, setLabReqData] = useState({ labo_id: '', analyses_demandees: [] });
   const [formData, setFormData] = useState({});
 
   useEffect(() => {
@@ -309,8 +305,6 @@ export default function CasDetail() {
         api.get(`/effets-secondaires/${id}`),
         api.get(`/chimio-seances/${id}`),
         api.get('/parametres'),
-        getLabRequestsByCase(id).catch(() => ({ data: [] })),
-        getLabos().catch(() => ({ data: [] })),
         api.get('/champs-dynamiques?entite=cancer').catch(() => ({ data: [] })),
         api.get(`/valeurs-dynamiques/${id}`).catch(() => ({ data: [] }))
       ]);
@@ -322,8 +316,6 @@ export default function CasDetail() {
       setEffets(eRes.data);
       setChimio(chRes.data);
       setParametres(pRes.data);
-      setLabRequests(lrRes.data || []);
-      setLabos(labosRes.data || []);
       setChampsDynamiques(champsRes.data || []);
       const vals = {};
       (valeursRes.data || []).forEach(v => { vals[v.champ_id] = v.valeur; });
@@ -368,24 +360,6 @@ export default function CasDetail() {
     await api.put(`/effets-secondaires/${efId}/resoudre`, { date_resolution: new Date().toISOString().slice(0,10) });
     toast.success('Marqué comme résolu');
     loadAll();
-  };
-
-  const submitLabRequest = async () => {
-    try {
-      if (!labReqData.labo_id || labReqData.analyses_demandees.length === 0) return toast.error('Veuillez remplir tous les champs obligatoires.');
-      
-      const payload = {
-        case_id: id,
-        labo_id: labReqData.labo_id,
-        analyses_demandees: labReqData.analyses_demandees.join(', ')
-      };
-
-      await createLabRequest(payload);
-      toast.success('Demande envoyée au laboratoire!');
-      setShowLabReqForm(false);
-      setLabReqData({ labo_id: '', analyses_demandees: [] });
-      loadAll();
-    } catch(e) { toast.error('Erreur lors de la demande: ' + (e.response?.data?.message || e.message)); }
   };
 
   const handleAnalyzePatientIA = async () => {
@@ -575,79 +549,8 @@ export default function CasDetail() {
         {/* ===== BIOLOGIE ===== */}
         {activeTab === 'biologie' && (
           <div>
-            <div className="card-header" style={{ borderBottom: '1px solid #e2e8f0', paddingBottom: 16 }}>
-              <h2>🧪 Demandes d'Analyses au Laboratoire</h2>
-              <button className="btn btn-outline btn-sm" onClick={() => setShowLabReqForm(!showLabReqForm)}>+ Nouvelle Demande</button>
-            </div>
-            {showLabReqForm && (
-              <div style={{ padding: '20px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                <div style={{ fontWeight: 700, marginBottom: 16 }}>Nouvelle Demande d'Analyse</div>
-                <div className="form-group" style={{ maxWidth: 400 }}>
-                  <label className="form-label">Laboratoire destinataire *</label>
-                  <select className="form-control" value={labReqData.labo_id} onChange={e => setLabReqData(p => ({ ...p, labo_id: e.target.value }))}>
-                    <option value="">Sélectionner un labo...</option>
-                    {labos.map(l => <option key={l.id} value={l.id}>{l.nom} {l.prenom}</option>)}
-                  </select>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Analyses demandées *</label>
-                  <div style={{ marginTop: 12, display: 'flex', flexDirection: 'column', gap: 16 }}>
-                    {Object.entries(ANALYSES_CATEGORIEES).map(([categorie, analyses]) => (
-                      <div key={categorie} style={{ padding: 12, border: '1px solid #e2e8f0', borderRadius: 8, background: 'white' }}>
-                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f4c81', marginBottom: 10, textTransform: 'uppercase' }}>{categorie}</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: '8px 16px' }}>
-                          {analyses.map(analyse => (
-                            <label key={analyse} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer', color: '#334155' }}>
-                              <input 
-                                type="checkbox" 
-                                checked={labReqData.analyses_demandees.includes(analyse)}
-                                onChange={(e) => {
-                                  if (e.target.checked) setLabReqData(p => ({ ...p, analyses_demandees: [...p.analyses_demandees, analyse] }));
-                                  else setLabReqData(p => ({ ...p, analyses_demandees: p.analyses_demandees.filter(a => a !== analyse) }));
-                                }}
-                                style={{ accentColor: '#0f4c81', width: 16, height: 16, margin: 0 }}
-                              />
-                              {analyse}
-                            </label>
-                          ))}
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-                <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
-                  <button className="btn btn-primary" onClick={submitLabRequest}>Envoyer la demande</button>
-                  <button className="btn btn-outline" onClick={() => setShowLabReqForm(false)}>Annuler</button>
-                </div>
-              </div>
-            )}
-            
-            <div style={{ padding: 24 }}>
-              {labRequests.length === 0 ? <div style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic' }}>Aucune demande adressée.</div> : (
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-                  {labRequests.map(r => (
-                    <div key={r.id} style={{ border: `1px solid ${r.statut === 'Terminée' ? '#dcfce7' : '#fde047'}`, borderRadius: 10, padding: 16, background: r.statut === 'Terminée' ? '#f0fdf4' : '#fefce8' }}>
-                      <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-                        <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
-                          <span style={{ fontWeight: 700, color: '#334155' }}>Analyses ({r.created_at?.slice(0,10)})</span>
-                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, background: r.statut === 'Terminée' ? '#bbf7d0' : '#fef08a', color: r.statut === 'Terminée' ? '#166534' : '#854d0e', fontWeight: 700 }}>{r.statut}</span>
-                          <span style={{ fontSize: 12, color: '#64748b' }}>À: {r.labo_nom} {r.labo_prenom}</span>
-                        </div>
-                        {r.statut === 'Terminée' && r.fichier_pdf && (
-                          <a href={`${process.env.REACT_APP_API_URL ? process.env.REACT_APP_API_URL.replace('/api','') : 'http://localhost:5000'}${r.fichier_pdf}`} target="_blank" rel="noreferrer" className="btn btn-primary btn-sm" style={{ textDecoration: 'none' }}>📄 Voir Résultat PDF</a>
-                        )}
-                      </div>
-                      <div style={{ fontSize: 13, color: '#475569' }}>{r.analyses_demandees}</div>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            <hr style={{ margin: 0, borderColor: '#e2e8f0' }} />
-
             <div className="card-header">
-              <h2>🧪 Résultats Biologiques Directs ({biologie.length})</h2>
+              <h2>🧪 Analyses Biologiques ({biologie.length})</h2>
               <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Ajouter</button>
             </div>
             {showForm && (

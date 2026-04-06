@@ -487,6 +487,29 @@ export default function PatientForm() {
 
             {activeTab === 'habitudes' && (
               <div>
+                {/* Bloc Génération QR Code */}
+                <div style={{ padding: 24, background: '#f8fafc', borderRadius: 12, border: '2px dashed #cbd5e1', marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Questionnaire Patient Mobile</div>
+                  {isEdit ? (
+                    <>
+                      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Le patient peut scanner ce QR Code pour remplir lui-même ce formulaire depuis la salle d'attente.</p>
+                      <div style={{ background: 'white', padding: 16, display: 'flex', justifyContent: 'center', borderRadius: 16, border: '1px solid #cbd5e1' }}>
+                         <div style={{ margin: "0 auto", alignSelf: "center" }}>
+                           <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/patient-forms/' + id)}`} alt="QR Code" style={{ width: 150, height: 150 }} />
+                         </div>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      <p style={{ fontSize: 14, color: '#334155', marginBottom: 12, maxWidth: 500 }}>
+                        Le QR Code sécurisé de ce patient sera généré <strong>automatiquement</strong> dès que vous aurez cliqué sur "Créer". 
+                      </p>
+                      <div style={{ padding: '10px 16px', background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
+                        💡 Sauvegardez d'abord ses informations (Nom, Prénom, etc.) pour débloquer le scan !
+                      </div>
+                    </>
+                  )}
+                </div>
                 <div style={{ marginBottom:20 }}>
                   <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:10 }}>Habitudes de base</div>
                   <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>

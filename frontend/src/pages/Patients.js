@@ -52,6 +52,12 @@ export default function Patients() {
   return (
     <Layout title="Gestion des Patients">
       <div className="filter-bar">
+        <Link to="/patients/nouveau" className="btn btn-primary" style={{ flexShrink: 0 }}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          Nouveau Patient
+        </Link>
         <div className="search-bar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
@@ -68,12 +74,6 @@ export default function Patients() {
           <option value="F">Féminin</option>
         </select>
         <div style={{ flex: 1 }} />
-        <Link to="/patients/nouveau" className="btn btn-primary">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
-          Nouveau Patient
-        </Link>
       </div>
 
       <div className="card">
@@ -93,6 +93,7 @@ export default function Patients() {
             <table>
               <thead>
                 <tr>
+                  <th>ID</th>
                   <th>Patient</th>
                   <th>Sexe</th>
                   <th>Âge</th>
@@ -106,6 +107,7 @@ export default function Patients() {
               <tbody>
                 {patients.map(p => (
                   <tr key={p.id}>
+                    <td style={{ fontFamily: 'JetBrains Mono', fontSize: 13, color: '#475569', fontWeight: 700 }}>#{String(p.id).padStart(4, '0')}</td>
                     <td>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{

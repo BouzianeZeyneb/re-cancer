@@ -287,7 +287,8 @@ const initMedicalTables = async () => {
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS biologie (
         id VARCHAR(36) PRIMARY KEY,
-        case_id VARCHAR(36) NOT NULL,
+        case_id VARCHAR(36),
+        patient_id VARCHAR(36),
         date_examen DATE NOT NULL,
         type_examen VARCHAR(100) NOT NULL,
         parametre VARCHAR(100) NOT NULL,
@@ -298,9 +299,14 @@ const initMedicalTables = async () => {
         notes TEXT,
         created_by VARCHAR(36),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        FOREIGN KEY (case_id) REFERENCES cancer_cases(id) ON DELETE CASCADE
+        FOREIGN KEY (case_id) REFERENCES cancer_cases(id) ON DELETE CASCADE,
+        FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
       )
     `);
+
+    try { await conn.execute(`ALTER TABLE biologie ADD COLUMN patient_id VARCHAR(36)`); } catch(e) {}
+    try { await conn.execute(`ALTER TABLE biologie ADD CONSTRAINT fk_bio_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE`); } catch(e) {}
+    try { await conn.execute(`ALTER TABLE biologie MODIFY COLUMN case_id VARCHAR(36) NULL`); } catch(e) {}
 
     // Imagerie table
     await conn.execute(`

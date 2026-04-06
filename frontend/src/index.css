@@ -462,6 +462,84 @@ tbody tr:last-child td { border-bottom: none; }
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
 
+/* ======== SELECT MODERNIZATION ======== */
+select.form-control, .filter-select {
+  appearance: none;
+  -webkit-appearance: none;
+  -moz-appearance: none;
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='%23475569' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='6 9 12 15 18 9'%3E%3C/polyline%3E%3C/svg%3E");
+  background-repeat: no-repeat;
+  background-position: right 14px center;
+  background-size: 16px;
+  padding-right: 40px; 
+  cursor: pointer;
+}
+
+.filter-select {
+  padding: 10px 40px 10px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 13.5px;
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+  background-color: var(--surface-solid);
+  outline: none;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: var(--shadow-sm);
+  min-width: 160px;
+}
+
+.filter-select:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(15, 76, 129, 0.15); /* Medical Blue focus */
+}
+
+.filter-select:hover {
+  border-color: #CBD5E1;
+}
+
+/* ======== FILTER & SEARCH BARS ======== */
+.filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 24px;
+}
+
+.search-bar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  background: var(--surface-solid);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0 16px;
+  flex: 1;
+  max-width: 400px;
+  transition: all 0.3s;
+  box-shadow: var(--shadow-sm);
+}
+
+.search-bar:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(15, 76, 129, 0.15);
+}
+
+.search-bar input {
+  border: none;
+  outline: none;
+  padding: 12px 0;
+  width: 100%;
+  font-family: 'Inter', sans-serif;
+  font-size: 14px;
+  background: transparent;
+  color: var(--text);
+}
+
+.search-bar svg {
+  color: var(--text-muted);
+}
+
 /* ======== BADGES ======== */
 .badge {
   display: inline-flex;

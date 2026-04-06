@@ -144,7 +144,7 @@ router.get('/doublons', authMiddleware, detectDoublons);
 // Medical modules
 const {
   getAnapath, createAnapath, updateAnapath, deleteAnapath,
-  getBiologie, createBiologie, deleteBiologie,
+  getBiologie, getBiologieByPatient, createBiologie, deleteBiologie,
   getImagerie, createImagerie, deleteImagerie,
   getConsultations, createConsultation, deleteConsultation,
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
@@ -156,6 +156,7 @@ router.post('/anapath', authMiddleware, createAnapath);
 router.put('/anapath/:id', authMiddleware, updateAnapath);
 router.delete('/anapath/:id', authMiddleware, deleteAnapath);
 
+router.get('/biologie/patient/:patientId', authMiddleware, getBiologieByPatient);
 router.get('/biologie/:caseId', authMiddleware, getBiologie);
 router.post('/biologie', authMiddleware, createBiologie);
 router.delete('/biologie/:id', authMiddleware, deleteBiologie);

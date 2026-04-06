@@ -130,10 +130,6 @@ export default function Layout({ children, title }) {
             <NavItem to="/cas-cancer" label="Anapath" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><path d="M2 12h20"/></svg>} />
           )}
 
-          {(isAdmin || user?.role === 'laboratoire') && (
-            <NavItem to="/demandes-labo" label={user?.role === 'laboratoire' ? "Mes Demandes" : "Demandes Labo"} icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M10 2v7.31"/><path d="M14 9.3V1.99"/><path d="M8.5 2h7"/><path d="M14 9.3a6.5 6.5 0 11-4 0"/><circle cx="12" cy="15.5" r="2.5"/><path d="M20 19v2h2"/><path d="M4 19v2H2"/></svg>} />
-          )}
-
           {(isAdmin || user?.role === 'medecin') && (
             <>
               <NavItem to="/cas-cancer" label="Imagerie" icon={<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>} />

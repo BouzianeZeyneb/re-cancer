@@ -24,7 +24,6 @@ import { AuditLogs } from './pages/AuditLogs';
 import AdminSettings from './pages/AdminSettings';
 import RCPList from './pages/RCPList';
 import RCPDetail from './pages/RCPDetail';
-import DemandesLabo from './pages/DemandesLabo';
 import PatientFormulairePublic from './pages/PatientFormulairePublic';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
@@ -77,7 +76,6 @@ function AppRoutes() {
       <Route path="/cas-cancer" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><CasCancer /></ProtectedRoute>} />
       <Route path="/cas-cancer/nouveau" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><CasForm /></ProtectedRoute>} />
       <Route path="/cas-cancer/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><CasDetail /></ProtectedRoute>} />
-      <Route path="/demandes-labo" element={<ProtectedRoute allowedRoles={['admin', 'laboratoire']}><DemandesLabo /></ProtectedRoute>} />
       <Route path="/rcp" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><RCPList /></ProtectedRoute>} />
       <Route path="/rcp/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><RCPDetail /></ProtectedRoute>} />
       

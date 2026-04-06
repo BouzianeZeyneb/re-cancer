@@ -6,6 +6,15 @@ import api from '../utils/api';
 import { differenceInYears, parseISO, format } from 'date-fns';
 import { fr } from 'date-fns/locale';
 import { QRCodeCanvas } from 'qrcode.react';
+import toast from 'react-hot-toast';
+import { Line } from 'react-chartjs-2';
+import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import zoomPlugin from 'chartjs-plugin-zoom';
+import 'hammerjs';
+
+ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, zoomPlugin);
+
+const STATUS_COLORS = { 'Normal': '#22c55e', 'Bas': '#3b82f6', 'Haut': '#f59e0b', 'Critique': '#e63946' };
 
 export default function PatientDetail() {
   const { id } = useParams();
@@ -18,6 +27,11 @@ export default function PatientDetail() {
   const [champsDynamiques, setChampsDynamiques] = useState([]);
   const [valeursDynamiques, setValeursDynamiques] = useState({});
 
+  const [biologie, setBiologie] = useState([]);
+  const [showForm, setShowForm] = useState(false);
+  const [formData, setFormData] = useState({});
+  const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
+
   useEffect(() => {
     getPatient(id).then(r => setPatient(r.data)).catch(() => navigate('/patients')).finally(() => setLoading(false));
     api.get('/champs-dynamiques').then(r => setChampsDynamiques(r.data)).catch(() => {});
@@ -26,6 +40,7 @@ export default function PatientDetail() {
       r.data.forEach(v => vals[v.champ_id] = v.valeur);
       setValeursDynamiques(vals);
     }).catch(() => {});
+    api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
   }, [id, navigate]);
 
   useEffect(() => {
@@ -47,6 +62,37 @@ export default function PatientDetail() {
 
   if (loading) return <Layout title="Fiche Patient"><div className="loading-center"><div className="spinner" /></div></Layout>;
   if (!patient) return null;
+
+  const handleAddBiologie = async () => {
+    try {
+      const data = { ...formData, patient_id: id };
+      await api.post('/biologie', data);
+      toast.success('Analyse ajoutée!');
+      setShowForm(false);
+      setFormData({});
+      api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
+    } catch(e) { toast.error('Erreur: ' + (e.response?.data?.message || e.message)); }
+  };
+
+  const handleDeleteBiologie = async (bId) => {
+    if(!window.confirm('Supprimer cette analyse ?')) return;
+    await api.delete(`/biologie/${bId}`);
+    toast.success('Supprimé');
+    api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
+  };
+
+  const bioChartData = () => {
+    const params = [...new Set(biologie.map(b => b.parametre))].slice(0, 3);
+    const colors = ['#0f4c81', '#e63946', '#22c55e'];
+    return {
+      labels: [...new Set(biologie.map(b => b.date_examen?.slice(0,10)))].sort(),
+      datasets: params.map((p, i) => ({
+        label: p,
+        data: biologie.filter(b => b.parametre === p).map(b => parseFloat(b.valeur)).filter(v => !isNaN(v)),
+        borderColor: colors[i], backgroundColor: colors[i] + '22', tension: 0.4, fill: false
+      }))
+    };
+  };
 
   const age = patient.date_naissance ? differenceInYears(new Date(), parseISO(patient.date_naissance)) : '-';
   const initials = `${patient.prenom[0]}${patient.nom[0]}`.toUpperCase();
@@ -96,6 +142,7 @@ export default function PatientDetail() {
       <div className="tabs">
         <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Informations</button>
         <button className={`tab ${tab === 'styles_vie' ? 'active' : ''}`} onClick={() => setTab('styles_vie')}>Styles de Vie</button>
+        <button className={`tab ${tab === 'analyses' ? 'active' : ''}`} onClick={() => setTab('analyses')}>Analyses Biologie ({biologie.length})</button>
         <button className={`tab ${tab === 'cancers' ? 'active' : ''}`} onClick={() => setTab('cancers')}>Cancers ({patient.cancer_cases?.length || 0})</button>
         <button className={`tab ${tab === 'rdv' ? 'active' : ''}`} onClick={() => setTab('rdv')}>Rendez-vous ({patient.rendez_vous?.length || 0})</button>
       </div>
@@ -201,30 +248,109 @@ export default function PatientDetail() {
                         {champsDynamiques.filter(c => c.entite === 'habitudes_vie').map(c => {
                            const val = valeursDynamiques[c.id];
                            return (
-                             <div key={c.id} style={{ padding: '10px 14px', background: 'white', borderRadius: 8, border: '1px solid #e0f2fe' }}>
-                               <div style={{ fontSize: 11, fontWeight: 700, color: '#0284c7', textTransform: 'uppercase', marginBottom: 4 }}>{c.nom}</div>
-                               <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a' }}>
-                                 {c.type_champ === 'booleen' ? (val === 'true' ? 'Oui' : val === 'false' ? 'Non' : '-') : (val || '-')}
-                               </div>
+                             <div key={c.id}>
+                                <div style={{ fontSize: 12, color: '#64748b' }}>{c.nom}</div>
+                                <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
+                                   {c.type_champ === 'booleen' ? (val === 'true' ? 'Oui' : val === 'false' ? 'Non' : '-') : (val || '-')}
+                                </div>
                              </div>
-                           )
+                           );
                         })}
                       </div>
                     </div>
                   )}
                 </div>
-
-                <div style={{ background: '#f8fafc', padding: 24, borderRadius: 16, border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Mettre à jour</div>
-                  <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Le patient peut scanner ce code pour mettre à jour ses informations.</p>
-                  <div style={{ background: 'white', padding: 16, display: 'flex', justifyContent: 'center', borderRadius: 16, border: '2px solid #cbd5e1', marginBottom: 8, width: 192, height: 192 }}>
-                    <div style={{ margin: "0 auto", alignSelf: 'center' }}>
-                      <QRCodeCanvas size={160} value={`${window.location.origin}/patient-forms/${patient.id}`} level="H" />
+                {/* 2nd Grid Column: QR Code always visible to update data */}
+                <div style={{ background: '#f8fafc', padding: 24, borderRadius: 16, border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: 'fit-content' }}>
+                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Actualiser le Questionnaire</div>
+                  <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Le patient peut scanner ce QR Code à tout moment pour mettre à jour ses données sensibles (Alcool, Tabac, etc.).</p>
+                  <div style={{ background: 'white', padding: 16, display: 'flex', justifyContent: 'center', borderRadius: 16, border: '1px solid #cbd5e1', cursor: 'pointer' }} title="Cliquez pour ouvrir le formulaire dans un nouvel onglet">
+                    <div style={{ margin: "0 auto", alignSelf: "center" }}>
+                      <a href={`/patient-forms/${patient.id}`} target="_blank" rel="noopener noreferrer">
+                        <QRCodeCanvas size={150} value={`${window.location.origin}/patient-forms/${patient.id}`} level="H" />
+                      </a>
                     </div>
                   </div>
                 </div>
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {tab === 'analyses' && (
+        <div className="card">
+          <div className="card-header">
+            <h2>🧪 Résultats d'Analyses ({biologie.length})</h2>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Ajouter Analyse</button>
+          </div>
+          {showForm && (
+            <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <div className="form-row">
+                <div className="form-group"><label className="form-label">Date</label><input type="date" className="form-control" onChange={e => set('date_examen', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Type examen</label>
+                  <select className="form-control" onChange={e => set('type_examen', e.target.value)}>
+                    {['NFS','Biochimie','Marqueurs tumoraux','Coagulation','Ionogramme','Autre'].map(o => <option key={o}>{o}</option>)}
+                  </select>
+                </div>
+                <div className="form-group"><label className="form-label">Paramètre</label><input className="form-control" placeholder="Ex: Hémoglobine, CA15-3" onChange={e => set('parametre', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Valeur</label><input className="form-control" placeholder="Ex: 12.5" onChange={e => set('valeur', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Unité</label><input className="form-control" placeholder="g/dL, U/mL..." onChange={e => set('unite', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Valeur normale</label><input className="form-control" placeholder="12-16 g/dL" onChange={e => set('valeur_normale', e.target.value)} /></div>
+                <div className="form-group"><label className="form-label">Interprétation</label>
+                  <select className="form-control" onChange={e => set('interpretation', e.target.value)}>
+                    {['Normal','Bas','Haut','Critique'].map(o => <option key={o}>{o}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                <button className="btn btn-primary btn-sm" onClick={handleAddBiologie}>Enregistrer</button>
+                <button className="btn btn-outline btn-sm" onClick={() => setShowForm(false)}>Annuler</button>
+              </div>
+            </div>
+          )}
+          <div className="card-body">
+            {biologie.length >= 2 && (
+              <div style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📈 Évolution des paramètres</div>
+                <Line data={bioChartData()} options={{ 
+                  responsive: true, 
+                  plugins: { 
+                    legend: { position: 'bottom' },
+                    zoom: {
+                      pan: { enabled: true, mode: 'x' },
+                      zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
+                    }
+                  }, 
+                  scales: { x: { grid: { display: false } }, y: { beginAtZero: false } } 
+                }} />
+              </div>
+            )}
+            {biologie.length === 0 ? <div className="empty-state"><div style={{fontSize:36}}>🧪</div><p>Aucune analyse au dossier</p></div> :
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                <thead><tr style={{ background: '#f8fafc' }}>
+                  {['Date','Type','Paramètre','Valeur','Unité','Référence','Interp.',''].map(h => <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>{h}</th>)}
+                </tr></thead>
+                <tbody>
+                  {biologie.map((b, i) => (
+                    <tr key={b.id} style={{ background: i%2===0?'white':'#fafbfc' }}>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{b.date_examen?.slice(0,10)}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{b.type_examen}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontWeight: 600 }}>{b.parametre}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontWeight: 700, fontFamily: 'JetBrains Mono' }}>{b.valeur}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', color: '#64748b' }}>{b.unite}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', color: '#94a3b8', fontSize: 12 }}>{b.valeur_normale}</td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: STATUS_COLORS[b.interpretation]+'22', color: STATUS_COLORS[b.interpretation] }}>{b.interpretation}</span>
+                      </td>
+                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
+                        <button onClick={() => handleDeleteBiologie(b.id)} style={{ background: 'none', border: 'none', color: '#e63946', cursor: 'pointer' }}>🗑</button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            }
           </div>
         </div>
       )}

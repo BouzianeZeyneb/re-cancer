@@ -44,14 +44,26 @@ const getBiologie = async (req, res) => {
     res.json(rows);
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
+const getBiologieByPatient = async (req, res) => {
+  try {
+    // Combine both patient-level biology and case-level biology (if linked directly to case but belonging to this patient)
+    // Or just patient_id. We'll select where patient_id = ? OR case_id IN (select id from cancer_cases where patient_id=?)
+    const [rows] = await pool.execute(`
+      SELECT b.* FROM biologie b 
+      WHERE b.patient_id = ? OR b.case_id IN (SELECT id FROM cancer_cases WHERE patient_id = ?) 
+      ORDER BY b.date_examen DESC
+    `, [req.params.patientId, req.params.patientId]);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
 const createBiologie = async (req, res) => {
   try {
     const id = uuidv4();
     const n = v => (v === undefined || v === '' ? null : v);
-    const { case_id, date_examen, type_examen, parametre, valeur, unite, valeur_normale, interpretation, notes } = req.body;
+    const { case_id, patient_id, date_examen, type_examen, parametre, valeur, unite, valeur_normale, interpretation, notes } = req.body;
     await pool.execute(
-      `INSERT INTO biologie (id, case_id, date_examen, type_examen, parametre, valeur, unite, valeur_normale, interpretation, notes, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, case_id, date_examen, type_examen, parametre, n(valeur), n(unite), n(valeur_normale), interpretation||'Normal', n(notes), req.user.id]
+      `INSERT INTO biologie (id, case_id, patient_id, date_examen, type_examen, parametre, valeur, unite, valeur_normale, interpretation, notes, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, n(case_id), n(patient_id), date_examen, type_examen, parametre, n(valeur), n(unite), n(valeur_normale), interpretation||'Normal', n(notes), req.user.id]
     );
     res.status(201).json({ id, message: 'Résultat ajouté' });
   } catch(e) { res.status(500).json({ message: e.message }); }
@@ -168,7 +180,7 @@ const createChimioSeance = async (req, res) => {
 
 module.exports = {
   getAnapath, createAnapath, updateAnapath, deleteAnapath,
-  getBiologie, createBiologie, deleteBiologie,
+  getBiologie, getBiologieByPatient, createBiologie, deleteBiologie,
   getImagerie, createImagerie, deleteImagerie,
   getConsultations, createConsultation, deleteConsultation,
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
