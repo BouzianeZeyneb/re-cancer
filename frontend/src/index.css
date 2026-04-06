@@ -1,31 +1,31 @@
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;700&display=swap');
 
 :root {
-  /* Premium Vibrant Palettes */
-  --primary: #4F46E5; /* Indigo 600 */
-  --primary-light: #818CF8;
-  --primary-dark: #312E81;
-  --accent: #F43F5E; /* Rose 500 */
-  --accent-light: #FDA4AF;
+  /* Premium Classic Medical Palettes */
+  --primary: #0F4C81; /* Classic Medical Blue */
+  --primary-light: #2B6CB0;
+  --primary-dark: #2A4365;
+  --accent: #E53E3E; /* Classic Red */
+  --accent-light: #FEB2B2;
   
   /* Status Colors */
-  --success: #10B981;
-  --success-light: #D1FAE5;
-  --warning: #F59E0B;
-  --warning-light: #FEF3C7;
-  --danger: #EF4444;
-  --danger-light: #FEE2E2;
-  --info: #3B82F6;
-  --info-light: #DBEAFE;
+  --success: #38A169;
+  --success-light: #C6F6D5;
+  --warning: #DD6B20;
+  --warning-light: #FEEBC8;
+  --danger: #E53E3E;
+  --danger-light: #FED7D7;
+  --info: #3182CE;
+  --info-light: #BEE3F8;
   
-  /* Dynamic Backgrounds & Glassmorphism */
-  --bg: #F8FAFC; 
-  --bg-gradient: linear-gradient(135deg, #F8FAFC 0%, #EEF2FF 100%);
-  --surface: rgba(255, 255, 255, 0.75);
+  /* Classic Clean Backgrounds */
+  --bg: #F4F7FB; 
+  --bg-gradient: #F4F7FB; /* Clean flat color for interior */
+  --surface: #FFFFFF;
   --surface-solid: #FFFFFF;
-  --surface2: rgba(241, 245, 249, 0.6);
-  --border: rgba(226, 232, 240, 0.8);
-  --border-light: rgba(255, 255, 255, 0.6);
+  --surface2: #F8FAFC;
+  --border: #E2E8F0;
+  --border-light: #EDF2F7;
   
   /* Typography */
   --text: #0F172A;
@@ -75,9 +75,7 @@ h1, h2, h3, h4, h5, h6 {
 /* ======== SIDEBAR ======== */
 .sidebar {
   width: var(--sidebar-w);
-  background: rgba(15, 23, 42, 0.95);
-  backdrop-filter: var(--glass);
-  -webkit-backdrop-filter: var(--glass);
+  background: var(--primary-dark);
   position: fixed;
   top: 0; left: 0; bottom: 0;
   display: flex;
@@ -216,10 +214,8 @@ h1, h2, h3, h4, h5, h6 {
 }
 
 .topbar {
-  background: rgba(255, 255, 255, 0.7);
-  backdrop-filter: var(--glass);
-  -webkit-backdrop-filter: var(--glass);
-  border-bottom: 1px solid var(--border-light);
+  background: var(--surface-solid);
+  border-bottom: 1px solid var(--border);
   padding: 0 40px;
   height: 70px;
   display: flex;
@@ -268,9 +264,7 @@ h1, h2, h3, h4, h5, h6 {
 
 /* ======== CARDS & CONTAINERS ======== */
 .card {
-  background: var(--surface);
-  backdrop-filter: var(--glass);
-  -webkit-backdrop-filter: var(--glass);
+  background: var(--surface-solid);
   border-radius: var(--radius);
   border: 1px solid var(--border-light);
   box-shadow: var(--shadow);
@@ -312,8 +306,7 @@ h1, h2, h3, h4, h5, h6 {
 .stat-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 20px; margin-bottom: 30px; }
 
 .stat-card {
-  background: var(--surface);
-  backdrop-filter: var(--glass);
+  background: var(--surface-solid);
   border-radius: var(--radius);
   padding: 24px;
   border: 1px solid var(--border-light);
@@ -399,32 +392,26 @@ tbody tr:last-child td { border-bottom: none; }
 }
 
 .btn-primary { 
-  background: linear-gradient(135deg, var(--primary) 0%, #6366F1 100%); 
+  background: var(--primary); 
   color: white; 
-  box-shadow: 0 4px 15px rgba(79, 70, 229, 0.3);
 }
 .btn-primary:hover { 
-  transform: translateY(-2px); 
-  box-shadow: 0 8px 25px rgba(79, 70, 229, 0.4); 
+  background: var(--primary-dark); 
 }
 
-.btn-danger { background: linear-gradient(135deg, var(--danger) 0%, #F43F5E 100%); color: white; box-shadow: 0 4px 15px rgba(239, 68, 68, 0.3); }
-.btn-danger:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(239, 68, 68, 0.4); }
+.btn-danger { background: var(--danger); color: white; }
+.btn-danger:hover { background: #C53030; }
 
-.btn-success { background: linear-gradient(135deg, var(--success) 0%, #34D399 100%); color: white; box-shadow: 0 4px 15px rgba(16, 185, 129, 0.3); }
-.btn-success:hover { transform: translateY(-2px); box-shadow: 0 8px 25px rgba(16, 185, 129, 0.4); }
+.btn-success { background: var(--success); color: white; }
+.btn-success:hover { background: #276749; }
 
 .btn-outline { 
   background: var(--surface-solid); 
   color: var(--text); 
   border: 1px solid var(--border); 
-  box-shadow: var(--shadow-sm);
 }
 .btn-outline:hover { 
   background: var(--bg); 
-  border-color: var(--primary-light);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow);
 }
 
 .btn-sm { padding: 8px 16px; font-size: 13px; }
@@ -616,46 +603,24 @@ tbody tr:last-child td { border-bottom: none; }
 /* Login page V2 */
 .login-page-v2 {
   min-height: 100vh;
-  background: #0F172A;
-  background-image: 
-    radial-gradient(circle at 15% 50%, rgba(79, 70, 229, 0.15), transparent 25%),
-    radial-gradient(circle at 85% 30%, rgba(244, 63, 94, 0.15), transparent 25%);
+  background: #F0F4F8; /* Classic blue-grey */
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
 }
 .login-split-card {
-  display: flex;
-  width: 1000px;
-  max-width: 95%;
-  border-radius: 24px;
-  overflow: hidden;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
-  background: rgba(255,255,255,0.03);
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255,255,255,0.1);
+  display: none;
 }
 .login-form-section {
-  background: white;
-  width: 50%;
-  padding: 80px 60px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
+  display: none;
 }
 .login-info-section {
-  background: transparent;
-  width: 50%;
-  padding: 80px 60px;
-  display: flex; flex-direction: column; justify-content: center; align-items: flex-start;
-  position: relative;
+  display: none;
 }
-.login-info-content { color: white; position: relative; z-index: 1; }
-.login-info-content h1 { font-size: 38px; font-weight: 800; margin-bottom: 24px; line-height: 1.1; background: linear-gradient(135deg, #fff 0%, #cbd5e1 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;}
-.login-info-content p { font-size: 16px; color: rgba(255, 255, 255, 0.7); line-height: 1.6; }
-.login-title { font-family: 'Outfit'; font-size: 32px; font-weight: 800; color: #0F172A; margin-bottom: 32px; }
+.login-info-content { display: none; }
+.login-info-content h1 { display: none; }
+.login-info-content p { display: none; }
+.login-title { display: none; }
 
 /* Patient Detail specific */
 .patient-header { display: flex; align-items: center; gap: 24px; margin-bottom: 30px; }
