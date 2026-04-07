@@ -147,7 +147,7 @@ export default function CasForm() {
 
   const [form, setForm] = useState({
     patient_id: patientId || '',
-    type_cancer: '',
+    type_cancer: 'Solide',
     sous_type: '',
     localisation: '',
     lateralite: '',
@@ -169,6 +169,7 @@ export default function CasForm() {
     sites_metastatiques: '',
     rapport_anatomopathologique: '',
     medecin_traitant: '',
+    medecin_inapte: '',
     medecin_diagnostiqueur: '',
     etablissement_diagnostiqueur: '',
     numero_lecteur: '',
@@ -221,7 +222,7 @@ export default function CasForm() {
 
   const handleTypeChange = (val) => {
     if (val === '__custom__') { setShowCustomType(true); }
-    else { setShowCustomType(false); set('type_cancer', val); set('sous_type', ''); set('localisation', ''); set('stade', ''); set('tnm_t',''); set('tnm_n',''); set('tnm_m',''); }
+    else { setShowCustomType(false); set('sous_type', val); set('localisation', ''); set('stade', ''); set('tnm_t',''); set('tnm_n',''); set('tnm_m',''); }
   };
 
   const startVoice = () => {
@@ -305,7 +306,7 @@ export default function CasForm() {
     if (!text) return;
     let formattedText = text.charAt(0).toUpperCase() + text.slice(1);
 
-    if (field === 'type_cancer') {
+    if (field === 'sous_type') {
       const match = ALL_CANCER_TYPES.find(t => t.toLowerCase().includes(text.toLowerCase()));
       if (match) { handleTypeChange(match); toast.success(`✅ Type: ${match}`); }
       else { setCustomType(formattedText); setShowCustomType(true); toast.success(`✅ Type personnalisé: ${formattedText}`); }
@@ -335,7 +336,7 @@ export default function CasForm() {
     if (!form.patient_id || !form.date_diagnostic) return setError('Champs obligatoires manquants');
     setLoading(true);
     try {
-      const payload = { ...form, type_cancer: showCustomType ? customType : form.type_cancer };
+      const payload = { ...form, sous_type: showCustomType ? customType : form.sous_type };
       const res = await createCase(payload);
       const caseId = res.data.id || res.data; // Depending on API response shape
 
@@ -431,6 +432,14 @@ export default function CasForm() {
               </div>
 
               <div className="form-group">
+                <label className="form-label">Médecin Inapte (si applicable)</label>
+                <select className="form-control" value={form.medecin_inapte} onChange={e => set('medecin_inapte', e.target.value)}>
+                  <option value="">Aucun</option>
+                  {medecins.map(m => <option key={m.id} value={m.id}>Dr. {m.prenom} {m.nom}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
                 <label className="form-label">Base de diagnostic</label>
                 <select className="form-control" value={form.base_diagnostic} onChange={e => set('base_diagnostic', e.target.value)}>
                   <option value="">Sélectionner</option>
@@ -450,10 +459,19 @@ export default function CasForm() {
           <div className="form-section-body">
             <div className="form-grid-modern">
               <div className="form-group">
-                <label className="form-label">Type de cancer *</label>
-                <select className="form-control" value={form.type_cancer} onChange={e => handleTypeChange(e.target.value)} required>
+                <label className="form-label">Type Majoritaire *</label>
+                <select className="form-control" value={form.type_cancer} onChange={e => set('type_cancer', e.target.value)} required>
+                  <option value="Solide">🧫 Solide</option>
+                  <option value="Liquide">🩸 Liquide (Hématologie)</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Sous-type / Nom du cancer *</label>
+                <select className="form-control" value={showCustomType ? '__custom__' : form.sous_type} onChange={e => handleTypeChange(e.target.value)} required>
                   <option value="">Sélectionner</option>
-                  {ALL_CANCER_TYPES.map(t => <option key={t}>{t}</option>)}
+                  {ALL_CANCER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                  <option value="__custom__">+ Autre nom personnalisé...</option>
                 </select>
               </div>
 

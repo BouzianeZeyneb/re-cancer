@@ -129,13 +129,13 @@ export default function AdminSettings() {
             className={`tab ${activeTab === 'listes' ? 'active' : ''}`}
             onClick={() => setActiveTab('listes')}
           >
-            📋 Liste de Choix (Paramètres)
+            Liste de Choix (Paramètres)
           </button>
           <button 
             className={`tab ${activeTab === 'champs' ? 'active' : ''}`}
             onClick={() => setActiveTab('champs')}
           >
-            ⚡ Générateur (Champs Dynamiques)
+            Générateur (Champs Dynamiques)
           </button>
         </div>
 
@@ -191,11 +191,11 @@ export default function AdminSettings() {
                             <td><span className="badge badge-blue">{getCategoryLabel(p.categorie)}</span></td>
                             <td style={{ fontWeight: 600 }}>{p.valeur}</td>
                             <td style={{ color: 'var(--text-muted)', fontFamily: 'JetBrains Mono' }}>{p.code || '-'}</td>
-                            <td>{p.obligatoire ? <span className="badge badge-red">🚨 OUI</span> : <span className="badge badge-gray">Non</span>}</td>
+                            <td>{p.obligatoire ? <span className="badge badge-red">OUI</span> : <span className="badge badge-gray">Non</span>}</td>
                             <td style={{ textAlign: 'right' }}>
                               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                <button className="btn-icon" onClick={() => { setFormDataList({ categorie: p.categorie, valeur: p.valeur, code: p.code||'', obligatoire: p.obligatoire||false }); setEditingListId(p.id); setShowFormList(true); }}>✏️</button>
-                                <button className="btn-icon" onClick={() => handleDeleteList(p.id)}>🗑️</button>
+                                <button className="btn-icon" style={{ fontSize: 9, fontWeight: 700 }} onClick={() => { setFormDataList({ categorie: p.categorie, valeur: p.valeur, code: p.code||'', obligatoire: p.obligatoire||false }); setEditingListId(p.id); setShowFormList(true); }}>[MODIF]</button>
+                                <button className="btn-icon" style={{ fontSize: 9, fontWeight: 700, color: '#ef4444' }} onClick={() => handleDeleteList(p.id)}>[SUPP]</button>
                               </div>
                             </td>
                           </tr>
@@ -211,7 +211,7 @@ export default function AdminSettings() {
                   <div className="section-header">
                     <h3 className="section-title" style={{ fontSize: 18 }}>Champs Dynamiques Personnalisés</h3>
                     <button className={showFormChamp ? "btn btn-outline" : "btn btn-success"} onClick={() => { setFormDataChamp({ entite: 'patient', nom: '', type_champ: 'texte', options_liste: '', obligatoire: false }); setEditingChampId(null); setShowFormChamp(!showFormChamp); }}>
-                      {showFormChamp ? 'Annuler' : '⚡ Créer un Champ'}
+                      {showFormChamp ? 'Annuler' : 'Créer un Champ'}
                     </button>
                   </div>
                   
@@ -248,7 +248,7 @@ export default function AdminSettings() {
                           <input type="checkbox" id="obligatoire" checked={formDataChamp.obligatoire} onChange={e => setFormDataChamp({...formDataChamp, obligatoire: e.target.checked})} style={{ width: '22px', height: '22px', accentColor: 'var(--success)' }} />
                           <label htmlFor="obligatoire" style={{ margin: 0, fontSize: '15px', fontWeight: 700, color: '#065F46', cursor: 'pointer' }}>Ce champ est REQUIS (Saisie Obligatoire)</label>
                         </div>
-                        <button type="submit" className="btn btn-success" style={{ padding: '12px 24px', fontSize: '15px' }}>💾 Enregistrer le Champ</button>
+                        <button type="submit" className="btn btn-success" style={{ padding: '12px 24px', fontSize: '15px' }}>Enregistrer le Champ</button>
                       </div>
                     </form>
                   )}
@@ -276,12 +276,12 @@ export default function AdminSettings() {
                               )}
                             </td>
                             <td>
-                              {c.obligatoire ? <span className="badge badge-red">🚨 OBLIGATOIRE</span> : <span className="badge badge-gray">Optionnel</span>}
+                              {c.obligatoire ? <span className="badge badge-red">OBLIGATOIRE</span> : <span className="badge badge-gray">Optionnel</span>}
                             </td>
                             <td style={{ textAlign: 'right' }}>
                               <div style={{ display: 'flex', gap: '8px', justifyContent: 'flex-end' }}>
-                                <button className="btn-icon" onClick={() => { setFormDataChamp({ entite: c.entite, nom: c.nom, type_champ: c.type_champ, options_liste: c.options_liste||'', obligatoire: c.obligatoire||false }); setEditingChampId(c.id); setShowFormChamp(true); setActiveTab('champs'); }}>✏️</button>
-                                <button className="btn-icon" onClick={() => handleDeleteChamp(c.id)}>🗑️</button>
+                                <button className="btn-icon" style={{ fontSize: 9, fontWeight: 700 }} onClick={() => { setFormDataChamp({ entite: c.entite, nom: c.nom, type_champ: c.type_champ, options_liste: c.options_liste||'', obligatoire: c.obligatoire||false }); setEditingChampId(c.id); setShowFormChamp(true); setActiveTab('champs'); }}>[MODIF]</button>
+                                <button className="btn-icon" style={{ fontSize: 9, fontWeight: 700, color: '#ef4444' }} onClick={() => handleDeleteChamp(c.id)}>[SUPP]</button>
                               </div>
                             </td>
                           </tr>

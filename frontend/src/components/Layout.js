@@ -70,7 +70,7 @@ export default function Layout({ children, title }) {
   const [chatInput, setChatInput] = useState('');
   const [isAiTyping, setIsAiTyping] = useState(false);
   const [chatMsgs, setChatMsgs] = useState([
-    { sender: 'ia', text: "👋 Bonjour ! Je suis l'Assistant IA du Registre (Normes SEER & ICD-O-3). Posez-moi des questions sur les zones (SIG), les statistiques ou l'abstraction des dossiers." }
+    { sender: 'ia', text: "Bonjour ! Je suis l'Assistant IA du Registre (Normes SEER & ICD-O-3). Posez-moi des questions sur les zones (SIG), les statistiques ou l'abstraction des dossiers." }
   ]);
   const chatEndRef = useRef(null);
 
@@ -90,7 +90,7 @@ export default function Layout({ children, title }) {
       const res = await api.post('/chat-ia', { message: userMsg.text });
       setChatMsgs(prev => [...prev, { sender: 'ia', text: res.data.reply }]);
     } catch (err) {
-      setChatMsgs(prev => [...prev, { sender: 'ia', text: "❌ Erreur de connexion au Cerveau IA." }]);
+      setChatMsgs(prev => [...prev, { sender: 'ia', text: "Erreur de connexion au Cerveau IA." }]);
     } finally {
       setIsAiTyping(false);
     }
@@ -170,7 +170,6 @@ export default function Layout({ children, title }) {
       <div style={{ position: 'fixed', top: 0, right: isAiChatOpen ? 0 : '-400px', width: 380, height: '100vh', background: 'white', boxShadow: '-5px 0 25px rgba(0,0,0,0.1)', zIndex: 9999, display: 'flex', flexDirection: 'column', transition: 'right 0.3s cubic-bezier(0.4, 0, 0.2, 1)' }}>
         <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)', color: 'white', padding: '16px 20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <div style={{ fontSize: 24, animation: isAiTyping ? 'pulse 1s infinite' : 'none' }}>🤖</div>
             <div>
               <div style={{ fontWeight: 700, fontSize: 16 }}>Assistant IA Global</div>
               <div style={{ fontSize: 11, opacity: 0.8 }}>SEER & ICD-O-3 v3.2</div>

@@ -35,6 +35,50 @@ export default function Patients() {
       toast.error(err.response?.data?.message || 'Erreur lors de la suppression');
     }
   };
+  
+  const fileInputRef = React.useRef(null);
+
+  const handleImportCSV = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    
+    const reader = new FileReader();
+    reader.onload = async (event) => {
+      const text = event.target.result;
+      const lines = text.split('\n');
+      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
+      
+      let count = 0;
+      toast.loading('Importation en cours...', { id: 'import' });
+      
+      for(let i = 1; i < lines.length; i++) {
+        const line = lines[i].split(',').map(v => v.trim());
+        if (line.length < 2) continue;
+        
+        const p = {};
+        headers.forEach((h, idx) => {
+          if (h.includes('nom')) p.nom = line[idx];
+          if (h.includes('prenom') || h.includes('prénom')) p.prenom = line[idx];
+          if (h.includes('sexe') || h.includes('genre')) p.sexe = line[idx]?.toUpperCase()[0] === 'F' ? 'F' : 'M';
+          if (h.includes('nais') || h.includes('dob')) p.date_naissance = line[idx];
+          if (h.includes('tel')) p.telephone = line[idx];
+          if (h.includes('carte') || h.includes('national')) p.num_carte_nationale = line[idx];
+        });
+        
+        if (p.nom && p.prenom) {
+          try {
+            const api = require('../utils/api'); // Dynamic import for safety
+            await api.createPatient(p);
+            count++;
+          } catch(err) { console.error('CSV row err:', err); }
+        }
+      }
+      toast.success(`${count} patients importés avec succès`, { id: 'import' });
+      load();
+    };
+    reader.readAsText(file);
+    e.target.value = ''; // Reset input
+  };
 
   const getAge = (dob) => {
     try { return differenceInYears(new Date(), parseISO(dob)); } catch { return '-'; }
@@ -58,6 +102,24 @@ export default function Patients() {
           </svg>
           Nouveau Patient
         </Link>
+        
+        <input 
+          type="file" 
+          accept=".csv" 
+          ref={fileInputRef} 
+          style={{ display: 'none' }} 
+          onChange={handleImportCSV} 
+        />
+        
+        <button 
+          className="btn btn-outline" 
+          onClick={() => fileInputRef.current.click()}
+          style={{ flexShrink: 0 }}
+        >
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+            <polyline points="21 15 16 10 5 21"/><path d="M7 10a3 3 0 110-6 3 3 0 010 6z"/><polyline points="17 4 21 8 17 12"/></svg>
+          Import CSV
+        </button>
         <div className="search-bar">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>

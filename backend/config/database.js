@@ -85,7 +85,7 @@ const initDatabase = async () => {
       )
     `);
 
-    // Treatments table
+    // Treatments table with specialized sub-modules
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS traitements (
         id VARCHAR(36) PRIMARY KEY,
@@ -95,10 +95,61 @@ const initDatabase = async () => {
         date_fin DATE,
         description TEXT,
         resultat TEXT,
+        
+        -- Sub-module Chirurgie
+        chirurgie_type VARCHAR(200),
+        chirurgie_complications TEXT,
+        chirurgie_compte_rendu TEXT,
+
+        -- Specialized fields from screenshots
+        intention_therapeutique VARCHAR(100),
+        ligne_traitement VARCHAR(50),
+        voie_administration VARCHAR(100),
+        jours_administration VARCHAR(100),
+        cycles_realises INT,
+
+        -- Sub-module Chimiothérapie (Global plan)
+        chimio_protocole VARCHAR(200),
+        chimio_nombre_cycles INT,
+        chimio_dose VARCHAR(100),
+        chimio_date_fin_prevue DATE,
+
+        -- Sub-module Radiothérapie
+        radio_dose_totale VARCHAR(100),
+        radio_fractionnement VARCHAR(100),
+        radio_nb_seances INT,
+
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (case_id) REFERENCES cancer_cases(id) ON DELETE CASCADE
       )
     `);
+
+    // Ensure columns exist for existing databases
+    const colsToAdd = [
+      ['chirurgie_type', 'VARCHAR(200)'],
+      ['chirurgie_complications', 'TEXT'],
+      ['chirurgie_compte_rendu', 'TEXT'],
+      ['chimio_protocole', 'VARCHAR(200)'],
+      ['chimio_nombre_cycles', 'INT'],
+      ['chimio_dose', 'VARCHAR(100)'],
+      ['chimio_date_fin_prevue', 'DATE'],
+      ['radio_dose_totale', 'VARCHAR(100)'],
+      ['radio_fractionnement', 'VARCHAR(100)'],
+      ['radio_nb_seances', 'INT'],
+      ['intention_therapeutique', 'VARCHAR(100)'],
+      ['ligne_traitement', 'VARCHAR(50)'],
+      ['voie_administration', 'VARCHAR(100)'],
+      ['jours_administration', 'VARCHAR(100)'],
+      ['cycles_realises', 'INT']
+    ];
+
+    for (const [col, type] of colsToAdd) {
+      try {
+        await conn.execute(`ALTER TABLE traitements ADD COLUMN ${col} ${type}`);
+      } catch (err) {
+        if (err.code !== 'ER_DUP_FIELDNAME') console.warn(`Error adding ${col}:`, err.message);
+      }
+    }
 
     // Appointments table
     await conn.execute(`

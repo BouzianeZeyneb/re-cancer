@@ -106,18 +106,30 @@ const updateCase = async (req, res) => {
 const addTraitement = async (req, res) => {
   try {
     const id = uuidv4();
-    const { case_id, type_traitement, date_debut, date_fin, description, resultat, intention_therapeutique, statut, protocole, ligne_traitement, nb_cycles_prevus, cycles_realises, jours, voie_administration, medicaments, reponse_tumorale, date_evaluation, grade_toxicite, description_toxicite } = req.body;
+    const { 
+      case_id, type_traitement, date_debut, date_fin, description, resultat, statut,
+      intention_therapeutique, ligne_traitement, voie_administration, jours_administration, cycles_realises,
+      chirurgie_type, chirurgie_complications, chirurgie_compte_rendu,
+      chimio_protocole, chimio_nombre_cycles, chimio_dose, chimio_date_fin_prevue,
+      radio_dose_totale, radio_fractionnement, radio_nb_seances
+    } = req.body;
+    
     const n = v => (v === undefined || v === '' ? null : v);
+    
     await pool.execute(
       `INSERT INTO traitements (
-        id, case_id, type_traitement, date_debut, date_fin, description, resultat,
-        intention_therapeutique, statut, protocole, ligne_traitement, nb_cycles_prevus, cycles_realises,
-        jours, voie_administration, medicaments, reponse_tumorale, date_evaluation, grade_toxicite, description_toxicite
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        id, case_id, type_traitement, date_debut, date_fin, description, resultat, statut,
+        intention_therapeutique, ligne_traitement, voie_administration, jours_administration, cycles_realises,
+        chirurgie_type, chirurgie_complications, chirurgie_compte_rendu,
+        chimio_protocole, chimio_nombre_cycles, chimio_dose, chimio_date_fin_prevue,
+        radio_dose_totale, radio_fractionnement, radio_nb_seances
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
-        id, case_id, type_traitement, n(date_debut), n(date_fin), n(description), n(resultat),
-        n(intention_therapeutique), n(statut)||'Planifié', n(protocole), n(ligne_traitement), n(nb_cycles_prevus), n(cycles_realises)||0,
-        n(jours), n(voie_administration), n(medicaments), n(reponse_tumorale), n(date_evaluation), n(grade_toxicite), n(description_toxicite)
+        id, case_id, type_traitement, n(date_debut), n(date_fin), n(description), n(resultat), n(statut)||'Planifié',
+        n(intention_therapeutique), n(ligne_traitement), n(voie_administration), n(jours_administration), n(cycles_realises),
+        n(chirurgie_type), n(chirurgie_complications), n(chirurgie_compte_rendu),
+        n(chimio_protocole), n(chimio_nombre_cycles), n(chimio_dose), n(chimio_date_fin_prevue),
+        n(radio_dose_totale), n(radio_fractionnement), n(radio_nb_seances)
       ]
     );
     await auditLog(req.user.id, 'ADD_TRAITEMENT', 'traitements', id, { case_id, type_traitement }, req.ip);
