@@ -349,299 +349,276 @@ export default function CasForm() {
     } finally { setLoading(false); }
   };
 
-  const Section = ({ title, icon, children }) => (
-    <div style={{ background:'white', border:'1px solid #e2e8f0', borderRadius:14, overflow:'hidden', marginBottom:20 }}>
-      <div style={{ padding:'14px 20px', borderBottom:'1px solid #f1f5f9', display:'flex', alignItems:'center', gap:10 }}>
-        <span style={{ fontSize:18 }}>{icon}</span>
-        <span style={{ fontWeight:700, fontSize:15, color:'#0f172a' }}>{title}</span>
-      </div>
-      <div style={{ padding:20 }}>{children}</div>
-    </div>
-  );
+
 
   return (
     <Layout title="Nouveau Diagnostic">
-      <style>{`@keyframes pulse { 0%,100%{opacity:1;transform:scale(1)} 50%{opacity:0.5;transform:scale(1.3)} }`}</style>
-      <div style={{ display:'flex', alignItems:'center', gap:12, marginBottom:20 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
         <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)}>←</button>
         <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize:22, fontWeight:800, margin:0 }}>Nouveau Diagnostic</h1>
-          <div style={{ fontSize:13, color:'#64748b' }}>Saisie complète avec descripteurs dynamiques</div>
-        </div>
-        <div style={{ display:'flex', gap:8 }}>
-          <button type="button" className={`btn ${voiceMode ? 'btn-danger' : 'btn-outline'}`} onClick={() => setVoiceMode(!voiceMode)}>
-            🎤 {voiceMode ? 'Vocal ON' : 'Mode Vocal'}
-          </button>
-          {voiceMode && (
-            <button type="button" className={`btn ${isListening ? 'btn-danger' : 'btn-outline'}`} onClick={() => isListening ? stopVoice() : startVoice()}>
-              {isListening ? '⏹ Arrêter Dictée' : '▶ Démarrer Dictée Intelligente'}
-            </button>
-          )}
+          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, fontFamily: 'Outfit' }}>Nouveau Diagnostic</h1>
+          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Complétion du dossier oncologique</div>
         </div>
       </div>
 
-      {voiceMode && (
-        <div style={{ background:'#f0f9ff', padding:'10px 24px', borderBottom:'1px solid #e2e8f0', fontSize:13, color:'#0369a1', marginBottom: 16 }}>
-          💡 Dites le nom du champ pour l'activer, puis dictez sa valeur. <br/>
-          <em>Exemple: "Type de cancer Sein" (pause) "Taille 2.5" (pause) "Organe Sein gauche" (pause) "Rapport anapath présence de..."</em>
-        </div>
-      )}
+      {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
-      {isListening && (
-        <div style={{ background:'#fee2e2', border:'2px solid #e63946', borderRadius:12, padding:'14px 20px', marginBottom:16, display:'flex', alignItems:'center', gap:12 }}>
-          <div style={{ width:12, height:12, borderRadius:'50%', background:'#e63946', animation:'pulse 1s infinite' }} />
-          <div style={{ flex:1 }}>
-            <div style={{ fontWeight:700, color:'#991b1b' }}>🎤 Écoute en mode continu...</div>
-            {activeVoiceField && <div style={{ fontWeight:600, color:'#e63946', fontSize:14, marginTop:2 }}>↳ Champ courant: {activeVoiceField.toUpperCase()}</div>}
-            <div style={{ fontSize:13, color:'#64748b', marginTop:4 }}>{voiceTranscript || 'Dites "Type de cancer", "Stade", "Rapport" suivi de la valeur...'}</div>
+      <form onSubmit={handleSubmit}>
+        {/* Section 1: Informations Cliniques */}
+        <div className="form-section-modern">
+          <div className="form-section-header">
+            <span style={{ fontSize: 20 }}>👤</span>
+            <h3>Informations Cliniques</h3>
           </div>
-          <button type="button" className="btn btn-sm" style={{ background:'#e63946', color:'white', border:'none' }} onClick={stopVoice}>⏹ Arrêter</button>
-        </div>
-      )}
-
-      {error && <div className="alert alert-error" style={{ marginBottom:16 }}>{error}</div>}
-
-      <Section title="Informations Cliniques" icon="👤">
-        <div className="form-row">
-          <div className="form-group" style={{ flex:2 }}>
-            <label className="form-label">Patient *</label>
-            <input className="form-control" placeholder="Rechercher par nom..." value={patientSearch} onChange={e => setPatientSearch(e.target.value)} style={{ marginBottom:6 }} />
-            <select className="form-control" value={form.patient_id} onChange={e => set('patient_id', e.target.value)} required>
-              <option value="">Sélectionner</option>
-              {filteredPatients.map(p => <option key={p.id} value={p.id}>{p.prenom} {p.nom}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Date du diagnostic *</label>
-            <input type="date" className="form-control" value={form.date_diagnostic} onChange={e => set('date_diagnostic', e.target.value)} required />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Date 1ers symptômes</label>
-            <input type="date" className="form-control" value={form.date_premiers_symptomes} onChange={e => set('date_premiers_symptomes', e.target.value)} />
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Établissement diagnostiqueur</label>
-            <input className="form-control" placeholder="Lieu de diagnostic..." value={form.etablissement_diagnostiqueur} onChange={e => set('etablissement_diagnostiqueur', e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Médecin diagnostiqueur</label>
-            <input className="form-control" placeholder="Dr. XYZ..." value={form.medecin_diagnostiqueur} onChange={e => set('medecin_diagnostiqueur', e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Médecin Traitant (Interne)</label>
-            <select className="form-control" value={form.medecin_traitant} onChange={e => set('medecin_traitant', e.target.value)}>
-              <option value="">Non assigné</option>
-              {medecins.map(m => <option key={m.id} value={m.id}>Dr. {m.prenom} {m.nom}</option>)}
-            </select>
-          </div>
-          <div className="form-group">
-            <label className="form-label">Base de diagnostic</label>
-            <select className="form-control" value={form.base_diagnostic} onChange={e => set('base_diagnostic', e.target.value)}>
-              <option value="">Sélectionner</option>
-              {['Histologie','Cytologie','Imagerie','Clinique','Marqueurs tumoraux'].map(o => <option key={o} value={o}>{o}</option>)}
-            </select>
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Tumeur & Histologie" icon="🧬">
-        <div className="form-row">
-          <div className="form-group" style={{ flex:1 }}>
-            <label className="form-label">Type de cancer *</label>
-            {!showCustomType ? (
-              <select className="form-control" value={form.type_cancer} onChange={e => handleTypeChange(e.target.value)} required style={activeVoiceField === 'type_cancer' ? { border:'2px solid #e63946', background:'#fef2f2' } : {}}>
-                <option value="">Sélectionner</option>
-                {ALL_CANCER_TYPES.map(t => <option key={t}>{t}</option>)}
-                <option value="__custom__">+ Saisie libre...</option>
-              </select>
-            ) : (
-              <div style={{ display:'flex', gap:8 }}>
-                <input className="form-control" placeholder="Cancer..." value={customType} onChange={e => setCustomType(e.target.value)} autoFocus />
-                <button type="button" className="btn btn-outline btn-sm" onClick={() => { setShowCustomType(false); set('type_cancer',''); }}>↩</button>
-              </div>
-            )}
-          </div>
-          <div className="form-group" style={{ flex:1 }}>
-            <label className="form-label">Organe / Localisation</label>
-            {ALL_LOCALISATIONS.length > 0 ? (
-              <select className="form-control" value={form.localisation} onChange={e => set('localisation', e.target.value)}>
-                <option value="">Sélectionner</option>
-                {ALL_LOCALISATIONS.map(l => <option key={l}>{l}</option>)}
-                <option value="__other__">+ Autre</option>
-              </select>
-            ) : (
-              <input className="form-control" value={form.localisation} onChange={e => set('localisation', e.target.value)} />
-            )}
-            {form.localisation === '__other__' && <input className="form-control" style={{ marginTop:6 }} placeholder="Préciser..." onChange={e => set('localisation', e.target.value)} />}
-          </div>
-          <div className="form-group" style={{ flex: 0.5 }}>
-            <label className="form-label">Latéralité</label>
-            <select className="form-control" value={form.lateralite} onChange={e => set('lateralite', e.target.value)}>
-              <option value="">N/A</option>
-              <option value="Droit">Droit</option>
-              <option value="Gauche">Gauche</option>
-              <option value="Bilatéral">Bilatéral</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ flex: 0.5 }}>
-            <label className="form-label">Code CIM-10</label>
-            <input className="form-control" list="cim10-list" placeholder="Ex: C50..." value={form.code_cim10} onChange={e => set('code_cim10', e.target.value)} />
-            <datalist id="cim10-list">
-              {CIM10_CANCER_CODES.map(c => <option key={c.code} value={c.code}>{c.label}</option>)}
-            </datalist>
-          </div>
-        </div>
-        <div className="form-row">
-          <div className="form-group" style={{ flex: 1.5 }}>
-            <label className="form-label">Type Histologique</label>
-            <input className="form-control" placeholder="Ex: Carcinome canalaire infiltrant..." value={form.type_histologique} onChange={e => set('type_histologique', e.target.value)} />
-          </div>
-          <div className="form-group" style={{ flex: 0.5 }}>
-            <label className="form-label">Grade</label>
-            <input className="form-control" placeholder="I, II, III..." value={form.grade_histologique} onChange={e => set('grade_histologique', e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">N° Bloc / CompteRendu</label>
-            <input className="form-control" placeholder="N°..." value={form.numero_bloc} onChange={e => set('numero_bloc', e.target.value)} />
-          </div>
-          <div className="form-group" style={{ flex: 1.5 }}>
-            <label className="form-label">Anomalies Génétiques</label>
-            <input className="form-control" placeholder="BRCA, EGFR..." value={form.anomalies_genetiques} onChange={e => set('anomalies_genetiques', e.target.value)} />
-          </div>
-        </div>
-      </Section>
-
-      <Section title="Stadification & Marqueurs" icon="📊">
-        <div className="form-row">
-          <div className="form-group" style={{ flex:2, display:'flex', gap:8, alignItems:'flex-end' }}>
-            <div style={{ flex:1 }}>
-              <label className="form-label">TNM — T</label>
-              {cancerInfo ? (
-                <select className="form-control" value={form.tnm_t} onChange={e => set('tnm_t', e.target.value)}><option value=""></option>{cancerInfo.T.map(t => <option key={t}>{t}</option>)}</select>
-              ) : <input className="form-control" value={form.tnm_t} onChange={e => set('tnm_t', e.target.value)} />}
-            </div>
-            <div style={{ flex:1 }}>
-              <label className="form-label">N</label>
-              {cancerInfo ? (
-                <select className="form-control" value={form.tnm_n} onChange={e => set('tnm_n', e.target.value)}><option value=""></option>{cancerInfo.N.map(n => <option key={n}>{n}</option>)}</select>
-              ) : <input className="form-control" value={form.tnm_n} onChange={e => set('tnm_n', e.target.value)} />}
-            </div>
-            <div style={{ flex:1 }}>
-              <label className="form-label">M</label>
-              {cancerInfo ? (
-                <select className="form-control" value={form.tnm_m} onChange={e => set('tnm_m', e.target.value)}><option value=""></option>{cancerInfo.M.map(m => <option key={m}>{m}</option>)}</select>
-              ) : <input className="form-control" value={form.tnm_m} onChange={e => set('tnm_m', e.target.value)} />}
-            </div>
-          </div>
-          <div className="form-group" style={{ flex:1 }}>
-            <label className="form-label">Stade Globl</label>
-            {cancerInfo ? (
-              <select className="form-control" value={form.stade} onChange={e => set('stade', e.target.value)}><option value="">Select</option>{cancerInfo.stades.map(s => <option key={s}>{s}</option>)}</select>
-            ) : <input className="form-control" value={form.stade} onChange={e => set('stade', e.target.value)} />}
-          </div>
-          <div className="form-group" style={{ flex:1 }}>
-            <label className="form-label">État</label>
-            <select className="form-control" value={form.etat} onChange={e => set('etat', e.target.value)}>
-              <option value="Localisé">Localisé</option>
-              <option value="Métastase">Métastatique</option>
-            </select>
-          </div>
-        </div>
-        
-        <div style={{ height: 1, background:'#f1f5f9', margin:'20px 0' }} />
-        
-        <div className="form-row">
-          <div className="form-group">
-            <label className="form-label">Taille (cm)</label>
-            <input type="number" step="0.1" className="form-control" placeholder="ex: 2.5" value={form.taille_cancer} onChange={e => set('taille_cancer', e.target.value)} />
-          </div>
-          <div className="form-group">
-            <label className="form-label">Ganglions envahis</label>
-            <input type="number" className="form-control" placeholder="Nombre..." value={form.nb_ganglions_envahis} onChange={e => set('nb_ganglions_envahis', e.target.value)} />
-          </div>
-          <div className="form-group" style={{ flex:2 }}>
-            <label className="form-label">Sites métastatiques</label>
-            <input className="form-control" placeholder="Os, Foie, Cerveau..." value={form.sites_metastatiques} onChange={e => set('sites_metastatiques', e.target.value)} />
-          </div>
-        </div>
-
-        <div style={{ height: 1, background:'#f1f5f9', margin:'20px 0' }} />
-
-        <div className="form-row">
-          <div className="form-group" style={{ flex:1 }}>
-            <label className="form-label">Récepteur ER</label>
-            <select className="form-control" value={form.recepteur_er} onChange={e => set('recepteur_er', e.target.value)}>
-              <option value="Inconnu">Inconnu / Non Testé</option><option value="Positif">Positif (+)</option><option value="Négatif">Négatif (-)</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ flex:1 }}>
-            <label className="form-label">Récepteur PR</label>
-            <select className="form-control" value={form.recepteur_pr} onChange={e => set('recepteur_pr', e.target.value)}>
-              <option value="Inconnu">Inconnu / Non Testé</option><option value="Positif">Positif (+)</option><option value="Négatif">Négatif (-)</option>
-            </select>
-          </div>
-          <div className="form-group" style={{ flex:1 }}>
-            <label className="form-label">HER2</label>
-            <select className="form-control" value={form.her2} onChange={e => set('her2', e.target.value)}>
-              <option value="Inconnu">Inconnu / Non Testé</option><option value="Positif">Positif (+)</option><option value="Négatif">Négatif (-)</option><option value="Equivoque">Equivoque</option>
-            </select>
-          </div>
-        </div>
-      </Section>
-
-      {champsDynamiques.length > 0 && (
-        <Section title="Spécificités (Champs Dynamiques)" icon="⚡">
-          <div className="form-row">
-            {champsDynamiques.map(s => (
-              <div className="form-group" key={s.id}>
-                <label className="form-label">{s.nom} {s.obligatoire && <span style={{color:'red'}}>*</span>}</label>
-                {s.type_champ === 'booleen' ? (
-                  <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
-                    <option value="">Choisir...</option>
-                    <option value="true">Oui</option>
-                    <option value="false">Non</option>
-                  </select>
-                ) : s.type_champ === 'liste' ? (
-                   <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
-                      <option value="">Choisir...</option>
-                      {s.options_liste.split(',').map(opt => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}
-                   </select>
-                ) : s.type_champ === 'date' ? (
-                   <input type="date" className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
-                ) : (
-                  <input type={s.type_champ === 'nombre' ? 'number' : 'text'} className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
+          <div className="form-section-body">
+            <div className="form-grid-modern">
+              <div className="form-group" style={{ position: 'relative' }}>
+                <label className="form-label">Patient *</label>
+                <div className="search-bar">
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  <input 
+                    placeholder="Rechercher par nom..." 
+                    value={patientSearch} 
+                    onChange={e => {
+                      setPatientSearch(e.target.value);
+                      if (e.target.value === '') set('patient_id', '');
+                    }} 
+                  />
+                </div>
+                {patientSearch && !form.patient_id && (
+                  <div className="search-results">
+                    {filteredPatients.slice(0, 5).map(p => (
+                      <div key={p.id} className="search-result-item" onClick={() => {
+                        set('patient_id', p.id);
+                        setPatientSearch(`${p.prenom} ${p.nom}`);
+                      }}>
+                        <div className="search-result-name">{p.prenom} {p.nom}</div>
+                        <div className="search-result-meta">{p.num_carte_nationale || 'Sans ID'}</div>
+                      </div>
+                    ))}
+                    {filteredPatients.length === 0 && <div className="search-result-item">Aucun patient trouvé</div>}
+                  </div>
                 )}
+                {form.patient_id && <div style={{ fontSize: 11, color: 'var(--primary)', marginTop: 4, fontWeight: 600 }}>Patient sélectionné ✓</div>}
               </div>
-            ))}
-          </div>
-        </Section>
-      )}
 
-      <Section title="Informations complémentaires" icon="📋">
-        <div className="form-row">
-           <div className="form-group" style={{ flex:2 }}>
-            <label className="form-label">Rapport anatomopathologique / Notes cliniques</label>
-            <textarea className="form-control" rows={3} placeholder="Résumé du rapport ou notes..." value={form.rapport_anatomopathologique} onChange={e => set('rapport_anatomopathologique', e.target.value)} />
-          </div>
-          <div className="form-group" style={{ flex:1 }}>
-             <label className="form-label">N° Lecteur / Dossier</label>
-             <input className="form-control" placeholder="Identifiant interne..." value={form.numero_lecteur} onChange={e => set('numero_lecteur', e.target.value)} />
+              <div className="form-group">
+                <label className="form-label">Date du diagnostic *</label>
+                <input type="date" className="form-control" value={form.date_diagnostic} onChange={e => set('date_diagnostic', e.target.value)} required />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Date 1ers symptômes</label>
+                <input type="date" className="form-control" value={form.date_premiers_symptomes} onChange={e => set('date_premiers_symptomes', e.target.value)} />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Établissement diagnostiqueur</label>
+                <input className="form-control" placeholder="Lieu de diagnostic..." value={form.etablissement_diagnostiqueur} onChange={e => set('etablissement_diagnostiqueur', e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Médecin diagnostiqueur</label>
+                <input className="form-control" placeholder="Dr. XYZ..." value={form.medecin_diagnostiqueur} onChange={e => set('medecin_diagnostiqueur', e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Médecin Traitant (Interne)</label>
+                <select className="form-control" value={form.medecin_traitant} onChange={e => set('medecin_traitant', e.target.value)}>
+                  <option value="">Non assigné</option>
+                  {medecins.map(m => <option key={m.id} value={m.id}>Dr. {m.prenom} {m.nom}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Base de diagnostic</label>
+                <select className="form-control" value={form.base_diagnostic} onChange={e => set('base_diagnostic', e.target.value)}>
+                  <option value="">Sélectionner</option>
+                  {['Histologie','Cytologie','Imagerie','Clinique','Marqueurs tumoraux'].map(o => <option key={o} value={o}>{o}</option>)}
+                </select>
+              </div>
+            </div>
           </div>
         </div>
-        <div className="form-group">
-          <label className="form-label">Décision RCP</label>
-          <textarea className="form-control" rows={2} placeholder="S'il y a eu une Réunion de Concertation Pluridisciplinaire..." value={form.decision_rcp} onChange={e => set('decision_rcp', e.target.value)} />
-        </div>
-      </Section>
 
-      <div style={{ display:'flex', gap:12, justifyContent:'flex-end', marginTop:8 }}>
-        <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>Annuler</button>
-        <button type="submit" className="btn btn-primary" disabled={loading} onClick={handleSubmit}>
-          {loading ? '⏳ Enregistrement...' : '💾 Enregistrer le diagnostic'}
-        </button>
-      </div>
+        {/* Section 2: 🧬 Tumeur & Histologie */}
+        <div className="form-section-modern">
+          <div className="form-section-header">
+            <span style={{ fontSize: 20 }}>🧬</span>
+            <h3>Tumeur & Histologie</h3>
+          </div>
+          <div className="form-section-body">
+            <div className="form-grid-modern">
+              <div className="form-group">
+                <label className="form-label">Type de cancer *</label>
+                <select className="form-control" value={form.type_cancer} onChange={e => handleTypeChange(e.target.value)} required>
+                  <option value="">Sélectionner</option>
+                  {ALL_CANCER_TYPES.map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Organe / Localisation</label>
+                <select className="form-control" value={form.localisation} onChange={e => set('localisation', e.target.value)}>
+                  <option value="">Sélectionner</option>
+                  {ALL_LOCALISATIONS.map(l => <option key={l}>{l}</option>)}
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Latéralité</label>
+                <select className="form-control" value={form.lateralite} onChange={e => set('lateralite', e.target.value)}>
+                  <option value="">N/A</option>
+                  <option value="Droit">Droit</option>
+                  <option value="Gauche">Gauche</option>
+                  <option value="Bilatéral">Bilatéral</option>
+                </select>
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Code CIM-10</label>
+                <input className="form-control" placeholder="Ex: C50..." value={form.code_cim10} onChange={e => set('code_cim10', e.target.value)} />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Type Histologique</label>
+                <input className="form-control" placeholder="Ex: Carcinome canalaire infiltrant..." value={form.type_histologique} onChange={e => set('type_histologique', e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">Grade</label>
+                <input className="form-control" placeholder="I, II, III..." value={form.grade_histologique} onChange={e => set('grade_histologique', e.target.value)} />
+              </div>
+
+              <div className="form-group">
+                <label className="form-label">N° Bloc / CompteRendu</label>
+                <input className="form-control" placeholder="N°..." value={form.numero_bloc} onChange={e => set('numero_bloc', e.target.value)} />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">Anomalies Génétiques</label>
+                <input className="form-control" placeholder="BRCA, EGFR..." value={form.anomalies_genetiques} onChange={e => set('anomalies_genetiques', e.target.value)} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 3: 📊 Stadification & Marqueurs */}
+        <div className="form-section-modern">
+          <div className="form-section-header">
+            <span style={{ fontSize: 20 }}>📊</span>
+            <h3>Stadification & Marqueurs</h3>
+          </div>
+          <div className="form-section-body">
+            <div className="form-grid-modern" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">TNM — T</label>
+                <select className="form-control" value={form.tnm_t} onChange={e => set('tnm_t', e.target.value)}>
+                   <option value=""></option>
+                   {(cancerInfo?.T || ['T1','T2','T3','T4']).map(t => <option key={t}>{t}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">N</label>
+                <select className="form-control" value={form.tnm_n} onChange={e => set('tnm_n', e.target.value)}>
+                   <option value=""></option>
+                   {(cancerInfo?.N || ['N0','N1','N2','N3']).map(n => <option key={n}>{n}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 2' }}>
+                <label className="form-label">M</label>
+                <select className="form-control" value={form.tnm_m} onChange={e => set('tnm_m', e.target.value)}>
+                   <option value=""></option>
+                   {(cancerInfo?.M || ['M0','M1']).map(m => <option key={m}>{m}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 3' }}>
+                <label className="form-label">Stade Globl</label>
+                <select className="form-control" value={form.stade} onChange={e => set('stade', e.target.value)}>
+                   <option value=""></option>
+                   {(cancerInfo?.stades || ['I','II','III','IV']).map(s => <option key={s}>{s}</option>)}
+                </select>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 3' }}>
+                <label className="form-label">État</label>
+                <select className="form-control" value={form.etat} onChange={e => set('etat', e.target.value)}>
+                   <option value="Localisé">Localisé</option>
+                   <option value="Métastase">Métastatique</option>
+                </select>
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 4' }}>
+                <label className="form-label">Taille (cm)</label>
+                <input type="number" step="0.1" className="form-control" placeholder="ex: 2.5" value={form.taille_cancer} onChange={e => set('taille_cancer', e.target.value)} />
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 4' }}>
+                <label className="form-label">Ganglions envahis</label>
+                <input type="number" className="form-control" placeholder="Nombre..." value={form.nb_ganglions_envahis} onChange={e => set('nb_ganglions_envahis', e.target.value)} />
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 4' }}>
+                <label className="form-label">Sites métastatiques</label>
+                <input className="form-control" placeholder="Os, Foie, Cerveau..." value={form.sites_metastatiques} onChange={e => set('sites_metastatiques', e.target.value)} />
+              </div>
+
+              <div className="form-group" style={{ gridColumn: 'span 4' }}>
+                <label className="form-label">Récepteur ER</label>
+                <select className="form-control" value={form.recepteur_er} onChange={e => set('recepteur_er', e.target.value)}>
+                   <option value="Inconnu">Inconnu / Non Testé</option>
+                   <option value="Positif">Positif (+)</option>
+                   <option value="Négatif">Négatif (-)</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 4' }}>
+                <label className="form-label">Récepteur PR</label>
+                <select className="form-control" value={form.recepteur_pr} onChange={e => set('recepteur_pr', e.target.value)}>
+                   <option value="Inconnu">Inconnu / Non Testé</option>
+                   <option value="Positif">Positif (+)</option>
+                   <option value="Négatif">Négatif (-)</option>
+                </select>
+              </div>
+              <div className="form-group" style={{ gridColumn: 'span 4' }}>
+                <label className="form-label">HER2</label>
+                <select className="form-control" value={form.her2} onChange={e => set('her2', e.target.value)}>
+                   <option value="Inconnu">Inconnu / Non Testé</option>
+                   <option value="Positif">Positif (+)</option>
+                   <option value="Négatif">Négatif (-)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Section 4: 📋 Informations complémentaires */}
+        <div className="form-section-modern">
+          <div className="form-section-header">
+            <span style={{ fontSize: 20 }}>📋</span>
+            <h3>Informations complémentaires</h3>
+          </div>
+          <div className="form-section-body">
+            <div className="form-group">
+              <label className="form-label">Rapport anatomopathologique / Notes cliniques</label>
+              <textarea className="form-control" rows={3} placeholder="Résumé du rapport ou notes..." value={form.rapport_anatomopathologique} onChange={e => set('rapport_anatomopathologique', e.target.value)} />
+            </div>
+            <div className="form-grid-modern">
+              <div className="form-group">
+                <label className="form-label">N° Lecteur / Dossier</label>
+                <input className="form-control" placeholder="Identifiant interne..." value={form.numero_lecteur} onChange={e => set('numero_lecteur', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Décision RCP</label>
+                <input className="form-control" placeholder="S'il y a eu une Réunion de Concertation Pluridisciplinaire..." value={form.decision_rcp} onChange={e => set('decision_rcp', e.target.value)} />
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
+          <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>Annuler</button>
+          <button type="submit" className="btn btn-primary" disabled={loading}>
+            {loading ? '⏳ Enregistrement...' : '💾 Créer le diagnostic'}
+          </button>
+        </div>
+      </form>
     </Layout>
   );
 }
