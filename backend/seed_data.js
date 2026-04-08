@@ -29,11 +29,20 @@ async function seed() {
        return;
     }
 
-    // Supprimer les anciennes données de test (optionnel mais recommandé pour les tests)
-    // await conn.execute('DELETE FROM cancer_cases');
-    // await conn.execute('DELETE FROM patients');
+    // Supprimer les anciennes données de test
+    await conn.execute('SET FOREIGN_KEY_CHECKS = 0');
+    await conn.execute('TRUNCATE TABLE bilans_anapath');
+    await conn.execute('TRUNCATE TABLE seances_traitement');
+    await conn.execute('TRUNCATE TABLE decisions_rcp');
+    await conn.execute('TRUNCATE TABLE bilans_biologiques');
+    await conn.execute('TRUNCATE TABLE bilans_imagerie');
+    await conn.execute('TRUNCATE TABLE rendez_vous');
+    await conn.execute('TRUNCATE TABLE styles_vie_valeurs');
+    await conn.execute('TRUNCATE TABLE cancer_cases');
+    await conn.execute('TRUNCATE TABLE patients');
+    await conn.execute('SET FOREIGN_KEY_CHECKS = 1');
 
-    for (let i = 0; i < 30; i++) {
+    for (let i = 0; i < 50; i++) {
       const pId = uuidv4();
       const sexe = Math.random() > 0.5 ? 'M' : 'F';
       const nom = NOMS[Math.floor(Math.random() * NOMS.length)];

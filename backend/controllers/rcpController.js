@@ -84,7 +84,7 @@ const createRCP = async (req, res) => {
         
         // Create Notification
         const notifTitle = "Invitation à une RCP";
-        const notifMsg = `Vous avez été invité à rejoindre la RCP : ${titre}`;
+        const notifMsg = `Le Dr ${req.user.nom || ''} vous a invité à rejoindre la RCP : ${titre}. Code d'accès : ${invite_code}`;
         const notifLien = `/rcp/${id}`;
         await createNotification(medecinId, notifTitle, notifMsg, notifLien, io);
       }
@@ -257,7 +257,7 @@ const inviteDoctorToRCP = async (req, res) => {
     const { id: rcp_id } = req.params;
     const { medecinId } = req.body;
 
-    const [rcps] = await pool.execute('SELECT titre FROM reunions_rcp WHERE id = ?', [rcp_id]);
+    const [rcps] = await pool.execute('SELECT titre, invite_code FROM reunions_rcp WHERE id = ?', [rcp_id]);
     if (rcps.length === 0) return res.status(404).json({ message: 'RCP introuvable' });
 
     // Check if already a participant
@@ -270,7 +270,7 @@ const inviteDoctorToRCP = async (req, res) => {
     // Send notification
     const io = req.app.get('io');
     const notifTitle = "Nouvelle invitation à une RCP";
-    const notifMsg = `Vous avez été invité à la RCP : ${rcps[0].titre}`;
+    const notifMsg = `Le Dr ${req.user.nom || ''} vous a invité à la RCP : ${rcps[0].titre}. Code d'accès : ${rcps[0].invite_code}`;
     const notifLien = `/rcp/${rcp_id}`;
     await createNotification(medecinId, notifTitle, notifMsg, notifLien, io);
 

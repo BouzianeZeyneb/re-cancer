@@ -27,7 +27,7 @@ const getAllPatients = async (req, res) => {
     params.push(parseInt(limit), offset);
 
     const [patients] = await pool.execute(query, params);
-    res.json({ patients, total: patients.length });
+    res.json({ patients, total: countResult[0].total });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }

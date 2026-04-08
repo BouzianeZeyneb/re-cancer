@@ -84,10 +84,15 @@ export default function Statistiques() {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [tempConfig, setTempConfig] = useState(null);
+  const [stats, setStats] = useState(null);
 
   useEffect(() => {
     localStorage.setItem('oncotrack_advanced_stats_v2', JSON.stringify(widgets));
   }, [widgets]);
+
+  useEffect(() => {
+    api.get('/stats/dashboard').then(res => setStats(res.data)).catch(console.error);
+  }, []);
 
   const handleCreateNew = () => {
     setTempConfig({
@@ -144,10 +149,10 @@ export default function Statistiques() {
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', marginBottom: 30, marginTop: 10 }}>Analyses Statistiques Avancées</h1>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 20, marginBottom: 40 }}>
-            <KPICard label="TOTAL PATIENTS" value="58" trend="+5.2% vs 2024" color="white" />
-            <KPICard label="NOUVEAUX CAS 2025" value="0" trend="Projection annuelle" color="white" />
-            <KPICard label="TAUX SURVIE 5 ANS" value="68.4%" trend="+1.2pp vs 2024" color="white" />
-            <KPICard label="TYPE DOMINANT" value="Solide" trend="Plus haute fréquence" color="white" />
+            <KPICard label="TOTAL PATIENTS" value={stats ? stats.totaux.patients : '...'} trend="Base de données active" color="white" />
+            <KPICard label="NOUVEAUX CE MOIS" value={stats ? stats.totaux.nouveauxMois : '...'} trend="Indicateur temps réel" color="white" />
+            <KPICard label="POURCENTAGE SUIVI" value={stats && stats.totaux.patients ? Math.round((stats.totaux.enTraitement / stats.totaux.patients)*100)+'%' : '...'} trend="Patients en traitement" color="white" />
+            <KPICard label="CANCER DOMINANT" value={stats && stats.parType.length ? [...stats.parType].sort((a,b)=>b.count-a.count)[0].type_cancer : '...'} trend="Plus haute fréquence" color="white" />
           </div>
 
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 25 }}>

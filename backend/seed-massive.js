@@ -25,8 +25,12 @@ const STAGES = ['Stade I', 'Stade II', 'Stade III', 'Stade IV'];
 const STATUSES = ['En suivi', 'En traitement', 'Guéri', 'Décédé'];
 const SEXES = ['M', 'F'];
 
+const NOMS = ["Hadj-Ali", "Benbouali", "Mansouri", "Belkacem", "Meziane", "Brahimi", "Ait-Ahmed", "Ziane", "Merbah", "Hamdad", "Oussalah", "Ferhat", "Guermazi", "Boudiaf", "Krim", "Abane", "Ben M'hidi", "Lotfi", "Amrouche", "Feraoun"];
+const PRENOMS_H = ["Mohamed", "Amine", "Mustapha", "Lyes", "Sami", "Karim", "Yacine", "Nabil", "Redouane", "Walid", "Fayçal", "Abdelkrim"];
+const PRENOMS_F = ["Nadia", "Sonia", "Lynda", "Meriem", "Yasmine", "Imane", "Leila", "Kahina", "Assia", "Amel", "Zohra", "Fatma-Zohra"];
+
 async function seedMassive() {
-  console.log('🚀 Démarrage du peuplement massif (200 patients)...');
+  console.log('🚀 Démarrage du peuplement massif avec vrais noms (50 patients)...');
   const conn = await pool.getConnection();
 
   try {
@@ -37,19 +41,24 @@ async function seedMassive() {
     // Clear old data
     console.log('🧹 Nettoyage des anciennes données...');
     await conn.execute('SET FOREIGN_KEY_CHECKS=0');
-    await conn.execute('DELETE FROM cancer_cases');
-    await conn.execute('DELETE FROM patients');
+    // Using TRUNCATE to avoid table not exist errors if they are empty
+    try { await conn.execute('DELETE FROM cancer_cases'); } catch(e){}
+    try { await conn.execute('DELETE FROM patients'); } catch(e){}
+    try { await conn.execute('DELETE FROM rendez_vous'); } catch(e){}
     await conn.execute('SET FOREIGN_KEY_CHECKS=1');
 
-    for (let i = 0; i < 200; i++) {
+    for (let i = 0; i < 50; i++) {
       const pid = uuidv4();
-      const nom = `Nom${i}`;
-      const prenom = `Prenom${i}`;
       const sexe = SEXES[Math.floor(Math.random() * 2)];
+      const nom = NOMS[Math.floor(Math.random() * NOMS.length)];
+      const prenom = sexe === 'M' ? PRENOMS_H[Math.floor(Math.random() * PRENOMS_H.length)] : PRENOMS_F[Math.floor(Math.random() * PRENOMS_F.length)];
+      
       const wilaya = WILAYAS[Math.floor(Math.random() * WILAYAS.length)];
       // Random date between 1940 and 2000
       const dobYear = 1940 + Math.floor(Math.random() * 60);
-      const dob = `${dobYear}-01-01`;
+      const dobMonth = 1 + Math.floor(Math.random() * 12);
+      const dobDay = 1 + Math.floor(Math.random() * 28);
+      const dob = `${dobYear}-${dobMonth.toString().padStart(2,'0')}-${dobDay.toString().padStart(2,'0')}`;
       
       await conn.execute(
         `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, wilaya, created_by) VALUES (?, ?, ?, ?, ?, ?, ?)`,
@@ -74,7 +83,7 @@ async function seedMassive() {
         );
       }
 
-      if (i % 50 === 0) console.log(`... ${i} patients insérés`);
+      if (i % 10 === 0) console.log(`... ${i} patients insérés`);
     }
 
     console.log('✅ Peuplement terminé : 200 patients ajoutés.');

@@ -65,7 +65,7 @@ const getDashboardStats = async (req, res) => {
     `, params);
 
     const [recent] = await pool.execute(`
-      SELECT p.nom, p.prenom, p.sexe, TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) as age, 
+      SELECT p.id as patientId, cc.id as caseId, p.nom, p.prenom, p.sexe, TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) as age, 
              cc.sous_type as diagnostic, cc.stade, cc.statut_patient, cc.created_at
       FROM patients p
       JOIN cancer_cases cc ON p.id = cc.patient_id

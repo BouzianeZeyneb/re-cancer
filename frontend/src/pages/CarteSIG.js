@@ -29,10 +29,10 @@ export default function CarteSIG() {
           if (!w) return null;
           const wNom = w.nom ? w.nom.toLowerCase() : '';
           const match = parWilaya.find(pw => {
-            const pwWilaya = pw.wilaya ? pw.wilaya.toLowerCase() : '';
+            const pwWilaya = pw.name ? pw.name.toLowerCase() : '';
             return pwWilaya === wNom;
           });
-          const count = match ? Number(match.count) || 0 : 0;
+          const count = match ? Number(match.value) || 0 : 0;
           if (count > maxC) maxC = count;
           return { ...w, count };
         }).filter(Boolean);

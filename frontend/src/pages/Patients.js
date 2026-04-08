@@ -7,6 +7,7 @@ import { format, differenceInYears, parseISO } from 'date-fns';
 
 export default function Patients() {
   const [patients, setPatients] = useState([]);
+  const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sexeFilter, setSexeFilter] = useState('');
@@ -25,7 +26,10 @@ export default function Patients() {
     if (typeFilter) params.type = typeFilter;
     if (stadeFilter) params.stade = stadeFilter;
     getPatients(params)
-      .then(r => setPatients(r.data.patients || r.data))
+      .then(r => {
+         setPatients(r.data.patients || r.data);
+         setTotal(r.data.total || (r.data.patients || r.data).length);
+      })
       .catch(console.error)
       .finally(() => setLoading(false));
   }, [search, sexeFilter]);
@@ -105,7 +109,7 @@ export default function Patients() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div>
           <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', margin: 0 }}>Patients</h1>
-          <p style={{ color: '#64748b', fontSize: 14, marginTop: 4 }}>{patients.length} patients trouvés</p>
+          <p style={{ color: '#64748b', fontSize: 14, marginTop: 4 }}>{total} patients trouvés</p>
         </div>
         <Link to="/patients/nouveau" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 10 }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
