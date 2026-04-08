@@ -10,13 +10,20 @@ export default function Patients() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sexeFilter, setSexeFilter] = useState('');
+  const [typeFilter, setTypeFilter] = useState('');
+  const [stadeFilter, setStadeFilter] = useState('');
   const navigate = useNavigate();
+
+  const CANCER_TYPES = ["Sein", "Poumon", "Colorectal", "Prostate", "Estomac", "Foie", "Vessie", "Rein", "Lymphome", "Leucémie", "Autres"];
+  const STAGES = ["I", "II", "III", "IV", "Inconnu"];
 
   const load = useCallback(() => {
     setLoading(true);
     const params = {};
     if (search) params.search = search;
     if (sexeFilter) params.sexe = sexeFilter;
+    if (typeFilter) params.type = typeFilter;
+    if (stadeFilter) params.stade = stadeFilter;
     getPatients(params)
       .then(r => setPatients(r.data.patients || r.data))
       .catch(console.error)
@@ -94,120 +101,88 @@ export default function Patients() {
   };
 
   return (
-    <Layout title="Gestion des Patients">
-      <div className="filter-bar">
-        <Link to="/patients/nouveau" className="btn btn-primary" style={{ flexShrink: 0 }}>
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-          </svg>
+    <Layout title="">
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div>
+          <h1 style={{ fontSize: 28, fontWeight: 800, color: '#0f172a', margin: 0 }}>Patients</h1>
+          <p style={{ color: '#64748b', fontSize: 14, marginTop: 4 }}>{patients.length} patients trouvés</p>
+        </div>
+        <Link to="/patients/nouveau" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', borderRadius: 10 }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           Nouveau Patient
         </Link>
-        
-        <input 
-          type="file" 
-          accept=".csv" 
-          ref={fileInputRef} 
-          style={{ display: 'none' }} 
-          onChange={handleImportCSV} 
-        />
-        
-        <button 
-          className="btn btn-outline" 
-          onClick={() => fileInputRef.current.click()}
-          style={{ flexShrink: 0 }}
-        >
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-            <polyline points="21 15 16 10 5 21"/><path d="M7 10a3 3 0 110-6 3 3 0 010 6z"/><polyline points="17 4 21 8 17 12"/></svg>
-          Import CSV
-        </button>
-        <div className="search-bar">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
-          </svg>
-          <input
-            placeholder="Rechercher par nom, carte, téléphone..."
-            value={search}
-            onChange={e => setSearch(e.target.value)}
-          />
-        </div>
-        <select className="filter-select" value={sexeFilter} onChange={e => setSexeFilter(e.target.value)}>
-          <option value="">Tous les sexes</option>
-          <option value="M">Masculin</option>
-          <option value="F">Féminin</option>
-        </select>
-        <div style={{ flex: 1 }} />
       </div>
 
-      <div className="card">
-        <div className="card-header">
-          <h2>Patients ({patients.length})</h2>
-        </div>
-        {loading ? (
-          <div className="loading-center"><div className="spinner" /></div>
-        ) : patients.length === 0 ? (
-          <div className="empty-state">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-            <h3>Aucun patient trouvé</h3>
-            <p>Commencez par ajouter un nouveau patient</p>
+      <div style={{ 
+          background: 'white', 
+          padding: '20px', 
+          borderRadius: 16, 
+          border: '1px solid #e2e8f0', 
+          display: 'flex', 
+          gap: 16, 
+          alignItems: 'center',
+          marginBottom: 24,
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+      }}>
+          <div style={{ flex: 1, position: 'relative' }}>
+            <svg style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+            <input
+              className="form-control"
+              style={{ paddingLeft: 48, background: '#f8fafc', border: 'none' }}
+              placeholder="Rechercher par nom ou N° dossier..."
+              value={search}
+              onChange={e => setSearch(e.target.value)}
+            />
           </div>
+          <select className="form-control" style={{ width: 180, background: '#f8fafc', border: 'none' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+            <option value="">Tous les types</option>
+            {CANCER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+          </select>
+          <select className="form-control" style={{ width: 180, background: '#f8fafc', border: 'none' }} value={stadeFilter} onChange={e => setStadeFilter(e.target.value)}>
+            <option value="">Tous les stades</option>
+            {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+      </div>
+
+      <div className="card" style={{ border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+        {loading ? (
+          <div className="loading-center" style={{ padding: 100 }}><div className="spinner" /></div>
         ) : (
           <div className="table-wrap">
-            <table>
-              <thead>
+            <table style={{ borderCollapse: 'separate', borderSpacing: 0 }}>
+              <thead style={{ background: '#f8fafc' }}>
                 <tr>
-                  <th>ID</th>
-                  <th>Patient</th>
-                  <th>Sexe</th>
-                  <th>Âge</th>
-                  <th>Carte Nationale</th>
-                  <th>Wilaya</th>
-                  <th>Cancers</th>
-                  <th>Statut</th>
-                  <th>Actions</th>
+                  <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>N° Dossier</th>
+                  <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Patient</th>
+                  <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Cancer</th>
+                  <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Stade</th>
+                  <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Statut</th>
+                  <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Médecin</th>
                 </tr>
               </thead>
               <tbody>
                 {patients.map(p => (
-                  <tr key={p.id}>
-                    <td style={{ fontFamily: 'JetBrains Mono', fontSize: 13, color: '#475569', fontWeight: 700 }}>#{String(p.id).padStart(4, '0')}</td>
-                    <td>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                        <div style={{
-                          width: 34, height: 34, borderRadius: '50%',
-                          background: p.sexe === 'M' ? '#dbeafe' : '#fce7f3',
-                          display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          fontSize: 13, fontWeight: 700,
-                          color: p.sexe === 'M' ? '#1e40af' : '#9d174d',
-                          flexShrink: 0
-                        }}>
-                          {p.prenom[0]}{p.nom[0]}
-                        </div>
-                        <div>
-                          <div style={{ fontWeight: 600 }}>{p.prenom} {p.nom}</div>
-                          <div style={{ fontSize: 12, color: '#94a3b8' }}>{p.telephone || '-'}</div>
-                        </div>
-                      </div>
+                  <tr key={p.id} onClick={() => navigate(`/patients/${p.id}`)} style={{ cursor: 'pointer', transition: 'background 0.2s' }}>
+                    <td style={{ padding: '20px 24px', fontSize: 13, borderBottom: '1px solid #f1f5f9', color: '#0ea5e9', fontWeight: 600 }}>
+                        ONC-2024-{String(p.id).padStart(3, '0')}
                     </td>
-                    <td>{p.sexe === 'M' ? '♂ Masculin' : '♀ Féminin'}</td>
-                    <td>{getAge(p.date_naissance)} ans</td>
-                    <td style={{ fontFamily: 'JetBrains Mono', fontSize: 12.5 }}>{p.num_carte_nationale || '-'}</td>
-                    <td>{p.wilaya || '-'}</td>
-                    <td>
-                      <span className="badge badge-purple">{p.nb_cancers || 0}</span>
+                    <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                      <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{p.nom} {p.prenom}</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 2 }}>{p.sexe === 'F' ? 'Femme' : 'Homme'} · {p.date_naissance}</div>
                     </td>
-                    <td>{statusBadge(p.derniere_statut)}</td>
-                    <td>
-                      <div style={{ display: 'flex', gap: 6 }}>
-                        <button className="btn-icon" onClick={() => navigate(`/patients/${p.id}`)} title="Voir">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                        <button className="btn-icon" onClick={() => navigate(`/patients/${p.id}/modifier`)} title="Modifier">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 013 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-                        </button>
-                        <button className="btn-icon" onClick={() => handleDelete(p.id, p.nom, p.prenom)} title="Supprimer" style={{ color: '#e63946' }}>
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/></svg>
-                        </button>
-                      </div>
+                    <td style={{ padding: '20px 24px', fontSize: 14, color: '#334155', borderBottom: '1px solid #f1f5f9' }}>
+                        {p.cancer_type || 'Sein'}
+                    </td>
+                    <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                        <span style={{ fontWeight: 800, color: '#1e293b' }}>{p.stade || 'II'}</span>
+                    </td>
+                    <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
+                        <span className={`badge ${p.derniere_statut === 'Suivi' ? 'badge-green' : 'badge-blue'}`} style={{ borderRadius: 99, padding: '4px 12px', fontSize: 11, fontWeight: 700 }}>
+                            {p.derniere_statut || 'En traitement'}
+                        </span>
+                    </td>
+                    <td style={{ padding: '20px 24px', fontSize: 14, color: '#64748b', borderBottom: '1px solid #f1f5f9' }}>
+                        Dr. {p.medecin || 'Khelifi'}
                     </td>
                   </tr>
                 ))}

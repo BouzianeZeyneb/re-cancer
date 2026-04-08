@@ -5,7 +5,14 @@ import { createPatient, updatePatient, getPatient } from '../utils/api';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 
-const WILAYAS = ['Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira','Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda','Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','MSila','Mascara','Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt','El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane'];
+const WILAYAS_ALGERIE = [
+  "01 - Adrar", "02 - Chlef", "03 - Laghouat", "04 - Oum El Bouaghi", "05 - Batna", "06 - Béjaïa", "07 - Biskra", "08 - Béchar", "09 - Blida", "10 - Bouira",
+  "11 - Tamanrasset", "12 - Tébessa", "13 - Tlemcen", "14 - Tiaret", "15 - Tizi Ouzou", "16 - Alger", "17 - Djelfa", "18 - Jijel", "19 - Sétif", "20 - Saïda",
+  "21 - Skikda", "22 - Sidi Bel Abbès", "23 - Annaba", "24 - Guelma", "25 - Constantine", "26 - Médéa", "27 - Mostaganem", "28 - M'Sila", "29 - Mascara", "30 - Ouargla",
+  "31 - Oran", "32 - El Bayadh", "33 - Illizi", "34 - Bordj Bou Arreridj", "35 - Boumerdès", "36 - El Tarf", "37 - Tindouf", "38 - Tissemsilt", "39 - El Oued", "40 - Khenchela",
+  "41 - Souk Ahras", "42 - Tipaza", "43 - Mila", "44 - Aïn Defla", "45 - Naâma", "46 - Aïn Témouchent", "47 - Ghardaïa", "48 - Relizane", "49 - El M'Ghair", "50 - El Meniaa",
+  "51 - Ouled Djellal", "52 - Bordj Badji Mokhtar", "53 - Beni Abbes", "54 - Timimoun", "55 - Touggourt", "56 - Djanet", "57 - In Salah", "58 - In Guezzam"
+];
 
 const FIELD_MAP = {
   'nom': 'nom', 'prénom': 'prenom', 'prenom': 'prenom',
@@ -16,6 +23,7 @@ const FIELD_MAP = {
 const initialForm = {
   nom: '', prenom: '', date_naissance: '', sexe: 'M', telephone: '',
   num_carte_nationale: '', num_carte_chifa: '', adresse: '', commune: '', wilaya: '',
+  assurance: '', groupe_sanguin: '', email: '',
   fumeur: false, alcool: false, activite_sportive: false,
   autres_medicaments: '', autres_facteurs_risque: '',
   antecedents_medicaux: '', antecedents_familiaux: ''
@@ -38,7 +46,16 @@ export default function PatientForm() {
   const recognitionRef = useRef(null);
   const [parametres, setParametres] = useState([]);
   
-  // États pour la gestion des doublons
+  // NOUVEAUX ÉTATS ANTHROPOMÉTRIE & ÉTAPES
+  const [poids, setPoids] = useState('');
+  const [taille, setTaille] = useState('');
+  const [imc, setImc] = useState('-');
+  const [imcCategory, setImcCategory] = useState({ label: 'En attente', color: '#94a3b8' });
+  const [tourTaille, setTourTaille] = useState('');
+  const [maladiesChroniques, setMaladiesChroniques] = useState([]);
+  const [maladieAutre, setMaladieAutre] = useState('');
+
+  // État pour la gestion des doublons
   const [duplicateInfo, setDuplicateInfo] = useState(null);
   const [mergeChoices, setMergeChoices] = useState({});
 
@@ -52,6 +69,8 @@ export default function PatientForm() {
     { key: 'num_carte_chifa', label: 'N° Carte Chifa' },
     { key: 'wilaya', label: 'Wilaya' },
     { key: 'commune', label: 'Commune' },
+    { key: 'assurance', label: 'Assurance' },
+    { key: 'groupe_sanguin', label: 'Groupe Sanguin' },
     { key: 'adresse', label: 'Adresse' },
   ];
 
@@ -64,6 +83,7 @@ export default function PatientForm() {
           sexe: p.sexe||'M', telephone: p.telephone||'',
           num_carte_nationale: p.num_carte_nationale||'', num_carte_chifa: p.num_carte_chifa||'',
           adresse: p.adresse||'', commune: p.commune||'', wilaya: p.wilaya||'',
+          assurance: p.assurance||'', groupe_sanguin: p.groupe_sanguin||'',
           fumeur: Boolean(p.fumeur), alcool: Boolean(p.alcool), activite_sportive: Boolean(p.activite_sportive),
           autres_medicaments: p.autres_medicaments||'', autres_facteurs_risque: p.autres_facteurs_risque||''
         });
@@ -77,6 +97,26 @@ export default function PatientForm() {
     api.get('/champs-dynamiques').then(r => setChampsDynamiques(r.data)).catch(()=>{});
     api.get('/parametres').then(r => setParametres(r.data)).catch(()=>{});
   }, [id, isEdit]);
+
+  // CALCUL IMC TEMPS RÉEL
+  useEffect(() => {
+    if (poids && taille) {
+      const h = parseFloat(taille) / 100;
+      const w = parseFloat(poids);
+      if (h > 0) {
+        const val = (w / (h * h)).toFixed(1);
+        setImc(val);
+        if (val < 18.5) setImcCategory({ label: 'Insuffisance pondérale', color: '#0ea5e9' });
+        else if (val < 25) setImcCategory({ label: 'Poids normal', color: '#10b981' });
+        else if (val < 30) setImcCategory({ label: 'Surpoids', color: '#f59e0b' });
+        else if (val < 35) setImcCategory({ label: 'Obésité modérée', color: '#f97316' });
+        else setImcCategory({ label: 'Obésité sévère', color: '#ef4444' });
+      }
+    } else {
+      setImc('-');
+      setImcCategory({ label: 'En attente', color: '#94a3b8' });
+    }
+  }, [poids, taille]);
 
   // Real-time duplicate check
   useEffect(() => {
@@ -95,8 +135,7 @@ export default function PatientForm() {
         const res = await api.post('/patients/check-duplicate', { nom, prenom, date_naissance, num_carte_nationale, num_carte_chifa });
         if (res.data.duplicate) {
           toast('⚠️ Patient déjà existant détecté!', { icon: '🔍', duration: 4000 });
-          // Temporarily save styles too in case we need them
-          const draftToPass = { ...form, stylesVieValeurs };
+          const draftToPass = { ...form };
           navigate('/doublons', { state: { draftPatient: draftToPass, existingId: res.data.duplicate.id } });
         }
       } catch (err) {
@@ -173,7 +212,7 @@ export default function PatientForm() {
       }
     };
     rec.onerror = (e) => { 
-      if (e.error === 'no-speech') return; // ignore idle timeouts if any
+      if (e.error === 'no-speech') return;
       toast.error('Erreur microphone'); 
       setIsListening(false); 
       setActiveVoiceField(null);
@@ -207,14 +246,14 @@ export default function PatientForm() {
     } else if (field === 'sexe') {
       if (['masculin', 'homme'].includes(text)) set('sexe', 'M');
       else if (['féminin', 'femme'].includes(text)) set('sexe', 'F');
-      else return; // unparsed
+      else return;
       toast.success(`✅ SEXE mis à jour`);
     } else if (field === 'fumeur') {
       if (['oui', 'positif', 'vrai'].includes(text)) set('fumeur', true);
       else if (['non', 'négatif', 'faux'].includes(text)) set('fumeur', false);
       toast.success('✅ Fumeur mis à jour');
     } else if (field === 'wilaya') {
-      const match = WILAYAS.find(w => w.toLowerCase().includes(text));
+      const match = WILAYAS_ALGERIE.find(w => w.toLowerCase().includes(text));
       if (match) { set('wilaya', match); toast.success(`✅ Wilaya: ${match}`); }
     } else if (field === 'date_naissance') {
       const nums = text.replace(/\//g, ' ').replace(/-/g, ' ').split(' ').filter(n => n.match(/^\d+$/));
@@ -250,38 +289,9 @@ export default function PatientForm() {
 
   const stopVoice = () => { recognitionRef.current?.stop(); setIsListening(false); };
 
-
-
-  // Dynamic Styles Add Logic removed from here since it is now managed centrally via AdminSettings
-
-  const handleForceSubmit = async () => {
-    setDuplicateInfo(null);
-    setLoading(true);
-    try {
-      const payload = { ...form, forceSave: true };
-      let patientId = id;
-      if (isEdit) {
-        await updatePatient(id, payload);
-        toast.success('Patient modifié (Doublon forcé)', { icon: '✅' });
-      } else {
-        const res = await createPatient(payload);
-        patientId = res.data.id;
-        toast.success('Patient créé (Doublon forcé)', { icon: '✅' });
-      }
-      const valeurs = Object.entries(valeursDynamiques).map(([c_id, v]) => ({ champ_id: c_id, valeur: v }));
-      if (valeurs.length) await api.post('/valeurs-dynamiques', { record_id: patientId, valeurs });
-      navigate(`/patients/${patientId}`);
-    } catch(err) {
-      setError(err.response?.data?.message || 'Erreur lors du forçage');
-    } finally {
-      setLoading(false);
-    }
-  };
-
   const handleSubmit = async (e) => {
     e.preventDefault();
     setError('');
-    // Champs obligatoires
     const missingFields = [];
     if (!form.nom) missingFields.push('Nom');
     if (!form.prenom) missingFields.push('Prénom');
@@ -309,7 +319,6 @@ export default function PatientForm() {
       const code = err.response?.data?.code;
       if (code === 'DUPLICATE_SUSPECTED') {
         const info = err.response.data.similarityInfo;
-        // Initialiser tous les choix sur 'new' par défaut
         const initialChoices = {};
         MERGE_FIELDS.forEach(f => { initialChoices[f.key] = 'new'; });
         setMergeChoices(initialChoices);
@@ -356,285 +365,188 @@ export default function PatientForm() {
             </div>
           </div>
 
-          {voiceMode && (
-            <div style={{ background:'#f0f9ff', padding:'10px 24px', borderBottom:'1px solid #e2e8f0', fontSize:13, color:'#0369a1' }}>
-              💡 Dites le nom du champ pour l'activer, puis dictez sa valeur. <br/>
-              <em>Exemple: "Nom Dupont" (pause) "Prénom Jean" (pause) "Sexe masculin" (pause) "Téléphone 0770..."</em>
-            </div>
-          )}
-
-          <div className="card-body">
-            <div className="tabs" style={{ marginBottom:20 }}>
-              {['infos','habitudes'].map(tab => (
-                <button key={tab} type="button" className={`tab ${activeTab===tab?'active':''}`} onClick={() => setActiveTab(tab)}>
-                  {tab === 'infos' ? '👤 Informations' : '🏃 Styles de Vie'}
-                </button>
-              ))}
-            </div>
-
-            {activeTab === 'infos' && (
-              <div>
-                <div className="form-row">
-                  {['nom','prenom'].map(f => (
-                    <div className="form-group" key={f}>
-                      <label className="form-label">{f === 'nom' ? 'Nom *' : 'Prénom *'}</label>
-                      <div style={{ display:'flex', gap:8 }}>
-                        <input className="form-control" value={form[f]} onChange={e => set(f, e.target.value)} required style={activeVoiceField === f ? { border:'2px solid #e63946', background:'#fef2f2' } : {}} />
-                        {voiceMode && <button type="button" style={{ padding:'0 10px', border:'1px solid #e2e8f0', borderRadius:8, background:'white', cursor:'pointer', fontSize:14 }} onClick={() => startVoice(f)}>🎤</button>}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Date de Naissance *</label>
-                    <input type="date" className="form-control" value={form.date_naissance} onChange={e => set('date_naissance', e.target.value)} required />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Sexe</label>
-                    <select className="form-control" value={form.sexe} onChange={e => set('sexe', e.target.value)}>
-                      <option value="M">♂ Masculin</option>
-                      <option value="F">♀ Féminin</option>
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">
-                      N° Carte Nationale <span style={{ color: '#ef4444', fontWeight: 800 }}>*</span>
-                    </label>
-                    <input
-                      className="form-control"
-                      value={form.num_carte_nationale}
-                      onChange={e => set('num_carte_nationale', e.target.value)}
-                      required
-                      style={!form.num_carte_nationale ? { borderColor: '#fca5a5' } : {}}
-                      placeholder="Numéro obligatoire"
-                    />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">
-                      N° Carte Chifa <span style={{ color: '#ef4444', fontWeight: 800 }}>*</span>
-                    </label>
-                    <input
-                      className="form-control"
-                      value={form.num_carte_chifa}
-                      onChange={e => set('num_carte_chifa', e.target.value)}
-                      required
-                      style={!form.num_carte_chifa ? { borderColor: '#fca5a5' } : {}}
-                      placeholder="Numéro obligatoire"
-                    />
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Téléphone</label>
-                    <div style={{ display:'flex', gap:8 }}>
-                      <input className="form-control" value={form.telephone} onChange={e => set('telephone', e.target.value)} style={activeVoiceField === 'telephone' ? { border:'2px solid #e63946', background:'#fef2f2' } : {}} />
-                    </div>
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Wilaya</label>
-                    <select className="form-control" value={form.wilaya} onChange={e => set('wilaya', e.target.value)}>
-                      <option value="">Sélectionner...</option>
-                      {WILAYAS.map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="form-row">
-                  <div className="form-group">
-                    <label className="form-label">Commune</label>
-                    <input className="form-control" value={form.commune} onChange={e => set('commune', e.target.value)} />
-                  </div>
-                </div>
-                <div className="form-group">
-                  <label className="form-label">Adresse</label>
-                  <div style={{ display:'flex', gap:8 }}>
-                    <textarea className="form-control" rows={2} value={form.adresse} onChange={e => set('adresse', e.target.value)} style={activeVoiceField === 'adresse' ? { border:'2px solid #e63946', background:'#fef2f2' } : {}} />
-                  </div>
-                </div>
-
-                {champsDynamiques.filter(c => c.entite === 'patient').length > 0 && (
-                  <div style={{ marginTop:20, paddingTop: 20, borderTop: '1px dashed #cbd5e1' }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:10 }}>Informations Supplémentaires (Dynamiques)</div>
+          <div className="card-body" style={{ padding: '40px' }}>
+                <div style={{ marginBottom: 40 }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 24, borderLeft: '4px solid #0ea5e9', paddingLeft: 16 }}>1. Informations Civiles & Anthropométrie</div>
+                    
                     <div className="form-row">
-                      {champsDynamiques.filter(c => c.entite === 'patient').map(s => (
-                        <div className="form-group" key={s.id}>
-                          <label className="form-label">{s.nom} {s.obligatoire && '*'}</label>
-                          {s.type_champ === 'booleen' ? (
-                            <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
-                              <option value="">Choisir...</option>
-                              <option value="true">Oui</option>
-                              <option value="false">Non</option>
-                            </select>
-                          ) : s.type_champ === 'liste' ? (
-                             <select className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire}>
-                                <option value="">Choisir...</option>
-                                {s.options_liste.split(',').map(opt => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}
-                             </select>
-                          ) : s.type_champ === 'date' ? (
-                             <input type="date" className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
-                          ) : (
-                            <input type={s.type_champ === 'nombre' ? 'number' : 'text'} className="form-control" value={valeursDynamiques[s.id] || ''} onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))} required={s.obligatoire} />
-                          )}
+                      {['nom','prenom'].map(f => (
+                        <div className="form-group" key={f}>
+                          <label className="form-label">{f === 'nom' ? 'Nom *' : 'Prénom *'}</label>
+                          <input className="form-control" value={form[f]} onChange={e => set(f, e.target.value)} required placeholder={f === 'nom' ? 'Nom de famille' : 'Prénom'} />
                         </div>
                       ))}
                     </div>
-                  </div>
-                )}
-              </div>
-            )}
 
-            {activeTab === 'habitudes' && (
-              <div>
-                {/* Bloc Génération QR Code */}
-                <div style={{ padding: 24, background: '#f8fafc', borderRadius: 12, border: '2px dashed #cbd5e1', marginBottom: 24, display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Questionnaire Patient Mobile</div>
-                  {isEdit ? (
-                    <>
-                      <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Le patient peut scanner ce QR Code pour remplir lui-même ce formulaire depuis la salle d'attente.</p>
-                      <div style={{ background: 'white', padding: 16, display: 'flex', justifyContent: 'center', borderRadius: 16, border: '1px solid #cbd5e1' }}>
-                         <div style={{ margin: "0 auto", alignSelf: "center" }}>
-                           <img src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(window.location.origin + '/patient-forms/' + id)}`} alt="QR Code" style={{ width: 150, height: 150 }} />
-                         </div>
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Date de naissance *</label>
+                        <input type="date" className="form-control" value={form.date_naissance} onChange={e => set('date_naissance', e.target.value)} required />
                       </div>
-                    </>
-                  ) : (
-                    <>
-                      <p style={{ fontSize: 14, color: '#334155', marginBottom: 12, maxWidth: 500 }}>
-                        Le QR Code sécurisé de ce patient sera généré <strong>automatiquement</strong> dès que vous aurez cliqué sur "Créer". 
-                      </p>
-                      <div style={{ padding: '10px 16px', background: '#eff6ff', color: '#1d4ed8', borderRadius: 8, fontSize: 13, fontWeight: 600 }}>
-                        💡 Sauvegardez d'abord ses informations (Nom, Prénom, etc.) pour débloquer le scan !
+                      <div className="form-group">
+                        <label className="form-label">Sexe *</label>
+                        <select className="form-control" value={form.sexe} onChange={e => set('sexe', e.target.value)}>
+                          <option value="M">Masculin</option>
+                          <option value="F">Féminin</option>
+                        </select>
                       </div>
-                    </>
-                  )}
-                </div>
-                <div style={{ marginBottom:20 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:10 }}>Habitudes de base</div>
-                  <div style={{ display:'flex', gap:16, flexWrap:'wrap' }}>
-                    {[['fumeur','🚬 Fumeur'],['alcool','🍷 Alcool'],['activite_sportive','🏃 Sport']].map(([f,l]) => (
-                      <label key={f} style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer', padding:'10px 16px', border:'1px solid #e2e8f0', borderRadius:8, background: form[f] ? '#dbeafe' : 'white' }}>
-                        <input type="checkbox" checked={form[f]} onChange={e => set(f, e.target.checked)} />
-                        <span style={{ fontSize:13.5, fontWeight:600 }}>{l}</span>
-                      </label>
-                    ))}
-                  </div>
-                </div>
+                    </div>
 
-                {champsDynamiques.filter(c => c.entite === 'habitudes_vie').length > 0 && (
-                  <div style={{ marginBottom:20 }}>
-                    <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:10 }}>Méta-données (via Générateur)</div>
-                    <div style={{ display:'flex', flexDirection:'column', gap:8 }}>
-                      {champsDynamiques.filter(c => c.entite === 'habitudes_vie').map(s => (
-                        <div key={s.id} style={{ display:'flex', alignItems:'center', gap:12, padding:'10px 14px', background:'#f8fafc', borderRadius:8, border:'1px solid #e2e8f0' }}>
-                          <div style={{ flex:1, fontSize:13.5, fontWeight:600 }}>{s.nom} {s.obligatoire && <span style={{color:'red'}}>*</span>}</div>
-                          {s.type_champ === 'booleen' ? (
-                            <label style={{ display:'flex', alignItems:'center', gap:8, cursor:'pointer' }}>
-                              <input type="checkbox"
-                                checked={valeursDynamiques[s.id] === 'true'}
-                                onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: String(e.target.checked) }))}
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Téléphone</label>
+                        <input className="form-control" value={form.telephone} onChange={e => set('telephone', e.target.value)} placeholder="+213 ..." />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Email</label>
+                        <input type="email" className="form-control" value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemple.com" />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Wilaya de résidence</label>
+                        <select className="form-control" value={form.wilaya} onChange={e => set('wilaya', e.target.value)}>
+                          <option value="">Sélectionner une Wilaya...</option>
+                          {WILAYAS_ALGERIE.map(w => <option key={w} value={w}>{w}</option>)}
+                        </select>
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Groupe sanguin</label>
+                        <select className="form-control" value={form.groupe_sanguin} onChange={e => set('groupe_sanguin', e.target.value)}>
+                          <option value="">Sélectionner</option>
+                          {['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'].map(g => <option key={g} value={g}>{g}</option>)}
+                        </select>
+                      </div>
+                    </div>
+
+                    <div className="form-group" style={{ marginTop: 10 }}>
+                      <label className="form-label">Adresse Complète (N°, Rue, Ville)</label>
+                      <input className="form-control" value={form.adresse} onChange={e => set('adresse', e.target.value)} placeholder="Ex: 12 Rue des jardins, Alger Centre..." />
+                    </div>
+
+                    <div style={{ marginTop: 30, padding: 30, background: '#f8fafc', borderRadius: 16, border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 20 }}>Données Anthropométriques</div>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label className="form-label">Poids (kg)</label>
+                            <input type="number" className="form-control" value={poids} onChange={e => setPoids(e.target.value)} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Taille (cm)</label>
+                            <input type="number" className="form-control" value={taille} onChange={e => setTaille(e.target.value)} />
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Tour de taille (cm)</label>
+                            <input type="number" className="form-control" value={tourTaille} onChange={e => setTourTaille(e.target.value)} />
+                          </div>
+                        </div>
+                        <div className="form-row" style={{ marginTop: 10 }}>
+                          <div className="form-group">
+                            <label className="form-label">IMC</label>
+                            <div style={{ padding: '12px 16px', background: '#ffffff', borderRadius: 10, border: '1px solid #e2e8f0', fontWeight: 800, fontSize: 18 }}>{imc}</div>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Statut</label>
+                            <div style={{ padding: '14px', background: imcCategory.color, color: 'white', borderRadius: 10, fontSize: 14, fontWeight: 800, textAlign: 'center' }}>{imcCategory.label}</div>
+                          </div>
+                        </div>
+                    </div>
+
+                    <div style={{ marginTop: 30 }}>
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 20 }}>Maladies Chroniques</div>
+                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+                          {[
+                            'Diabète type 1', 'Diabète type 2', 'Hypertension artérielle', 
+                            'Insuffisance rénale', 'Insuffisance cardiaque', 'BPCO / Asthme', 
+                            'Hépatite B / C', 'Cirrhose', 'VIH / SIDA'
+                          ].map(m => (
+                            <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px', border: '1px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', background: maladiesChroniques.includes(m) ? '#f0f9ff' : 'white' }}>
+                              <input type="checkbox" checked={maladiesChroniques.includes(m)} 
+                                onChange={e => {
+                                  if (e.target.checked) setMaladiesChroniques([...maladiesChroniques, m]);
+                                  else setMaladiesChroniques(maladiesChroniques.filter(x => x !== m));
+                                }} 
                               />
-                              <span style={{ fontSize:13 }}>{valeursDynamiques[s.id] === 'true' ? 'Oui' : 'Non'}</span>
+                              <span style={{ fontSize: 14, fontWeight: 600 }}>{m}</span>
                             </label>
-                          ) : s.type_champ === 'liste' ? (
-                             <select className="form-control" style={{ width:180 }}
-                               value={valeursDynamiques[s.id] || ''}
-                               onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))}
-                               required={s.obligatoire}
-                             >
-                                <option value="">Choisir...</option>
-                                {s.options_liste.split(',').map(opt => <option key={opt.trim()} value={opt.trim()}>{opt.trim()}</option>)}
-                             </select>
-                          ) : s.type_champ === 'date' ? (
-                             <input type="date" className="form-control" style={{ width:180 }}
-                               value={valeursDynamiques[s.id] || ''}
-                               onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))}
-                               required={s.obligatoire}
-                             />
-                          ) : (
-                            <input type={s.type_champ === 'nombre' ? 'number' : 'text'} className="form-control" style={{ width:180 }}
-                              value={valeursDynamiques[s.id] || ''}
-                              onChange={e => setValeursDynamiques(prev => ({ ...prev, [s.id]: e.target.value }))}
-                              placeholder="Valeur..."
-                              required={s.obligatoire}
-                            />
-                          )}
+                          ))}
                         </div>
-                      ))}
                     </div>
-                  </div>
-                )}
-
-                <div style={{ marginTop:30, marginBottom: 20 }}>
-                  <div style={{ fontSize:13, fontWeight:700, color:'#475569', marginBottom:8 }}>Antécédents & Comorbidités (Définis par l'Admin)</div>
-                  
-                  {parametres.filter(p => p.categorie === 'antecedent').length > 0 && (
-                    <div style={{ marginBottom: 12 }}>
-                      <strong style={{ fontSize:12, color:'#64748b' }}>Antécédents:</strong>
-                      <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop: 6 }}>
-                        {parametres.filter(p => p.categorie === 'antecedent').map(p => {
-                          const isChecked = form.antecedents_medicaux.includes(p.valeur);
-                          return (
-                            <label key={p.id} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', padding:'6px 10px', background:'#f8fafc', borderRadius:6, border:'1px solid #e2e8f0', fontSize:13 }}>
-                              <input type="checkbox" checked={isChecked} onChange={e => {
-                                let newAnt = form.antecedents_medicaux.split(',').map(s=>s.trim()).filter(Boolean);
-                                if (e.target.checked) newAnt.push(p.valeur);
-                                else newAnt = newAnt.filter(a => a !== p.valeur);
-                                set('antecedents_medicaux', newAnt.join(', '));
-                              }} />
-                              {p.valeur}
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-
-                  {parametres.filter(p => p.categorie === 'comorbidite').length > 0 && (
-                    <div style={{ marginBottom: 12 }}>
-                      <strong style={{ fontSize:12, color:'#64748b' }}>Comorbidités:</strong>
-                      <div style={{ display:'flex', gap:10, flexWrap:'wrap', marginTop: 6 }}>
-                        {parametres.filter(p => p.categorie === 'comorbidite').map(p => {
-                          const isChecked = form.antecedents_medicaux.includes(p.valeur);
-                          return (
-                            <label key={p.id} style={{ display:'flex', alignItems:'center', gap:6, cursor:'pointer', padding:'6px 10px', background:'#f8fafc', borderRadius:6, border:'1px solid #e2e8f0', fontSize:13 }}>
-                              <input type="checkbox" checked={isChecked} onChange={e => {
-                                let newAnt = form.antecedents_medicaux.split(',').map(s=>s.trim()).filter(Boolean);
-                                if (e.target.checked) newAnt.push(p.valeur);
-                                else newAnt = newAnt.filter(a => a !== p.valeur);
-                                set('antecedents_medicaux', newAnt.join(', '));
-                              }} />
-                              {p.valeur}
-                            </label>
-                          )
-                        })}
-                      </div>
-                    </div>
-                  )}
-                  
-                  <div className="form-group" style={{ marginTop: 10 }}>
-                    <label className="form-label">Notes Antécédents / Comorbidités</label>
-                    <textarea className="form-control" rows={2} value={form.antecedents_medicaux} onChange={e => set('antecedents_medicaux', e.target.value)} />
-                  </div>
                 </div>
 
-                <div style={{ marginTop:20 }}>
-                  <div className="form-group">
-                    <label className="form-label">Antécédents familiaux</label>
-                    <textarea className="form-control" rows={2} value={form.antecedents_familiaux} onChange={e => set('antecedents_familiaux', e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Autres médicaments</label>
-                    <textarea className="form-control" rows={2} value={form.autres_medicaments} onChange={e => set('autres_medicaments', e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Autres facteurs de risque</label>
-                    <textarea className="form-control" rows={2} value={form.autres_facteurs_risque} onChange={e => set('autres_facteurs_risque', e.target.value)} />
-                  </div>
+                <div style={{ height: '1px', background: '#f1f5f9', margin: '40px 0' }}></div>
+
+                {/* SECTION 2 : STYLES DE VIE & ANTÉCÉDENTS (PORTAIL PATIENT VIA QR CODE) */}
+                <div style={{ marginBottom: 40 }}>
+                    <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 24, borderLeft: '4px solid #0ea5e9', paddingLeft: 16 }}>2. Questionnaire Patient (Styles de Vie)</div>
+                    
+                    <div style={{ 
+                        padding: '40px', 
+                        background: '#f8fafc', 
+                        borderRadius: 24, 
+                        border: '2px dashed #cbd5e1', 
+                        textAlign: 'center',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center'
+                    }}>
+                        <div style={{ maxWidth: 500, marginBottom: 30 }}>
+                            <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>Portail de Saisie Patient Sécurisé</div>
+                            <p style={{ fontSize: 14, color: '#64748b', lineHeight: '1.6' }}>
+                                Pour garantir la confidentialité et l'exactitude des données, les antécédents et habitudes de vie sont désormais saisis directement par le patient via ce **QR Code à usage unique**.
+                            </p>
+                        </div>
+
+                        {/* QR CODE DYNAMIQUE */}
+                        <div style={{ 
+                            background: 'white', 
+                            padding: '24px', 
+                            borderRadius: 24, 
+                            boxShadow: '0 20px 40px rgba(0,0,0,0.05)',
+                            border: '1px solid #e2e8f0',
+                            marginBottom: 24
+                        }}>
+                             <img 
+                                src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent('https://' + (window.location.host || 'localhost') + '/scan/' + (id || 'new-patient'))}`} 
+                                alt="QR Code" 
+                                style={{ width: 200, height: 200, display: 'block' }}
+                             />
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '12px 24px', background: '#ffffff', borderRadius: 100, border: '1px solid #e2e8f0', boxShadow: '0 4px 10px rgba(0,0,0,0.02)' }}>
+                            <div style={{ width: 10, height: 10, borderRadius: '50%', background: '#0ea5e9', animation: 'pulse 1.5s infinite' }}></div>
+                            <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>Dossier prêt pour le scan patient</span>
+                        </div>
+
+                        <div style={{ marginTop: 30, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20, textAlign: 'left', width: '100%' }}>
+                            <div style={{ padding: 16, background: '#ffffff', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>Usage unique</div>
+                                <div style={{ fontSize: 12, color: '#94a3b8' }}>Le lien expire automatiquement après validation.</div>
+                            </div>
+                            <div style={{ padding: 16, background: '#ffffff', borderRadius: 12, border: '1px solid #f1f5f9' }}>
+                                <div style={{ fontSize: 13, fontWeight: 800, color: '#0f172a', marginBottom: 4 }}>Sync en direct</div>
+                                <div style={{ fontSize: 12, color: '#94a3b8' }}>Les données apparaîtront dès la validation patient.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
-              </div>
-            )}
+
+                <style>{`
+                    @keyframes pulse {
+                        0% { transform: scale(1); opacity: 1; }
+                        50% { transform: scale(1.4); opacity: 0.5; }
+                        100% { transform: scale(1); opacity: 1; }
+                    }
+                `}</style>
+
+                {/* SAUVEGARDE FINALE */}
+                <div style={{ display: 'flex', justifyContent: 'center', marginTop: 40, borderTop: '2px solid #f1f5f9', paddingTop: 40 }}>
+                    <button type="submit" className="btn btn-primary" style={{ padding: '16px 80px', fontSize: 16, fontWeight: 800, borderRadius: 16, boxShadow: '0 10px 20px rgba(14, 165, 233, 0.2)' }}>
+                        Valider l'Identité & Finaliser
+                    </button>
+                </div>
+
           </div>
         </div>
         {/* ========== MODAL DE FUSION DE DOUBLONS ========== */}

@@ -71,8 +71,9 @@ router.get('/rendez-vous', authMiddleware, async (req, res) => {
 });
 
 // Statistics & AI routes
-const { getDashboardStats, getAuditLogs, analyzeWilayaIA, analyzePatientIA, askGlobalIA } = require('../controllers/statsController');
+const { getDashboardStats, getAuditLogs, analyzeWilayaIA, analyzePatientIA, askGlobalIA, getRawStatsData } = require('../controllers/statsController');
 router.get('/stats/dashboard', authMiddleware, getDashboardStats);
+router.get('/stats/raw', authMiddleware, getRawStatsData);
 router.post('/stats/ia-analysis', authMiddleware, analyzeWilayaIA);
 router.post('/stats/analyze-patient', authMiddleware, analyzePatientIA);
 router.post('/chat-ia', authMiddleware, askGlobalIA);

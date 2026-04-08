@@ -7,9 +7,11 @@
   --primary-dark: #023E8A;
   --accent: #E11D48; /* Vibrant Rose Accents */
   
-  /* Sidebar Specifics */
-  --sidebar-bg: #1B2431; /* Dark Slate / Blue-Black to match the reference */
-  --sidebar-active: #2D3A4B; /* Active menu item color */
+  /* Sidebar Specifics (Dark Premium) */
+  --sidebar-bg: #1e293b; 
+  --sidebar-active: #334155; 
+  --sidebar-text: #94a3b8;
+  --sidebar-text-active: #ffffff;
   
   /* Backgrounds & Surface */
   --bg: #F8F9FA; 
@@ -82,54 +84,29 @@ h1, h2, h3, h4, h5, h6 {
   border-bottom: 1px solid rgba(255,255,255,0.06);
 }
 
-.sidebar-logo-icon {
-  width: 42px;
-  height: 42px;
-  background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: white;
-  flex-shrink: 0;
-  box-shadow: 0 8px 16px rgba(79, 70, 229, 0.3);
-  position: relative;
-}
-.sidebar-logo-icon::after {
-  content: ''; position: absolute; inset: 0;
-  background: linear-gradient(135deg, rgba(255,255,255,0.4) 0%, transparent 50%);
-  border-radius: inherit;
-}
-
 .sidebar-logo-text h1 {
-  font-size: 19px;
+  font-size: 20px;
   font-weight: 800;
-  color: white;
+  color: #ffffff;
   margin: 0;
-  background: linear-gradient(to right, #FFFFFF, #CBD5E1);
-  background-clip: text;
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
 }
 
 .sidebar-logo-text span {
   font-size: 11px;
-  color: rgba(255,255,255,0.5);
-  font-weight: 500;
+  color: #94a3b8;
+  font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
 }
 
-.sidebar-nav { flex: 1; padding: 24px 16px; }
-
 .nav-section-title {
   font-family: 'Outfit', sans-serif;
   font-size: 11px;
-  font-weight: 700;
-  color: rgba(255,255,255,0.3);
+  font-weight: 800;
+  color: #475569;
   text-transform: uppercase;
   letter-spacing: 1.5px;
-  padding: 16px 12px 8px;
+  padding: 24px 12px 10px;
 }
 
 .nav-item {
@@ -138,32 +115,26 @@ h1, h2, h3, h4, h5, h6 {
   gap: 12px;
   padding: 12px 16px;
   border-radius: 10px;
-  color: rgba(255,255,255,0.6);
+  color: var(--sidebar-text);
   text-decoration: none;
   font-size: 14px;
-  font-weight: 500;
+  font-weight: 600;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   margin-bottom: 4px;
-  cursor: pointer;
-  border: none;
-  background: transparent;
-  width: 100%;
-  text-align: left;
 }
 
 .nav-item:hover { 
-  background: rgba(255,255,255,0.06); 
-  color: white; 
+  background: rgba(255, 255, 255, 0.05); 
+  color: #ffffff; 
 }
 .nav-item.active { 
   background: var(--sidebar-active);
-  color: white; 
-  font-weight: 600;
+  color: var(--sidebar-text-active); 
 }
-.nav-item svg { opacity: 0.7; transition: all 0.3s; }
-.nav-item:hover svg, .nav-item.active svg { opacity: 1; transform: scale(1.1); color: var(--primary-light); }
+.nav-item svg { opacity: 0.7; }
+.nav-item.active svg { color: #0ea5e9; opacity: 1; }
 
-.sidebar-footer { padding: 20px 16px; border-top: 1px solid rgba(255,255,255,0.06); }
+.sidebar-footer { padding: 20px 16px; border-top: 1px solid var(--border); }
 
 .user-card {
   display: flex;
@@ -172,8 +143,8 @@ h1, h2, h3, h4, h5, h6 {
   padding: 12px;
   border-radius: 12px;
   background: rgba(255,255,255,0.04);
-  border: 1px solid rgba(255,255,255,0.05);
-  transition: background 0.3s;
+  border: 1px solid rgba(255,255,255,0.06);
+  transition: all 0.3s ease;
 }
 .user-card:hover { background: rgba(255,255,255,0.08); }
 
@@ -251,12 +222,13 @@ h1, h2, h3, h4, h5, h6 {
 /* ======== CARDS & CONTAINERS ======== */
 .card {
   background: var(--surface-solid);
-  border-radius: var(--radius);
-  border: 1px solid var(--border-light);
-  box-shadow: var(--shadow);
-  transition: box-shadow 0.3s ease;
+  border-radius: 16px;
+  border: 1px solid rgba(226, 232, 240, 0.8);
+  box-shadow: 0 10px 25px -5px rgba(0,0,0,0.03), 0 8px 10px -6px rgba(0,0,0,0.03);
+  transition: all 0.3s ease;
   overflow: hidden;
 }
+.card:hover { box-shadow: 0 20px 30px -10px rgba(0,0,0,0.05); }
 
 .card-header {
   padding: 24px 28px;
@@ -445,6 +417,32 @@ tbody tr:last-child td { border-bottom: none; }
   background: #FFFFFF;
 }
 .form-control:disabled { background: var(--bg-dark); color: var(--text-muted); cursor: not-allowed; }
+
+.form-group {
+  margin-bottom: 24px;
+}
+.form-label {
+  display: block;
+  font-family: 'Outfit';
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text);
+  margin-bottom: 10px;
+  letter-spacing: 0.3px;
+}
+.form-control {
+  width: 100%;
+  padding: 14px 16px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-size: 14px;
+  font-family: 'Inter', sans-serif;
+  color: var(--text);
+  background: var(--surface-solid);
+  transition: all 0.3s;
+  outline: none;
+  box-shadow: inset 0 2px 4px rgba(0,0,0,0.02);
+}
 
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
 .form-row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 20px; }
