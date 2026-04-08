@@ -1,50 +1,72 @@
 const mysql = require('mysql2/promise');
 const { v4: uuidv4 } = require('uuid');
+require('dotenv').config();
 
 const pool = mysql.createPool({
-  host: 'localhost',
-  user: 'root',
-  password: '',
-  database: 'cancer_registry'
+  host: process.env.DB_HOST || 'localhost',
+  user: process.env.DB_USER || 'root',
+  password: process.env.DB_PASSWORD || '',
+  database: process.env.DB_NAME || 'cancer_registry',
+  port: process.env.DB_PORT || 3306
 });
 
+const NOMS = ["Hadj-Ali", "Benbouali", "Mansouri", "Belkacem", "Meziane", "Brahimi", "Ait-Ahmed", "Ziane", "Merbah", "Hamdad", "Oussalah", "Ferhat", "Guermazi", "Boudiaf", "Krim", "Abane", "Ben M'hidi", "Lotfi", "Amrouche", "Feraoun"];
+const PRENOMS_H = ["Mohamed", "Amine", "Mustapha", "Lyes", "Sami", "Karim", "Yacine", "Nabil", "Redouane", "Walid", "Fayçal", "Abdelkrim"];
+const PRENOMS_F = ["Nadia", "Sonia", "Lynda", "Meriem", "Yasmine", "Imane", "Leila", "Kahina", "Assia", "Amel", "Zohra", "Fatma-Zohra"];
+const WILAYAS = ["16 Alger", "31 Oran", "25 Constantine", "09 Blida", "23 Annaba", "19 Sétif", "13 Tlemcen", "35 Boumerdès", "06 Béjaïa", "15 Tizi Ouzou"];
+const CANCERS = ["Sein", "Poumon", "Colorectal", "Prostate", "Estomac", "Vessie"];
+
 async function seed() {
-  console.log('--- DÉBUT DE L\'INJECTION (Version Corrigée) ---');
+  const conn = await pool.getConnection();
+  console.log("🚀 Début de l'injection des données...");
+
   try {
-    const wilayas = ['Alger', 'Oran', 'Constantine', 'Annaba', 'Blida', 'Sétif', 'Batna', 'Tizi Ouzou'];
-    const stades = ['Stade I', 'Stade II', 'Stade III', 'Stade IV'];
-    const statuts = ['En traitement', 'Guéri', 'Décédé'];
+    const [users] = await conn.execute('SELECT id FROM users LIMIT 1');
+    const adminId = users[0]?.id;
 
-    for (let i = 1; i <= 50; i++) {
+    if (!adminId) {
+       console.error("❌ Aucun utilisateur trouvé. Veuillez d'abord créer un compte admin.");
+       return;
+    }
+
+    // Supprimer les anciennes données de test (optionnel mais recommandé pour les tests)
+    // await conn.execute('DELETE FROM cancer_cases');
+    // await conn.execute('DELETE FROM patients');
+
+    for (let i = 0; i < 30; i++) {
       const pId = uuidv4();
-      const cId = uuidv4();
       const sexe = Math.random() > 0.5 ? 'M' : 'F';
-      const wilaya = wilayas[Math.floor(Math.random() * wilayas.length)];
-      const stade = stades[Math.floor(Math.random() * stades.length)];
-      const statut = statuts[Math.floor(Math.random() * statuts.length)];
-      const dateDiag = `2024-${String(Math.floor(Math.random() * 12) + 1).padStart(2, '0')}-${String(Math.floor(Math.random() * 28) + 1).padStart(2, '0')}`;
-      const birth = `${Math.floor(Math.random() * 50) + 1950}-01-01`;
+      const nom = NOMS[Math.floor(Math.random() * NOMS.length)];
+      const prenom = sexe === 'M' ? PRENOMS_H[Math.floor(Math.random() * PRENOMS_H.length)] : PRENOMS_F[Math.floor(Math.random() * PRENOMS_F.length)];
+      const wilaya = WILAYAS[Math.floor(Math.random() * WILAYAS.length)];
+      const dateNais = `${1950 + Math.floor(Math.random() * 40)}-${String(1 + Math.floor(Math.random() * 11)).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 27)).padStart(2, '0')}`;
 
-      // 1. Insert Patient
-      await pool.execute(
-        `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, wilaya, commune, fumeur, alcool) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-        [pId, `TEST_NOM_${i}`, `TEST_PRENOM_${i}`, birth, sexe, `05550000${i}`, `999000${i}`, wilaya, 'Commune_X', Math.random()>0.7, Math.random()>0.8]
+      // Insert Patient
+      await conn.execute(
+        'INSERT INTO patients (id, nom, prenom, date_naissance, sexe, wilaya, adresse, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [pId, nom, prenom, dateNais, sexe, wilaya, `Adresse ${i+1}, ${wilaya}`, adminId]
       );
 
-      // 2. Insert Cancer Case
-      await pool.execute(
-        `INSERT INTO cancer_cases (id, patient_id, type_cancer, date_diagnostic, stade, statut_patient, etat, created_at) 
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
-        [cId, pId, 'Solide', dateDiag, stade, statut, 'Localisé', dateDiag]
+      // Insert Cancer Case
+      const cId = uuidv4();
+      const typeC = Math.random() > 0.2 ? 'Solide' : 'Liquide';
+      const sousType = CANCERS[Math.floor(Math.random() * CANCERS.length)];
+      const stade = ['Stade I', 'Stade II', 'Stade III', 'Stade IV'][Math.floor(Math.random() * 4)];
+      const statut = ['En traitement', 'Guéri', 'Décédé'][Math.floor(Math.random() * 3)];
+      const dateDiag = `202${Math.floor(Math.random() * 5)}-${String(1 + Math.floor(Math.random() * 11)).padStart(2, '0')}-01`;
+
+      await conn.execute(
+        'INSERT INTO cancer_cases (id, patient_id, type_cancer, sous_type, stade, statut_patient, date_diagnostic, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        [cId, pId, typeC, sousType, stade, statut, dateDiag, adminId]
       );
     }
 
-    console.log('--- RÉUSSITE : 50 DOSSIERS RÉELS INJECTÉS ---');
-    process.exit(0);
+    console.log("✅ 30 dossiers patients injectés avec succès !");
   } catch (err) {
-    console.error('Erreur:', err.message);
-    process.exit(1);
+    console.error("❌ Erreur lors de l'injection :", err);
+  } finally {
+    conn.release();
+    process.exit();
   }
 }
 
