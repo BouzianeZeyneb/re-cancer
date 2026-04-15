@@ -305,6 +305,9 @@ const initMedicalTables = async () => {
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_medicaux TEXT`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_familiaux TEXT`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS num_dossier_hospitalier VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS profession VARCHAR(200)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_tabac VARCHAR(100) DEFAULT 'Inconnu'`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_alcool VARCHAR(100) DEFAULT 'Inconnu'`);
 
     // Anapath table
     await conn.execute(`
