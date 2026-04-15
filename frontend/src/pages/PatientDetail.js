@@ -1,21 +1,41 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
-import { getPatient } from '../utils/api';
+import { getPatient, getCasesByPatient } from '../utils/api';
 import api from '../utils/api';
 import { differenceInYears, parseISO, format } from 'date-fns';
-import { fr } from 'date-fns/locale';
 import { QRCodeCanvas } from 'qrcode.react';
 import toast from 'react-hot-toast';
 import { Line } from 'react-chartjs-2';
-import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
+import {
+  Chart as ChartJS, CategoryScale, LinearScale, PointElement,
+  LineElement, Title, Tooltip, Legend
+} from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import 'hammerjs';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, zoomPlugin);
 
-const STATUS_COLORS = { 'Normal': '#22c55e', 'Bas': '#3b82f6', 'Haut': '#f59e0b', 'Critique': '#e63946' };
+/* ─── Helpers ─────────────────────────────────────────────── */
+const pill = (color, bg, text) => ({
+  display: 'inline-flex', alignItems: 'center',
+  padding: '3px 10px', borderRadius: 20,
+  fontSize: 11, fontWeight: 700,
+  color, background: bg, letterSpacing: '0.3px'
+});
+const STATUS_PILL = {
+  'En traitement': pill('#1d4ed8', '#dbeafe', 'En traitement'),
+  'Guéri':         pill('#15803d', '#dcfce7', 'Guéri'),
+  'Décédé':        pill('#b91c1c', '#fee2e2', 'Décédé'),
+};
+const ETAT_PILL = {
+  'Localisé':   pill('#5b21b6', '#ede9fe', 'Localisé'),
+  'Métastase':  pill('#c2410c', '#ffedd5', 'Métastatique'),
+};
+const INTERP_COLORS = { Normal: '#16a34a', Bas: '#2563eb', Haut: '#d97706', Critique: '#dc2626' };
+const GRADE_COLORS  = { 'Grade 1': '#16a34a', 'Grade 2': '#d97706', 'Grade 3': '#ea580c', 'Grade 4': '#dc2626' };
 
+<<<<<<< HEAD
 const ANALYSES_CATEGORIES = {
   'Hématologie & Hémostase': ['NFS', 'Frottis sanguin', 'Groupage sanguin', 'VS', 'TP / INR', 'TCA', 'Fibrinogène'],
   'Biochimie & Ionogramme': ['Glycémie', 'Urée', 'Créatinine', 'Sodium (Na)', 'Potassium (K)', 'Calcium (Ca)'],
@@ -24,21 +44,79 @@ const ANALYSES_CATEGORIES = {
   'Hormonologie & Inflammation': ['TSH', 'CRP', 'Œstradiol', 'Progestérone']
 };
 
+=======
+function InfoRow({ label, value }) {
+  return (
+    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+      padding: '10px 0', borderBottom: '1px solid #f1f5f9' }}>
+      <span style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>{label}</span>
+      <span style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', textAlign: 'right', maxWidth: '60%' }}>{value || '—'}</span>
+    </div>
+  );
+}
+
+function EmptyState({ icon, title, message }) {
+  return (
+    <div style={{ textAlign: 'center', padding: '60px 20px', color: '#94a3b8' }}>
+      <div style={{ fontSize: 40, marginBottom: 12 }}>{icon}</div>
+      <div style={{ fontSize: 16, fontWeight: 700, color: '#475569', marginBottom: 6 }}>{title}</div>
+      <div style={{ fontSize: 13 }}>{message}</div>
+    </div>
+  );
+}
+
+function SectionCard({ title, children, action }) {
+  return (
+    <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0',
+      boxShadow: '0 1px 4px rgba(0,0,0,0.05)', overflow: 'hidden' }}>
+      {(title || action) && (
+        <div style={{ padding: '16px 20px', borderBottom: '1px solid #f1f5f9',
+          display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          {title && <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a' }}>{title}</div>}
+          {action}
+        </div>
+      )}
+      <div style={{ padding: '0 20px 20px' }}>{children}</div>
+    </div>
+  );
+}
+
+/* ─── Main Component ──────────────────────────────────────── */
+>>>>>>> 4554ad2e0cf96f5cae585554676fcd0f8d388821
 export default function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [patient, setPatient] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState('info');
-  const [showQR, setShowQR] = useState(false);
 
-  const [champsDynamiques, setChampsDynamiques] = useState([]);
-  const [valeursDynamiques, setValeursDynamiques] = useState({});
+  const [patient,  setPatient]  = useState(null);
+  const [loading,  setLoading]  = useState(true);
+  const [tab,      setTab]      = useState('resume');
 
+  // Data states
+  const [cases,    setCases]    = useState([]);
   const [biologie, setBiologie] = useState([]);
-  const [showForm, setShowForm] = useState(false);
-  const [formData, setFormData] = useState({});
-  const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
+  const [anapath,  setAnapath]  = useState([]);
+  const [imagerie, setImagerie] = useState([]);
+  const [traitements, setTraitements] = useState([]);
+  const [consultations, setConsultations] = useState([]);
+  const [effets,   setEffets]   = useState([]);
+  const [champsDyn,setChampsDyn]= useState([]);
+  const [valsDyn,  setValsDyn]  = useState({});
+
+  // Form states
+  const [showBioForm,  setShowBioForm]  = useState(false);
+  const [bioForm,      setBioForm]      = useState({});
+  const [aiMessages,   setAiMessages]   = useState([
+    { role: 'assistant', text: "👋 Bonjour! Je suis l'Assistant IA OncoTrack. Comment puis-je vous aider à analyser ce dossier?" }
+  ]);
+  const [aiInput,  setAiInput]  = useState('');
+  const [aiLoading,setAiLoading]= useState(false);
+  const chatBottom = useRef(null);
+
+  // Selected detail for slide-over
+  const [selectedCase,    setSelectedCase]    = useState(null);
+  const [selectedAnapath, setSelectedAnapath] = useState(null);
+  const [selectedEffect,  setSelectedEffect]  = useState(null);
+  const [selectedImgerie, setSelectedImgerie] = useState(null);
 
   const [labRequests, setLabRequests] = useState([]);
   const [showRequestForm, setShowRequestForm] = useState(false);
@@ -47,6 +125,7 @@ export default function PatientDetail() {
   const setReq = (k, v) => setRequestData(p => ({ ...p, [k]: v }));
 
   useEffect(() => {
+<<<<<<< HEAD
     getPatient(id).then(r => setPatient(r.data)).catch(() => navigate('/patients')).finally(() => setLoading(false));
     api.get('/champs-dynamiques').then(r => setChampsDynamiques(r.data)).catch(() => {});
     api.get(`/valeurs-dynamiques/${id}`).then(r => {
@@ -57,39 +136,82 @@ export default function PatientDetail() {
     api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
     api.get(`/lab-requests/patient/${id}`).then(r => setLabRequests(r.data)).catch(()=>{});
     api.get('/users/role/laboratoire').then(r => setLabos(r.data)).catch(()=>{});
+=======
+    setLoading(true);
+    Promise.all([
+      getPatient(id),
+      api.get(`/cases/patient/${id}`).catch(() => ({ data: [] })),
+      api.get(`/biologie/patient/${id}`).catch(() => ({ data: [] })),
+      api.get(`/anapath/case`).catch(() => ({ data: [] })),
+      api.get(`/imagerie/patient/${id}`).catch(() => ({ data: [] })),
+      api.get(`/traitements/patient/${id}`).catch(() => ({ data: [] })),
+      api.get(`/consultations/patient/${id}`).catch(() => ({ data: [] })),
+      api.get(`/effets-secondaires/patient/${id}`).catch(() => ({ data: [] })),
+      api.get('/champs-dynamiques').catch(() => ({ data: [] })),
+      api.get(`/valeurs-dynamiques/${id}`).catch(() => ({ data: [] })),
+    ]).then(([pRes, casRes, bioRes, anRes, imgRes, trRes, consultRes, effRes, chRes, vRes]) => {
+      setPatient(pRes.data);
+      setCases(Array.isArray(casRes.data) ? casRes.data : casRes.data?.cases || []);
+      setBiologie(Array.isArray(bioRes.data) ? bioRes.data : []);
+      setAnapath(Array.isArray(anRes.data) ? anRes.data : []);
+      setImagerie(Array.isArray(imgRes.data) ? imgRes.data : []);
+      setTraitements(Array.isArray(trRes.data) ? trRes.data : []);
+      setConsultations(Array.isArray(consultRes.data) ? consultRes.data : []);
+      setEffets(Array.isArray(effRes.data) ? effRes.data : []);
+      setChampsDyn(Array.isArray(chRes.data) ? chRes.data : []);
+      const vv = {};
+      (Array.isArray(vRes.data) ? vRes.data : []).forEach(v => (vv[v.champ_id] = v.valeur));
+      setValsDyn(vv);
+    }).catch(() => navigate('/patients')).finally(() => setLoading(false));
+>>>>>>> 4554ad2e0cf96f5cae585554676fcd0f8d388821
   }, [id, navigate]);
 
+  // also load cancer_cases from patient object directly if API endpoint missing
   useEffect(() => {
-    let interval;
-    if (tab === 'styles_vie') {
-      interval = setInterval(() => {
-        getPatient(id).then(r => {
-          if (r.data) setPatient(r.data);
-        }).catch(() => {});
-        api.get(`/valeurs-dynamiques/${id}`).then(r => {
-          const vals = {};
-          r.data.forEach(v => vals[v.champ_id] = v.valeur);
-          setValeursDynamiques(vals);
-        }).catch(() => {});
-      }, 3000); // Polling every 3s
+    if (patient?.cancer_cases?.length && cases.length === 0) {
+      setCases(patient.cancer_cases);
     }
-    return () => clearInterval(interval);
-  }, [tab, id]);
+  }, [patient, cases.length]);
+
+  useEffect(() => {
+    if (chatBottom.current) chatBottom.current.scrollIntoView({ behavior: 'smooth' });
+  }, [aiMessages, aiLoading]);
 
   if (loading) return <Layout title="Fiche Patient"><div className="loading-center"><div className="spinner" /></div></Layout>;
   if (!patient) return null;
 
-  const handleAddBiologie = async () => {
+  const age = patient.date_naissance
+    ? differenceInYears(new Date(), parseISO(patient.date_naissance))
+    : '—';
+  const initials = `${(patient.prenom || ' ')[0]}${(patient.nom || ' ')[0]}`.toUpperCase();
+  const mainCase = (patient.cancer_cases || cases)[0];
+  const dossierNum = `ONC-${new Date(patient.created_at || Date.now()).getFullYear()}-${String(patient.id || '').slice(-3).toUpperCase().padStart(3, '0')}`;
+
+  /* ── AI Chat ── */
+  const handleAiSend = async (e, presetMsg) => {
+    if (e) e.preventDefault();
+    const msg = presetMsg || aiInput.trim();
+    if (!msg) return;
+    setAiMessages(prev => [...prev, { role: 'user', text: msg }]);
+    setAiInput('');
+    setAiLoading(true);
     try {
-      const data = { ...formData, patient_id: id };
-      await api.post('/biologie', data);
-      toast.success('Analyse ajoutée!');
-      setShowForm(false);
-      setFormData({});
-      api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
-    } catch(e) { toast.error('Erreur: ' + (e.response?.data?.message || e.message)); }
+      const patientCtx = `Patient: ${patient.prenom} ${patient.nom}, ${age} ans, ${patient.sexe === 'M' ? 'Homme' : 'Femme'}. `
+        + (mainCase ? `Cancer: ${mainCase.type_cancer || mainCase.sous_type || ''}, Stade: ${mainCase.stade || 'inconnu'}. ` : '')
+        + `Antécédents: ${patient.antecedents_medicaux || 'non renseigné'}. `
+        + `Traitements actifs: ${(patient.cancer_cases || cases).flatMap(c => c.traitements || []).filter(t => t.statut === 'En cours').map(t => t.protocole).join(', ') || 'aucun'}.`;
+      const res = await api.post('/chat-ia', { message: msg, context: patientCtx });
+      const reply = res.data?.reply || res.data?.message || 'Aucune réponse reçue.';
+      setAiMessages(prev => [...prev, { role: 'assistant', text: reply }]);
+    } catch (err) {
+      const errMsg = err.response?.data?.message || err.message || 'Erreur de connexion à l\'assistant IA.';
+      setAiMessages(prev => [...prev, { role: 'assistant', text: `❌ ${errMsg}` }]);
+    } finally {
+      setAiLoading(false);
+    }
   };
 
+<<<<<<< HEAD
   const handleRequestLab = async () => {
     try {
       if (!requestData.labo_id) return toast.error('Veuillez sélectionner un laborantin');
@@ -119,204 +241,288 @@ export default function PatientDetail() {
     await api.delete(`/biologie/${bId}`);
     toast.success('Supprimé');
     api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
+=======
+  /* ── Biologie add ── */
+  const handleAddBio = async () => {
+    try {
+      await api.post('/biologie', { ...bioForm, patient_id: id });
+      toast.success('Analyse ajoutée');
+      setShowBioForm(false);
+      setBioForm({});
+      api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data || [])).catch(() => {});
+    } catch (e) { toast.error(e.response?.data?.message || 'Erreur'); }
+>>>>>>> 4554ad2e0cf96f5cae585554676fcd0f8d388821
   };
 
-  const bioChartData = () => {
-    const params = [...new Set(biologie.map(b => b.parametre))].slice(0, 3);
-    const colors = ['#0f4c81', '#e63946', '#22c55e'];
-    return {
-      labels: [...new Set(biologie.map(b => b.date_examen?.slice(0,10)))].sort(),
-      datasets: params.map((p, i) => ({
-        label: p,
-        data: biologie.filter(b => b.parametre === p).map(b => parseFloat(b.valeur)).filter(v => !isNaN(v)),
-        borderColor: colors[i], backgroundColor: colors[i] + '22', tension: 0.4, fill: false
-      }))
-    };
-  };
+  const TABS = [
+    { key: 'resume',      label: 'Résumé' },
+    { key: 'diagnostic',  label: `Diagnostic (${(patient.cancer_cases || cases).length})` },
+    { key: 'anapath',     label: 'Anapath' },
+    { key: 'biologie',    label: `Biologie (${biologie.length})` },
+    { key: 'imagerie',    label: 'Imagerie' },
+    { key: 'traitement',  label: 'Traitement' },
+    { key: 'consultations', label: 'Consultations' },
+    { key: 'effets',      label: 'Effets secondaires' },
+    { key: 'ia',          label: '🤖 Assistant IA' },
+  ];
 
-  const age = patient.date_naissance ? differenceInYears(new Date(), parseISO(patient.date_naissance)) : '-';
-  const initials = `${patient.prenom[0]}${patient.nom[0]}`.toUpperCase();
-  
-  const hasLifestyleData = patient.fumeur || patient.alcool || patient.activite_sportive || 
-    (patient.autres_facteurs_risque && patient.autres_facteurs_risque.includes('Alimentation étudiée:')) || 
-    (patient.antecedents_familiaux && patient.antecedents_familiaux.trim() !== '');
-
-  const statusClass = (s) => ({ 'En traitement': 'badge badge-blue', 'Guéri': 'badge badge-green', 'Décédé': 'badge badge-red' }[s] || 'badge badge-gray');
-  const etatClass = (e) => ({ 'Localisé': 'badge badge-purple', 'Métastase': 'badge badge-orange' }[e] || 'badge badge-gray');
-
+  /* ═══════════════════════════════════════════════════════ */
   return (
     <Layout title="Fiche Patient">
-      <div style={{ display: 'flex', gap: 12, marginBottom: 20 }}>
-        <button className="btn btn-outline" onClick={() => navigate('/patients')}>← Retour</button>
-        <Link to={`/patients/${id}/modifier`} className="btn btn-outline">✏️ Modifier</Link>
-        <Link to={`/cas-cancer/nouveau?patient=${id}`} className="btn btn-primary">+ Nouveau Cas de Cancer</Link>
+
+      {/* ── Top action bar ── */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 24 }}>
+        <button onClick={() => navigate('/patients')}
+          style={{ background: 'none', border: 'none', cursor: 'pointer', fontSize: 22, color: '#475569', padding: '4px 8px' }}>←</button>
+        <div style={{ flex: 1 }}>
+          <h1 style={{ fontSize: 28, fontWeight: 800, margin: 0, fontFamily: 'Outfit', color: '#0f172a' }}>
+            {patient.prenom} {patient.nom}
+          </h1>
+          <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>{dossierNum}</div>
+        </div>
+        <Link to={`/patients/${id}/modifier`}
+          style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+            background: 'white', border: '1px solid #e2e8f0', color: '#475569', textDecoration: 'none' }}>
+          Modifier
+        </Link>
       </div>
 
-      {/* Patient header */}
-      <div className="card" style={{ marginBottom: 20 }}>
-        <div className="card-body">
-          <div className="patient-header">
-            <div className="patient-avatar-lg" style={{ background: patient.sexe === 'M' ? '#0f4c81' : '#e63946' }}>
-              {initials}
-            </div>
-            <div style={{ flex: 1 }}>
-              <div className="patient-name">{patient.prenom} {patient.nom}</div>
-              <div className="patient-meta">
-                <span className="patient-meta-item">📅 {age} ans · {patient.date_naissance ? format(parseISO(patient.date_naissance), 'dd/MM/yyyy') : '-'}</span>
-                <span className="patient-meta-item">{patient.sexe === 'M' ? '♂' : '♀'} {patient.sexe === 'M' ? 'Masculin' : 'Féminin'}</span>
-                {patient.telephone && <span className="patient-meta-item">📞 {patient.telephone}</span>}
-                {patient.wilaya && <span className="patient-meta-item">📍 {patient.commune ? `${patient.commune}, ` : ''}{patient.wilaya}</span>}
+      {/* ── Patient header card ── */}
+      <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0',
+        boxShadow: '0 1px 4px rgba(0,0,0,0.05)', padding: '24px', marginBottom: 24 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 0, position: 'relative' }}>
+          {[
+            {
+              label: 'Sexe / Âge',
+              value: `${patient.sexe === 'M' ? 'Homme' : 'Femme'} · ${age} ans`
+            },
+            {
+              label: 'Type Cancer',
+              value: mainCase
+                ? `${mainCase.type_cancer || mainCase.sous_type || '—'} — ${mainCase.stade || '—'}`
+                : 'Aucun diagnostic'
+            },
+            {
+              label: 'Téléphone',
+              value: patient.telephone || '—'
+            },
+            {
+              label: 'Admission',
+              value: patient.date_naissance
+                ? format(parseISO(patient.date_naissance), 'yyyy-MM-dd')
+                : '—'
+            },
+          ].map((item, i) => (
+            <div key={i} style={{
+              padding: '0 24px',
+              borderLeft: i === 0 ? 'none' : '1px solid #f1f5f9'
+            }}>
+              <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600,
+                textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: 6 }}>
+                {item.label}
               </div>
-              <div style={{ marginTop: 10, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                {patient.fumeur && <span className="badge badge-red">🚬 Fumeur</span>}
-                {patient.alcool && <span className="badge badge-orange">🍷 Alcool</span>}
-                {patient.activite_sportive && <span className="badge badge-green">🏃 Sport</span>}
-                <span className="badge badge-purple">{patient.cancer_cases?.length || 0} cas de cancer</span>
-              </div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>{item.value}</div>
             </div>
-          </div>
+          ))}
         </div>
       </div>
 
+<<<<<<< HEAD
       {/* Tabs */}
       <div className="tabs">
         <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Informations</button>
         <button className={`tab ${tab === 'styles_vie' ? 'active' : ''}`} onClick={() => setTab('styles_vie')}>Styles de Vie</button>
         <button className={`tab ${tab === 'cancers' ? 'active' : ''}`} onClick={() => setTab('cancers')}>Cancers ({patient.cancer_cases?.length || 0})</button>
         <button className={`tab ${tab === 'rdv' ? 'active' : ''}`} onClick={() => setTab('rdv')}>Rendez-vous ({patient.rendez_vous?.length || 0})</button>
+=======
+      {/* ── Horizontal tabs ── */}
+      <div style={{ display: 'flex', gap: 0, borderBottom: '2px solid #e2e8f0', marginBottom: 24, overflowX: 'auto' }}>
+        {TABS.map(t => (
+          <button key={t.key} onClick={() => setTab(t.key)}
+            style={{
+              background: 'none', border: 'none', cursor: 'pointer',
+              padding: '12px 18px', fontSize: 14, fontWeight: tab === t.key ? 700 : 500,
+              color: tab === t.key ? '#2563eb' : '#64748b',
+              borderBottom: tab === t.key ? '2px solid #2563eb' : '2px solid transparent',
+              marginBottom: -2, whiteSpace: 'nowrap', transition: 'all 0.2s'
+            }}>
+            {t.label}
+          </button>
+        ))}
+>>>>>>> 4554ad2e0cf96f5cae585554676fcd0f8d388821
       </div>
 
-      {tab === 'info' && (
-        <div className="card">
-          <div className="card-header"><h2>Informations Personnelles</h2></div>
-          <div className="card-body">
-            <div className="info-grid">
-              <div className="info-item"><label>Carte Nationale</label><span style={{ fontFamily: 'JetBrains Mono' }}>{patient.num_carte_nationale || '-'}</span></div>
-              <div className="info-item"><label>Carte Chifa</label><span style={{ fontFamily: 'JetBrains Mono' }}>{patient.num_carte_chifa || '-'}</span></div>
-              <div className="info-item"><label>Téléphone</label><span>{patient.telephone || '-'}</span></div>
-              <div className="info-item"><label>Wilaya</label><span>{patient.wilaya || '-'}</span></div>
-              <div className="info-item"><label>Commune</label><span>{patient.commune || '-'}</span></div>
-              <div className="info-item"><label>Adresse</label><span>{patient.adresse || '-'}</span></div>
-              {champsDynamiques.filter(c => c.entite === 'patient').map(c => (
-                 <div className="info-item" key={c.id}>
-                    <label>{c.nom} <span style={{ color: '#8b5cf6', fontSize: 10, fontWeight: 'normal' }}>(Dynamique)</span></label>
-                    <span style={{ fontWeight: 600, color: '#4c1d95' }}>
-                       {c.type_champ === 'booleen' ? (valeursDynamiques[c.id] === 'true' ? 'Oui' : valeursDynamiques[c.id] === 'false' ? 'Non' : '-') : (valeursDynamiques[c.id] || '-')}
-                    </span>
-                 </div>
-              ))}
-            </div>
+      {/* ════════════════════ TAB CONTENT ════════════════════ */}
+
+      {/* ── RÉSUMÉ ── */}
+      {tab === 'resume' && (
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <SectionCard title="Informations Générales">
+            <InfoRow label="Nom complet"        value={`${patient.prenom} ${patient.nom}`} />
+            <InfoRow label="Date de naissance"  value={patient.date_naissance ? format(parseISO(patient.date_naissance), 'yyyy-MM-dd') : null} />
+            <InfoRow label="Email"              value={patient.email} />
+            <InfoRow label="Médecin responsable" value={patient.medecin_traitant_nom || (mainCase?.medecin_nom ? `Dr. ${mainCase.medecin_nom}` : null)} />
+            <InfoRow label="Wilaya"             value={patient.wilaya} />
+            <InfoRow label="Téléphone"          value={patient.telephone} />
+            <InfoRow label="Carte Nationale"    value={patient.num_carte_nationale} />
+            <InfoRow label="Statut" value={
+              mainCase?.statut_patient
+                ? <span style={STATUS_PILL[mainCase.statut_patient] || pill('#475569','#f1f5f9')}>{mainCase.statut_patient}</span>
+                : '—'
+            } />
+            {champsDyn.filter(c => c.entite === 'patient').map(c => (
+              <InfoRow key={c.id} label={c.nom}
+                value={valsDyn[c.id] || '—'} />
+            ))}
+          </SectionCard>
+
+          <SectionCard title="Antécédents">
+            <InfoRow label="Médicaux"   value={patient.antecedents_medicaux} />
+            <InfoRow label="Familiaux"  value={patient.antecedents_familiaux} />
+            <InfoRow label="Allergies"  value={patient.allergies} />
+            <InfoRow label="Tabac"      value={patient.fumeur ? 'Fumeur actif' : 'Non fumeur'} />
+            <InfoRow label="Alcool"     value={patient.alcool ? 'Consommateur' : 'Non'} />
+            <InfoRow label="Sport"      value={patient.activite_sportive ? 'Actif' : 'Sédentaire'} />
             {patient.autres_facteurs_risque && (
-              <div style={{ marginTop: 20 }}>
-                <div className="form-label">Autres facteurs de risque</div>
-                <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 13.5 }}>{patient.autres_facteurs_risque}</div>
+              <div style={{ marginTop: 12, background: '#f8fafc', borderRadius: 8, padding: 12 }}>
+                <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: 6 }}>Autres facteurs de risque</div>
+                <div style={{ fontSize: 13, color: '#334155' }}>{patient.autres_facteurs_risque}</div>
               </div>
             )}
-            {patient.autres_medicaments && (
-              <div style={{ marginTop: 16 }}>
-                <div className="form-label">Autres médicaments</div>
-                <div style={{ background: '#f8fafc', padding: 12, borderRadius: 8, fontSize: 13.5 }}>{patient.autres_medicaments}</div>
-              </div>
-            )}
-          </div>
+          </SectionCard>
         </div>
       )}
 
-      {tab === 'styles_vie' && (
-        <div className="card">
-          <div className="card-header">
-            <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-              <h2>Styles de Vie & Antécédents</h2>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, background: '#dcfce7', color: '#166534', padding: '4px 10px', borderRadius: 20, fontWeight: 600 }}>
-                <span style={{ width: 8, height: 8, background: '#16a34a', borderRadius: '50%', display: 'inline-block' }}></span> Mise à jour en direct
-              </div>
-            </div>
+      {/* ── DIAGNOSTIC ── */}
+      {tab === 'diagnostic' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <Link to={`/cas-cancer/nouveau?patient=${id}`}
+              style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', textDecoration: 'none' }}>
+              + Nouveau Diagnostic
+            </Link>
           </div>
-          <div className="card-body">
-            {!hasLifestyleData ? (
-              <div style={{ background: '#f8fafc', padding: 40, borderRadius: 16, border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center' }}>
-                <div style={{ fontSize: 22, fontWeight: 800, color: '#0f172a', marginBottom: 12 }}>Questionnaire Patient</div>
-                <p style={{ fontSize: 15, color: '#64748b', marginBottom: 30, maxWidth: 500 }}>Demandez au patient de scanner ce code depuis son téléphone pour remplir lui-même ses informations de style de vie (Tabac, Alcool, Alimentation, Antécédents). Celles-ci apparaîtront automatiquement ici après le scan.</p>
-                <div style={{ background: 'white', padding: 24, display: 'flex', justifyContent: 'center', borderRadius: 20, border: '2px solid #cbd5e1', width: 260, height: 260 }}>
-                  <div style={{ margin: "0 auto", alignSelf: "center" }}>
-                    <QRCodeCanvas size={208} value={`${window.location.origin}/patient-forms/${patient.id}`} level="H" />
+          {(patient.cancer_cases || cases).length === 0
+            ? <EmptyState icon="🔬" title="Aucun diagnostic enregistré" message="Cliquez sur '+ Nouveau Diagnostic' pour ajouter un dossier oncologique." />
+            : (patient.cancer_cases || cases).map(c => (
+              <div key={c.id}
+                onClick={() => setSelectedCase(selectedCase?.id === c.id ? null : c)}
+                style={{ background: 'white', borderRadius: 12, border: `1px solid ${selectedCase?.id === c.id ? '#3b82f6' : '#e2e8f0'}`,
+                  padding: '18px 20px', marginBottom: 12, cursor: 'pointer',
+                  boxShadow: '0 1px 4px rgba(0,0,0,0.05)', transition: 'all 0.2s' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                      {c.type_cancer && <span style={pill('#1d4ed8','#dbeafe')}>{c.type_cancer}</span>}
+                      {c.sous_type   && <span style={pill('#5b21b6','#ede9fe')}>{c.sous_type}</span>}
+                      {c.stade       && <span style={pill('#0f172a','#f1f5f9')}>{c.stade}</span>}
+                      {c.etat        && <span style={ETAT_PILL[c.etat] || pill('#475569','#f1f5f9')}>{c.etat}</span>}
+                      {c.statut_patient && <span style={STATUS_PILL[c.statut_patient] || pill('#475569','#f1f5f9')}>{c.statut_patient}</span>}
+                    </div>
+                    <div style={{ fontSize: 13, color: '#64748b' }}>
+                      {c.localisation && <span>📍 {c.localisation} · </span>}
+                      {c.date_diagnostic && <span>📅 {format(parseISO(c.date_diagnostic), 'dd/MM/yyyy')}</span>}
+                    </div>
                   </div>
+                  <button onClick={e => { e.stopPropagation(); navigate(`/cas-cancer/${c.id}`); }}
+                    style={{ padding: '6px 14px', fontSize: 12, fontWeight: 600, borderRadius: 8,
+                      background: '#f8fafc', border: '1px solid #e2e8f0', cursor: 'pointer', color: '#475569' }}>
+                    Voir le dossier →
+                  </button>
                 </div>
+
+                {selectedCase?.id === c.id && (
+                  <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #f1f5f9',
+                    display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12 }}>
+                    {[
+                      ['Type histologique',   c.type_histologique],
+                      ['Grade',               c.grade_histologique],
+                      ['TNM — T',             c.tnm_t],
+                      ['N',                   c.tnm_n],
+                      ['M',                   c.tnm_m],
+                      ['Code CIM-10',         c.code_cim10],
+                      ['Latéralité',          c.lateralite],
+                      ['Base diagnostic',     c.base_diagnostic],
+                      ['Anomalies génétiques',c.anomalies_genetiques],
+                      ['Taille (cm)',         c.taille_cancer],
+                      ['Ganglions envahis',   c.nb_ganglions_envahis],
+                      ['Sites métastatiques', c.sites_metastatiques],
+                      ['Récepteur ER',        c.recepteur_er],
+                      ['Récepteur PR',        c.recepteur_pr],
+                      ['HER2',                c.her2],
+                    ].filter(([,v]) => v).map(([label, val]) => (
+                      <div key={label} style={{ background: '#f8fafc', borderRadius: 8, padding: '10px 12px' }}>
+                        <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>{label}</div>
+                        <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a' }}>{val}</div>
+                      </div>
+                    ))}
+                    {c.rapport_anatomopathologique && (
+                      <div style={{ gridColumn: '1 / -1', background: '#f8fafc', borderRadius: 8, padding: '10px 12px' }}>
+                        <div style={{ fontSize: 11, color: '#94a3b8', fontWeight: 600, textTransform: 'uppercase', marginBottom: 4 }}>Notes cliniques</div>
+                        <div style={{ fontSize: 13, color: '#334155' }}>{c.rapport_anatomopathologique}</div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
-            ) : (
-              <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 2fr) minmax(0, 1fr)', gap: 24 }}>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 12 }}>
-                    <div style={{ padding: 16, background: patient.fumeur ? '#fee2e2' : '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ fontSize: 24 }}>🚬</div>
-                      <div>
-                        <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Tabagisme</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: patient.fumeur ? '#b91c1c' : '#0f172a' }}>{patient.fumeur ? 'Oui' : 'Non'}</div>
+            ))
+          }
+        </div>
+      )}
+
+      {/* ── ANAPATH ── */}
+      {tab === 'anapath' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+              background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
+              + Nouveau résultat Anapath
+            </button>
+          </div>
+          {anapath.length === 0 && patient.cancer_cases?.some(c => c.anapath)
+            ? patient.cancer_cases.filter(c => c.anapath).map(c => {
+              const a = c.anapath;
+              return (
+                <div key={c.id} style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0',
+                  padding: '18px 20px', marginBottom: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 10 }}>
+                    <div>
+                      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{patient.prenom} {patient.nom}</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {a.type_histologique && <span style={pill('#1d4ed8','#dbeafe')}>{a.type_histologique?.slice(0,30)}</span>}
+                        {a.grade_sbr && <span style={pill('#5b21b6','#ede9fe')}>Grade {a.grade_sbr}</span>}
+                        {a.er === 'Positif' && <span style={pill('#15803d','#dcfce7')}>ER+</span>}
+                        {a.pr === 'Positif' && <span style={pill('#0369a1','#e0f2fe')}>PR+</span>}
+                        {a.her2 === 'Positif' && <span style={pill('#b45309','#fef3c7')}>HER2+</span>}
+                        {a.ki67 && <span style={pill('#6b21a8','#f5f3ff')}>Ki-67: {a.ki67}</span>}
+                        {a.pd_l1 && <span style={pill('#475569','#f1f5f9')}>PD-L1: {a.pd_l1}</span>}
                       </div>
                     </div>
-                    <div style={{ padding: 16, background: patient.alcool ? '#ffedd5' : '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ fontSize: 24 }}>🍷</div>
-                      <div>
-                        <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Alcool</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: patient.alcool ? '#c2410c' : '#0f172a' }}>{patient.alcool ? 'Oui' : 'Non'}</div>
-                      </div>
-                    </div>
-                    <div style={{ padding: 16, background: patient.activite_sportive ? '#dcfce7' : '#f8fafc', borderRadius: 12, border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', gap: 12 }}>
-                      <div style={{ fontSize: 24 }}>🏃</div>
-                      <div>
-                        <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>Sport / Activité</div>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: patient.activite_sportive ? '#15803d' : '#0f172a' }}>{patient.activite_sportive ? 'Oui' : 'Non'}</div>
-                      </div>
+                    <div style={{ textAlign: 'right', fontSize: 12, color: '#94a3b8' }}>
+                      <div>{a.date_prelevement ? format(parseISO(a.date_prelevement), 'dd/MM/yyyy') : '—'}</div>
+                      <div style={{ marginTop: 2 }}>{a.type_prelevement}</div>
+                      <div style={{ marginTop: 2, fontWeight: 600, color: '#475569' }}>{a.pathologiste}</div>
                     </div>
                   </div>
-
-                  <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f4c81', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>🍽️ Habitudes alimentaires</div>
-                    <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap' }}>{(patient.autres_facteurs_risque?.includes('Alimentation étudiée:') ? patient.autres_facteurs_risque.split('Alimentation étudiée:')[1].trim() : patient.autres_facteurs_risque) || 'Non renseigné'}</div>
-                  </div>
-
-                  <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #e2e8f0' }}>
-                    <div style={{ fontSize: 14, fontWeight: 700, color: '#0f4c81', marginBottom: 8, display: 'flex', alignItems: 'center', gap: 6 }}>👨‍👩‍👧‍👦 Antécédents familiaux</div>
-                    <div style={{ fontSize: 14, color: '#334155', whiteSpace: 'pre-wrap' }}>{patient.antecedents_familiaux || 'Aucun antécédent renseigné'}</div>
-                  </div>
-
-                  {champsDynamiques.filter(c => c.entite === 'habitudes_vie').length > 0 && (
-                    <div style={{ background: '#f8fafc', padding: 16, borderRadius: 12, border: '1px solid #bae6fd' }}>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#0369a1', marginBottom: 12 }}>⚡ Facteurs Dynamiques (Méta-données)</div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        {champsDynamiques.filter(c => c.entite === 'habitudes_vie').map(c => {
-                           const val = valeursDynamiques[c.id];
-                           return (
-                             <div key={c.id}>
-                                <div style={{ fontSize: 12, color: '#64748b' }}>{c.nom}</div>
-                                <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>
-                                   {c.type_champ === 'booleen' ? (val === 'true' ? 'Oui' : val === 'false' ? 'Non' : '-') : (val || '-')}
-                                </div>
-                             </div>
-                           );
-                        })}
-                      </div>
+                  {a.compte_rendu && (
+                    <div style={{ fontSize: 13, color: '#475569', fontStyle: 'italic',
+                      background: '#f8fafc', borderRadius: 8, padding: '10px 12px', borderLeft: '3px solid #3b82f6' }}>
+                      {a.compte_rendu}
                     </div>
                   )}
+                  {a.mmr_msi && (
+                    <div style={{ marginTop: 10, fontSize: 11, color: '#64748b' }}>MMR/MSI: <strong>{a.mmr_msi}</strong></div>
+                  )}
                 </div>
-                {/* 2nd Grid Column: QR Code always visible to update data */}
-                <div style={{ background: '#f8fafc', padding: 24, borderRadius: 16, border: '2px dashed #cbd5e1', display: 'flex', flexDirection: 'column', alignItems: 'center', textAlign: 'center', height: 'fit-content' }}>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', marginBottom: 8 }}>Actualiser le Questionnaire</div>
-                  <p style={{ fontSize: 13, color: '#64748b', marginBottom: 20 }}>Le patient peut scanner ce QR Code à tout moment pour mettre à jour ses données sensibles (Alcool, Tabac, etc.).</p>
-                  <div style={{ background: 'white', padding: 16, display: 'flex', justifyContent: 'center', borderRadius: 16, border: '1px solid #cbd5e1', cursor: 'pointer' }} title="Cliquez pour ouvrir le formulaire dans un nouvel onglet">
-                    <div style={{ margin: "0 auto", alignSelf: "center" }}>
-                      <a href={`/patient-forms/${patient.id}`} target="_blank" rel="noopener noreferrer">
-                        <QRCodeCanvas size={150} value={`${window.location.origin}/patient-forms/${patient.id}`} level="H" />
-                      </a>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            )}
-          </div>
+              );
+            })
+            : <EmptyState icon="🧫" title="Aucun résultat anatomopathologique" message="Les résultats d'anapath liés aux dossiers oncologiques apparaissent ici." />
+          }
         </div>
       )}
 
+<<<<<<< HEAD
       {tab === 'analyses' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
         
@@ -410,138 +616,360 @@ export default function PatientDetail() {
           <div className="card-header">
             <h2>🧪 Résultats d'Analyses Saisis ({biologie.length})</h2>
             <button className="btn btn-outline btn-sm" onClick={() => setShowForm(!showForm)}>+ Saisie Manuelle</button>
+=======
+      {/* ── BIOLOGIE ── */}
+      {tab === 'biologie' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button onClick={() => setShowBioForm(!showBioForm)}
+              style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
+              + Nouvelle analyse
+            </button>
+>>>>>>> 4554ad2e0cf96f5cae585554676fcd0f8d388821
           </div>
-          {showForm && (
-            <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-              <div className="form-row">
-                <div className="form-group"><label className="form-label">Date</label><input type="date" className="form-control" onChange={e => set('date_examen', e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Type examen</label>
-                  <select className="form-control" onChange={e => set('type_examen', e.target.value)}>
+          {showBioForm && (
+            <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20, marginBottom: 16 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3,1fr)', gap: 16 }}>
+                {[
+                  { label: 'Date', key: 'date_examen', type: 'date' },
+                  { label: 'Paramètre', key: 'parametre', placeholder: 'Ex: Hémoglobine' },
+                  { label: 'Valeur', key: 'valeur', placeholder: '12.5' },
+                  { label: 'Unité', key: 'unite', placeholder: 'g/dL' },
+                  { label: 'Valeur normale', key: 'valeur_normale', placeholder: '12-16 g/dL' },
+                ].map(f => (
+                  <div key={f.key}>
+                    <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>{f.label}</label>
+                    <input type={f.type || 'text'} placeholder={f.placeholder} className="form-control"
+                      value={bioForm[f.key] || ''} onChange={e => setBioForm(p => ({ ...p, [f.key]: e.target.value }))} />
+                  </div>
+                ))}
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>Type examen</label>
+                  <select className="form-control" value={bioForm.type_examen || ''} onChange={e => setBioForm(p => ({ ...p, type_examen: e.target.value }))}>
                     {['NFS','Biochimie','Marqueurs tumoraux','Coagulation','Ionogramme','Autre'].map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
-                <div className="form-group"><label className="form-label">Paramètre</label><input className="form-control" placeholder="Ex: Hémoglobine, CA15-3" onChange={e => set('parametre', e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Valeur</label><input className="form-control" placeholder="Ex: 12.5" onChange={e => set('valeur', e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Unité</label><input className="form-control" placeholder="g/dL, U/mL..." onChange={e => set('unite', e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Valeur normale</label><input className="form-control" placeholder="12-16 g/dL" onChange={e => set('valeur_normale', e.target.value)} /></div>
-                <div className="form-group"><label className="form-label">Interprétation</label>
-                  <select className="form-control" onChange={e => set('interpretation', e.target.value)}>
+                <div>
+                  <label style={{ fontSize: 12, fontWeight: 600, color: '#475569', display: 'block', marginBottom: 6 }}>Interprétation</label>
+                  <select className="form-control" value={bioForm.interpretation || 'Normal'} onChange={e => setBioForm(p => ({ ...p, interpretation: e.target.value }))}>
                     {['Normal','Bas','Haut','Critique'].map(o => <option key={o}>{o}</option>)}
                   </select>
                 </div>
               </div>
-              <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
-                <button className="btn btn-primary btn-sm" onClick={handleAddBiologie}>Enregistrer</button>
-                <button className="btn btn-outline btn-sm" onClick={() => setShowForm(false)}>Annuler</button>
+              <div style={{ display: 'flex', gap: 10, marginTop: 16 }}>
+                <button onClick={handleAddBio}
+                  style={{ padding: '8px 20px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                    background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
+                  Enregistrer
+                </button>
+                <button onClick={() => setShowBioForm(false)}
+                  style={{ padding: '8px 16px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                    background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer', color: '#475569' }}>
+                  Annuler
+                </button>
               </div>
             </div>
           )}
-          <div className="card-body">
-            {biologie.length >= 2 && (
-              <div style={{ marginBottom: 20, padding: 16, background: '#f8fafc', borderRadius: 10, border: '1px solid #e2e8f0' }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📈 Évolution des paramètres</div>
-                <Line data={bioChartData()} options={{ 
-                  responsive: true, 
-                  plugins: { 
-                    legend: { position: 'bottom' },
-                    zoom: {
-                      pan: { enabled: true, mode: 'x' },
-                      zoom: { wheel: { enabled: true }, pinch: { enabled: true }, mode: 'x' }
-                    }
-                  }, 
-                  scales: { x: { grid: { display: false } }, y: { beginAtZero: false } } 
-                }} />
-              </div>
-            )}
-            {biologie.length === 0 ? <div className="empty-state"><div style={{fontSize:36}}>🧪</div><p>Aucune analyse au dossier</p></div> :
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead><tr style={{ background: '#f8fafc' }}>
-                  {['Date','Type','Paramètre','Valeur','Unité','Référence','Interp.',''].map(h => <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0' }}>{h}</th>)}
-                </tr></thead>
-                <tbody>
-                  {biologie.map((b, i) => (
-                    <tr key={b.id} style={{ background: i%2===0?'white':'#fafbfc' }}>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{b.date_examen?.slice(0,10)}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>{b.type_examen}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontWeight: 600 }}>{b.parametre}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', fontWeight: 700, fontFamily: 'JetBrains Mono' }}>{b.valeur}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', color: '#64748b' }}>{b.unite}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9', color: '#94a3b8', fontSize: 12 }}>{b.valeur_normale}</td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ padding: '3px 10px', borderRadius: 12, fontSize: 11, fontWeight: 700, background: STATUS_COLORS[b.interpretation]+'22', color: STATUS_COLORS[b.interpretation] }}>{b.interpretation}</span>
-                      </td>
-                      <td style={{ padding: '10px 12px', borderBottom: '1px solid #f1f5f9' }}>
-                        <button onClick={() => handleDeleteBiologie(b.id)} style={{ background: 'none', border: 'none', color: '#e63946', cursor: 'pointer' }}>🗑</button>
-                      </td>
+
+          {biologie.length >= 2 && (
+            <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', padding: '16px 20px', marginBottom: 16 }}>
+              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>📈 Évolution des paramètres</div>
+              <Line data={{
+                labels: [...new Set(biologie.map(b => b.date_examen?.slice(0,10)))].sort(),
+                datasets: [...new Set(biologie.map(b => b.parametre))].slice(0,3).map((p, i) => ({
+                  label: p,
+                  data: biologie.filter(b => b.parametre === p).map(b => parseFloat(b.valeur)).filter(v => !isNaN(v)),
+                  borderColor: ['#3b82f6','#e63946','#22c55e'][i],
+                  backgroundColor: ['#3b82f622','#e6394622','#22c55e22'][i],
+                  tension: 0.4, fill: false
+                }))
+              }} options={{ responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { x: { grid: { display: false } } } }} />
+            </div>
+          )}
+
+          {biologie.length === 0
+            ? <EmptyState icon="🧪" title="Aucune analyse biologique" message="Cliquez sur '+ Nouvelle analyse' pour ajouter des résultats." />
+            : (
+              <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', overflow: 'hidden' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr style={{ background: '#f8fafc' }}>
+                      {['Date','Type','Paramètre','Valeur','Unité','Référence','Statut',''].map(h => (
+                        <th key={h} style={{ padding: '12px 14px', textAlign: 'left', fontSize: 11, fontWeight: 700,
+                          color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px',
+                          borderBottom: '1px solid #e2e8f0' }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
-            }
+                  </thead>
+                  <tbody>
+                    {biologie.map((b, i) => (
+                      <tr key={b.id} style={{ background: i % 2 === 0 ? 'white' : '#fafbfc' }}>
+                        <td style={{ padding: '11px 14px', fontSize: 13, borderBottom: '1px solid #f1f5f9' }}>{b.date_examen?.slice(0,10)}</td>
+                        <td style={{ padding: '11px 14px', fontSize: 13, borderBottom: '1px solid #f1f5f9', color: '#64748b' }}>{b.type_examen}</td>
+                        <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 600, borderBottom: '1px solid #f1f5f9' }}>{b.parametre}</td>
+                        <td style={{ padding: '11px 14px', fontSize: 13, fontWeight: 700, fontFamily: 'monospace', borderBottom: '1px solid #f1f5f9' }}>{b.valeur}</td>
+                        <td style={{ padding: '11px 14px', fontSize: 13, color: '#64748b', borderBottom: '1px solid #f1f5f9' }}>{b.unite}</td>
+                        <td style={{ padding: '11px 14px', fontSize: 12, color: '#94a3b8', borderBottom: '1px solid #f1f5f9' }}>{b.valeur_normale}</td>
+                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #f1f5f9' }}>
+                          <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                            background: (INTERP_COLORS[b.interpretation] || '#64748b') + '22',
+                            color: INTERP_COLORS[b.interpretation] || '#64748b' }}>
+                            {b.interpretation}
+                          </span>
+                        </td>
+                        <td style={{ padding: '11px 14px', borderBottom: '1px solid #f1f5f9' }}>
+                          <button onClick={() => { if(window.confirm('Supprimer?')) api.delete(`/biologie/${b.id}`).then(() => { toast.success('Supprimé'); api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data || [])); }); }}
+                            style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#ef4444', fontSize: 14 }}>🗑</button>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )
+          }
+        </div>
+      )}
+
+      {/* ── IMAGERIE ── */}
+      {tab === 'imagerie' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+              background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
+              + Nouvelle imagerie
+            </button>
+          </div>
+          {(() => {
+            const imgs = imagerie.length > 0 ? imagerie 
+              : patient.cancer_cases?.flatMap(c => c.imagerie || []) || [];
+            return imgs.length === 0
+              ? <EmptyState icon="🖼️" title="Aucune imagerie" message="Les résultats d'imagerie (Scanner, IRM, PET) apparaissent ici." />
+              : imgs.map((img, i) => (
+                <div key={img.id || i} onClick={() => setSelectedImgerie(selectedImgerie?.id === img.id ? null : img)}
+                  style={{ background: 'white', borderRadius: 12, border: `1px solid ${selectedImgerie?.id === img.id ? '#3b82f6' : '#e2e8f0'}`,
+                    padding: '18px 20px', marginBottom: 12, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                        <span style={pill('#0369a1','#e0f2fe')}>{img.type_examen}</span>
+                        {img.region && <span style={pill('#475569','#f1f5f9')}>{img.region}</span>}
+                      </div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: '#0f172a', marginBottom: 4 }}>{img.conclusion}</div>
+                      <div style={{ fontSize: 12, color: '#94a3b8' }}>{img.date_examen ? format(parseISO(img.date_examen), 'dd/MM/yyyy') : '—'}</div>
+                    </div>
+                  </div>
+                  {selectedImgerie?.id === img.id && img.resultat_resume && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f1f5f9',
+                      fontSize: 13, color: '#475569', background: '#f8fafc', borderRadius: 8, padding: '10px 12px' }}>
+                      {img.resultat_resume}
+                    </div>
+                  )}
+                </div>
+              ));
+          })()}
+        </div>
+      )}
+
+      {/* ── TRAITEMENT ── */}
+      {tab === 'traitement' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+              background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
+              + Nouveau traitement
+            </button>
+          </div>
+          {(() => {
+            const treats = traitements.length > 0 ? traitements
+              : patient.cancer_cases?.flatMap(c => c.traitements || []) || [];
+            return treats.length === 0
+              ? <EmptyState icon="💊" title="Aucun traitement enregistré" message="Les protocoles de traitement (chimio, radio, chirurgie) apparaissent ici." />
+              : treats.map((t, i) => {
+                const statutStyle = { 'En cours': pill('#15803d','#dcfce7'), 'Terminé': pill('#475569','#f1f5f9'), 'Abandonné': pill('#b91c1c','#fee2e2'), 'Suspendu': pill('#d97706','#fef3c7') };
+                return (
+                  <div key={t.id || i} style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0',
+                    padding: '18px 20px', marginBottom: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                      <div>
+                        <div style={{ fontSize: 15, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{t.protocole}</div>
+                        <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 8 }}>
+                          <span style={pill('#1d4ed8','#dbeafe')}>{t.type_traitement}</span>
+                          {t.statut && <span style={statutStyle[t.statut] || pill('#475569','#f1f5f9')}>{t.statut}</span>}
+                          {t.intention_therapeutique && <span style={pill('#0369a1','#e0f2fe')}>{t.intention_therapeutique}</span>}
+                          {t.ligne_traitement && <span style={pill('#6b21a8','#f5f3ff')}>Ligne {t.ligne_traitement}</span>}
+                        </div>
+                        <div style={{ fontSize: 12, color: '#64748b' }}>
+                          {t.date_debut && `📅 ${format(parseISO(t.date_debut), 'dd/MM/yyyy')}`}
+                          {t.date_fin && ` → ${format(parseISO(t.date_fin), 'dd/MM/yyyy')}`}
+                          {t.cycles_realises && ` · ${t.cycles_realises}/${t.nb_cycles_prevus || '?'} cycles`}
+                        </div>
+                      </div>
+                    </div>
+                    {t.medicaments && (
+                      <div style={{ marginTop: 10, fontSize: 13, color: '#475569',
+                        background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>
+                        💊 {t.medicaments}
+                      </div>
+                    )}
+                    {t.resultat && (
+                      <div style={{ marginTop: 8, fontSize: 13, color: '#475569', fontStyle: 'italic' }}>
+                        📋 {t.resultat}
+                      </div>
+                    )}
+                  </div>
+                );
+              });
+          })()}
+        </div>
+      )}
+
+      {/* ── CONSULTATIONS ── */}
+      {tab === 'consultations' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+              background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
+              + Nouvelle consultation
+            </button>
+          </div>
+          {(() => {
+            const rdvs = consultations.length > 0 ? consultations : patient.rendez_vous || [];
+            return rdvs.length === 0
+              ? <EmptyState icon="📅" title="Aucune consultation" message="Les rendez-vous et consultations apparaissent ici." />
+              : rdvs.map((r, i) => (
+                <div key={r.id || i} style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0',
+                  padding: '18px 20px', marginBottom: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 6 }}>{r.motif || 'Consultation'}</div>
+                      <div style={{ display: 'flex', gap: 8 }}>
+                        <span style={pill('#475569','#f1f5f9')}>{r.date_rdv ? format(new Date(r.date_rdv), 'dd/MM/yyyy HH:mm') : '—'}</span>
+                        {r.statut && <span style={{ ...pill(r.statut==='Effectué'?'#15803d':r.statut==='Annulé'?'#b91c1c':'#1d4ed8', r.statut==='Effectué'?'#dcfce7':r.statut==='Annulé'?'#fee2e2':'#dbeafe') }}>{r.statut}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  {r.notes && <div style={{ marginTop: 10, fontSize: 13, color: '#475569', fontStyle: 'italic' }}>{r.notes}</div>}
+                </div>
+              ));
+          })()}
+        </div>
+      )}
+
+      {/* ── EFFETS SECONDAIRES ── */}
+      {tab === 'effets' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+            <button style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+              background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
+              + Signaler effet secondaire
+            </button>
+          </div>
+          {(() => {
+            const eff = effets.length > 0 ? effets
+              : patient.cancer_cases?.flatMap(c => c.effets_secondaires || []) || [];
+            return eff.length === 0
+              ? <EmptyState icon="⚠️" title="Aucun effet secondaire signalé" message="Les effets secondaires des traitements apparaissent ici." />
+              : eff.map((e, i) => (
+                <div key={e.id || i}
+                  onClick={() => setSelectedEffect(selectedEffect?.id === e.id ? null : e)}
+                  style={{ background: 'white', borderRadius: 12, border: `1px solid ${selectedEffect?.id === e.id ? '#3b82f6' : '#e2e8f0'}`,
+                    padding: '18px 20px', marginBottom: 12, cursor: 'pointer', boxShadow: '0 1px 4px rgba(0,0,0,0.05)' }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                    <div>
+                      <div style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 8 }}>{e.type_effet}</div>
+                      <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                        {e.grade && <span style={{ padding: '3px 10px', borderRadius: 20, fontSize: 11, fontWeight: 700,
+                          background: (GRADE_COLORS[e.grade] || '#64748b') + '22', color: GRADE_COLORS[e.grade] || '#64748b' }}>{e.grade}</span>}
+                        <span style={pill(e.resolu ? '#15803d' : '#d97706', e.resolu ? '#dcfce7' : '#fef3c7')}>{e.resolu ? 'Résolu' : 'En cours'}</span>
+                        {e.date_apparition && <span style={pill('#475569','#f1f5f9')}>📅 {format(parseISO(e.date_apparition), 'dd/MM/yyyy')}</span>}
+                      </div>
+                    </div>
+                  </div>
+                  {selectedEffect?.id === e.id && (
+                    <div style={{ marginTop: 12, paddingTop: 12, borderTop: '1px solid #f1f5f9' }}>
+                      {e.description && <div style={{ fontSize: 13, color: '#475569', marginBottom: 8 }}>{e.description}</div>}
+                      {e.traitement_pris && (
+                        <div style={{ fontSize: 13, color: '#334155', background: '#f8fafc', borderRadius: 8, padding: '8px 12px' }}>
+                          💊 Traitement: {e.traitement_pris}
+                        </div>
+                      )}
+                      {e.date_resolution && <div style={{ fontSize: 12, color: '#64748b', marginTop: 8 }}>Résolu le: {format(parseISO(e.date_resolution), 'dd/MM/yyyy')}</div>}
+                    </div>
+                  )}
+                </div>
+              ));
+          })()}
+        </div>
+      )}
+
+      {/* ── ASSISTANT IA ── */}
+      {tab === 'ia' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+
+          {/* Preset questions */}
+          <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            {["Résumer le dossier patient", "Proposer un protocole adapté", "Analyser les derniers résultats biologie", "Quelles sont les options thérapeutiques ?"].map(q => (
+              <button key={q} onClick={() => handleAiSend(null, q)}
+                style={{ padding: '8px 16px', fontSize: 12, fontWeight: 600, borderRadius: 20,
+                  background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer', color: '#475569' }}>
+                {q}
+              </button>
+            ))}
+          </div>
+
+          {/* Chat window */}
+          <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0',
+            display: 'flex', flexDirection: 'column', height: 480 }}>
+            <div style={{ flex: 1, overflowY: 'auto', padding: '20px 16px', display: 'flex', flexDirection: 'column', gap: 12 }}>
+              {aiMessages.map((m, i) => (
+                <div key={i} style={{ alignSelf: m.role === 'user' ? 'flex-end' : 'flex-start', maxWidth: '80%' }}>
+                  {m.role === 'assistant' && (
+                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 4, marginLeft: 4 }}>OncoTrack IA</div>
+                  )}
+                  <div style={{ padding: '10px 16px', borderRadius: m.role === 'user' ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                    background: m.role === 'user' ? 'linear-gradient(135deg,#3b82f6,#2563eb)' : '#f8fafc',
+                    color: m.role === 'user' ? 'white' : '#334155',
+                    border: m.role !== 'user' ? '1px solid #e2e8f0' : 'none',
+                    fontSize: 13, lineHeight: 1.6 }}>
+                    {m.text}
+                  </div>
+                </div>
+              ))}
+              {aiLoading && (
+                <div style={{ alignSelf: 'flex-start', padding: '10px 16px', background: '#f8fafc',
+                  borderRadius: '16px 16px 16px 4px', border: '1px solid #e2e8f0' }}>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    {[0,1,2].map(i => <div key={i} style={{ width: 6, height: 6, borderRadius: '50%', background: '#94a3b8',
+                      animation: `bounce 1s ${i*0.2}s infinite` }} />)}
+                  </div>
+                </div>
+              )}
+              <div ref={chatBottom} />
+            </div>
+            <form onSubmit={handleAiSend}
+              style={{ padding: '12px 16px', borderTop: '1px solid #e2e8f0', display: 'flex', gap: 10 }}>
+              <input value={aiInput} onChange={e => setAiInput(e.target.value)} placeholder="Posez une question sur ce patient..."
+                style={{ flex: 1, padding: '10px 16px', borderRadius: 24, border: '1px solid #e2e8f0',
+                  fontSize: 13, outline: 'none', fontFamily: 'Inter' }} />
+              <button type="submit" disabled={aiLoading || !aiInput.trim()}
+                style={{ padding: '10px 20px', borderRadius: 24, background: 'linear-gradient(135deg,#3b82f6,#2563eb)',
+                  color: 'white', border: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, opacity: aiLoading || !aiInput.trim() ? 0.5 : 1 }}>
+                Envoyer
+              </button>
+            </form>
           </div>
         </div>
         </div>
       )}
 
-      {tab === 'cancers' && (
-        <div className="card">
-          <div className="card-header">
-            <h2>Historique des Cancers</h2>
-            <Link to={`/cas-cancer/nouveau?patient=${id}`} className="btn btn-primary btn-sm">+ Ajouter</Link>
-          </div>
-          {!patient.cancer_cases?.length ? (
-            <div className="empty-state"><h3>Aucun cas enregistré</h3></div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>Type</th><th>Sous-type</th><th>État</th><th>Stade</th><th>Statut</th><th>Diagnostic</th><th>Actions</th></tr></thead>
-                <tbody>
-                  {patient.cancer_cases.map(c => (
-                    <tr key={c.id}>
-                      <td><span className="badge badge-blue">{c.type_cancer}</span></td>
-                      <td>{c.sous_type || '-'}</td>
-                      <td><span className={etatClass(c.etat)}>{c.etat}</span></td>
-                      <td>{c.stade || '-'}</td>
-                      <td><span className={statusClass(c.statut_patient)}>{c.statut_patient}</span></td>
-                      <td>{c.date_diagnostic ? format(parseISO(c.date_diagnostic), 'dd/MM/yyyy') : '-'}</td>
-                      <td>
-                        <button className="btn-icon" onClick={() => navigate(`/cas-cancer/${c.id}`)} title="Voir le dossier">
-                          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
-
-      {tab === 'rdv' && (
-        <div className="card">
-          <div className="card-header"><h2>Historique des Rendez-vous</h2></div>
-          {!patient.rendez_vous?.length ? (
-            <div className="empty-state"><h3>Aucun rendez-vous</h3></div>
-          ) : (
-            <div className="table-wrap">
-              <table>
-                <thead><tr><th>Date</th><th>Motif</th><th>Statut</th><th>Notes</th></tr></thead>
-                <tbody>
-                  {patient.rendez_vous.map(r => (
-                    <tr key={r.id}>
-                      <td>{r.date_rdv ? format(new Date(r.date_rdv), 'dd/MM/yyyy HH:mm') : '-'}</td>
-                      <td>{r.motif || '-'}</td>
-                      <td><span className={r.statut === 'Effectué' ? 'badge badge-green' : r.statut === 'Annulé' ? 'badge badge-red' : 'badge badge-blue'}>{r.statut}</span></td>
-                      <td>{r.notes || '-'}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          )}
-        </div>
-      )}
+      <style>{`
+        @keyframes bounce {
+          0%, 80%, 100% { transform: translateY(0); }
+          40% { transform: translateY(-6px); }
+        }
+      `}</style>
     </Layout>
   );
 }
