@@ -1,59 +1,101 @@
 export const WILAYAS = [
-  'Adrar','Chlef','Laghouat','Oum El Bouaghi','Batna','Béjaïa','Biskra','Béchar','Blida','Bouira',
-  'Tamanrasset','Tébessa','Tlemcen','Tiaret','Tizi Ouzou','Alger','Djelfa','Jijel','Sétif','Saïda',
-  'Skikda','Sidi Bel Abbès','Annaba','Guelma','Constantine','Médéa','Mostaganem','MSila','Mascara',
-  'Ouargla','Oran','El Bayadh','Illizi','Bordj Bou Arréridj','Boumerdès','El Tarf','Tindouf','Tissemsilt',
-  'El Oued','Khenchela','Souk Ahras','Tipaza','Mila','Aïn Defla','Naâma','Aïn Témouchent','Ghardaïa','Relizane',
-  'Timimoun','Bordj Badji Mokhtar','Ouled Djellal','Béni Abbès','In Salah','In Guezzam','Touggourt','Djanet','El M\'Ghair','El Meniaa'
+  '01 Adrar', '02 Chlef', '03 Laghouat', '04 Oum El Bouaghi', '05 Batna', '06 Béjaïa', '07 Biskra', '08 Béchar', '09 Blida', '10 Bouira',
+  '11 Tamanrasset', '12 Tébessa', '13 Tlemcen', '14 Tiaret', '15 Tizi Ouzou', '16 Alger', '17 Djelfa', '18 Jijel', '19 Sétif', '20 Saïda',
+  '21 Skikda', '22 Sidi Bel Abbès', '23 Annaba', '24 Guelma', '25 Constantine', '26 Médéa', '27 Mostaganem', '28 M\'Sila', '29 Mascara',
+  '30 Ouargla', '31 Oran', '32 El Bayadh', '33 Illizi', '34 Bordj Bou Arréridj', '35 Boumerdès', '36 El Tarf', '37 Tindouf', '38 Tissemsilt',
+  '39 El Oued', '40 Khenchela', '41 Souk Ahras', '42 Tipaza', '43 Mila', '44 Aïn Defla', '45 Naâma', '46 Aïn Témouchent', '47 Ghardaïa', '48 Relizane',
+  '49 Timimoun', '50 Bordj Badji Mokhtar', '51 Ouled Djellal', '52 Béni Abbès', '53 In Salah', '54 In Guezzam', '55 Touggourt', '56 Djanet', '57 El M\'Ghair', '58 El Meniaa'
 ];
 
 const CUSTOM_DATA = {
-  "Alger": { lat: 36.7538, lng: 3.0588, communes: ["Alger-Centre", "Bab El Oued", "Hussein Dey", "Rouiba", "Zéralda"], zones: ["ZI Rouiba", "ZI Réghaïa", "Zone Industrielle Oued Smar", "Zone d'Activité Baba Ali"] },
-  "Oran": { lat: 35.6987, lng: -0.6308, communes: ["Oran", "Arzew", "Bir El Djir", "Es Sénia", "Gdyel"], zones: ["ZI Arzew (Pétrochimie)", "Zone Industrielle Hassi-Ameur", "ZI Oued Tlélat"] },
-  "Constantine": { lat: 36.3650, lng: 6.6147, communes: ["Constantine", "El Khroub", "Ain Smara", "Hamma Bouziane"], zones: ["ZI Oued Hamimine", "ZI Ibn Ziad", "Zone d'Activité Ali Mendjeli"] },
-  "Tlemcen": { lat: 34.8783, lng: -1.3150, communes: ["Tlemcen", "Mansourah", "Maghnia", "Remchi", "Ghazaouet"], zones: ["ZI Remchi", "ZI Maghnia", "ZI Chetouane"] },
-  "Annaba": { lat: 36.9000, lng: 7.7667, communes: ["Annaba", "El Bouni", "Sidi Amar", "El Hadjar", "Berrahal"], zones: ["ZI Pont Bouchet", "Complexe Sidérurgique El Hadjar", "ZI Berrahal"] },
-  "Sétif": { lat: 36.1911, lng: 5.4137, communes: ["Sétif", "El Eulma", "Ain Arnat", "Ain Oulmene"], zones: ["ZI Sétif-Est", "ZI El Eulma", "Zone d'Activité Ain Arnat"] },
-  "Batna": { lat: 35.5558, lng: 6.1736, communes: ["Batna", "Barika", "Arris", "Merouana"], zones: ["Zone Industrielle Kechida", "ZI Barika"] },
-  "Blida": { lat: 36.4700, lng: 2.8277, communes: ["Blida", "Boufarik", "Beni Mered", "Ouled Yaich"], zones: ["Zone Industrielle de Boufarik", "ZI Ben Boulaid", "ZI Ouled Yaich"] },
-  "Béjaïa": { lat: 36.7512, lng: 5.0645, communes: ["Béjaïa", "Amizour", "Akbou", "El Kseur"], zones: ["ZI Taharacht", "Zone Portuaire Béjaïa", "Zone d'Activité Ighil Ouazzoug"] },
-  "Skikda": { lat: 36.8778, lng: 5.9069, communes: ["Skikda", "Azzaba", "El Harrouch", "Collo"], zones: ["ZI Skikda (Pétrochimie)", "Zone d'Activité Hamadi Krouma"] },
-  "Bordj Bou Arréridj": { lat: 36.0732, lng: 4.7611, communes: ["Bordj Bou Arréridj", "Ras El Oued", "Bordj Ghedir"], zones: ["ZI BBA (Électronique/Électroménager)", "Zone d'Activité Bordj Ghedir"] },
-  "Ouargla": { lat: 31.9493, lng: 5.3250, communes: ["Ouargla", "Rouissat", "Hassi Messaoud"], zones: ["Zones Pétrolières Hassi Messaoud", "ZI Ouargla"] },
-  "Boumerdès": { lat: 36.7558, lng: 3.4735, communes: ["Boumerdès", "Boudouaou", "Corso", "Dellys"], zones: ["ZI Corso", "ZI Larbatache", "Zone Industrielle Ouled Moussa"] },
-  "Tizi Ouzou": { lat: 36.7118, lng: 4.0459, communes: ["Tizi Ouzou", "Azazga", "Draa Ben Khedda"], zones: ["ZI Oued Aïssi", "Zone d'Activité Freha"] },
-  "Médéa": { lat: 36.2642, lng: 2.7539, communes: ["Médéa", "Berrouaghia", "Ksar El Boukhari"], zones: ["ZI Ksar El Boukhari", "ZI Médéa"] },
-  "Biskra": { lat: 34.8500, lng: 5.7333, communes: ["Biskra", "Tolga", "Sidi Okba"], zones: ["ZI Biskra", "Zone d'Activité Tolga"] },
-  "Tiaret": { lat: 35.3710, lng: 1.3166, communes: ["Tiaret", "Sougueur", "Frenda"], zones: ["ZI Zaaroura", "ZI Tiaret"] },
-  "Chlef": { lat: 36.1647, lng: 1.3318, communes: ["Chlef", "Ténès", "Boukadir"], zones: ["ZI Oued Sly", "Zone d'Activité Ténès"] },
-  "Sidi Bel Abbès": { lat: 35.1899, lng: -0.6308, communes: ["Sidi Bel Abbès", "Sfisef", "Telagh"], zones: ["ZI Route d'Oran", "Zone Industrielle Sidi Bel Abbès"] },
-  "Guelma": { lat: 36.4621, lng: 7.4261, communes: ["Guelma", "Bouchegouf", "Oued Zenati"], zones: ["ZI Guelma", "Zone d'Activité Bouchegouf"] },
+  "01 Adrar": ["Adrar", "Reggane", "In Zghmir", "Tit", "Tsabit", "Fenoughil", "Aoulef"],
+  "02 Chlef": ["Chlef", "Ténès", "Boukadir", "Ouled Fares", "Sidi Akkacha", "Béni Haoua", "El Karimia"],
+  "03 Laghouat": ["Laghouat", "Aflou", "Ain Madhi", "Ksar El Hirane", "Hassi R'Mel", "Sidi Makhlouf"],
+  "04 Oum El Bouaghi": ["Oum El Bouaghi", "Ain Beida", "Ain M'lila", "Ain Kercha", "Ain Zitoun", "Fkirina"],
+  "05 Batna": ["Batna", "Barika", "Arris", "Merouana", "Ain Touta", "Timgad", "Tazoult", "N'Gaous"],
+  "06 Béjaïa": ["Béjaïa", "Akbou", "Amizour", "Kherrata", "Sidi Aïch", "El Kseur", "Ighram", "Ouzellaguen"],
+  "07 Biskra": ["Biskra", "Tolga", "Sidi Okba", "Ouled Djellal", "Zeribet El Oued", "M'Chouneche"],
+  "08 Béchar": ["Béchar", "Abadla", "Kenadsa", "Béni Abbès", "Taghit", "Igli", "Béni Ounif"],
+  "09 Blida": ["Blida", "Boufarik", "Beni Mered", "Ouled Yaich", "Larbaa", "Meftah", "Mouzaia", "El Affroun"],
+  "10 Bouira": ["Bouira", "Lakhdaria", "Sour El Ghozlane", "Aïn Bessem", "M'Chedallah", "Bechloul", "Kadiria"],
+  "11 Tamanrasset": ["Tamanrasset", "In Salah", "In Ghar", "In Amguel", "Idles", "Tazrouk"],
+  "12 Tébessa": ["Tébessa", "Bir El Ater", "Cheria", "Ouenza", "El Kouif", "Morsott", "Negrine"],
+  "13 Tlemcen": ["Tlemcen", "Maghnia", "Mansourah", "Ghazaouet", "Remchi", "Sebdou", "Hennaya", "Nedroma"],
+  "14 Tiaret": ["Tiaret", "Sougueur", "Frenda", "Ksar Chellala", "Mahdia", "Rahouia", "Mecheria"],
+  "15 Tizi Ouzou": ["Tizi Ouzou", "Azazga", "Draâ Ben Khedda", "Tigzirt", "Larbaâ Nath Irathen", "Azeffoun", "Boghni", "Ouadhias"],
+  "16 Alger": ["Alger-Centre", "Bab El Oued", "Hussein Dey", "Bir Mourad Raïs", "Kouba", "Dar El Beïda", "Birkhadem", "Cheraga", "Hydra", "El Harrach", "Zéralda", "Sidi M'Hamed"],
+  "17 Djelfa": ["Djelfa", "Hassi Bahbah", "Ain Oussera", "Messaad", "Dar Chioukh", "Idrisia", "Charef"],
+  "18 Jijel": ["Jijel", "Taher", "El Milia", "Chekfa", "Jidjelli", "Sidi Abdelaziz", "Texenna"],
+  "19 Sétif": ["Sétif", "El Eulma", "Aïn Arnat", "Aïn Oulmene", "Bouandas", "Beni Aziz", "Hammam Guergour", "Guidjel"],
+  "20 Saïda": ["Saïda", "Ain El Hadjar", "Sidi Amar", "Youb", "Hassasna", "Moulay Larbi"],
+  "21 Skikda": ["Skikda", "Azzaba", "El Harrouch", "Collo", "Tamalous", "Sidi Mezghiche", "Bin El Ouidane"],
+  "22 Sidi Bel Abbès": ["Sidi Bel Abbès", "Sfisef", "Télagh", "Ben Badis", "Sidi Ali Boussidi", "Moulay Slissen"],
+  "23 Annaba": ["Annaba", "El Bouni", "El Hadjar", "Berrahal", "Séraïdi", "Chetaïbi", "Sidi Amar", "Trézel"],
+  "24 Guelma": ["Guelma", "Bouchegouf", "Oued Zenati", "Héliopolis", "Ain Makhlouf", "Boumahra Ahmed"],
+  "25 Constantine": ["Constantine", "El Khroub", "Aïn Smara", "Hamma Bouziane", "Zighoud Youcef", "Didouche Mourad"],
+  "26 Médéa": ["Médéa", "Berrouaghia", "Ksar El Boukhari", "Beni Slimane", "Aziz", "Chahbounia", "Tablat"],
+  "27 Mostaganem": ["Mostaganem", "Aïn Nouïssy", "Hassi Maâmeche", "Mesra", "Bouguirat", "Sidi Lakhdar", "Achaacha"],
+  "28 M'Sila": ["M'Sila", "Bou Saâda", "Sidi Aïssa", "Maadid", "Beni Ilman", "Hammam Dhalaa"],
+  "29 Mascara": ["Mascara", "Ghriss", "Sig", "Tighennif", "Mohammadia", "Oued Taria", "Bou Hanifia"],
+  "30 Ouargla": ["Ouargla", "Hassi Messaoud", "Rouissat", "N'Goussa", "Sidi Khouiled", "Ain Beida"],
+  "31 Oran": ["Oran", "Es Sénia", "Bir El Djir", "Arzew", "Bethioua", "Aïn El Turck", "Mers El Kébir", "Gdyel", "Oued Tlelat", "Misserghin"],
+  "32 El Bayadh": ["El Bayadh", "Bougtob", "Brezina", "El Abiodh Sidi Cheikh", "Boualem", "Rogassa"],
+  "33 Illizi": ["Illizi", "Djanet", "Debdeb", "Bordj Omar Driss"],
+  "34 Bordj Bou Arréridj": ["Bordj Bou Arréridj", "Ras El Oued", "Bordj Ghedir", "Mansoura", "Medjana", "El Hammadia"],
+  "35 Boumerdès": ["Boumerdès", "Boudouaou", "Corso", "Dellys", "Thénia", "Khemis El Khechna", "Hamadi"],
+  "36 El Tarf": ["El Tarf", "El Kala", "Dréan", "Besbes", "Ben M'Hidi", "Bouhadjar"],
+  "37 Tindouf": ["Tindouf", "Oum El Assel"],
+  "38 Tissemsilt": ["Tissemsilt", "Theniet El Had", "Lardjem", "Khemisti", "Bordj Emir Abdelkader"],
+  "39 El Oued": ["El Oued", "Guémar", "Robbah", "Bayadha", "Debila", "Magrane", "Hassi Khalifa"],
+  "40 Khenchela": ["Khenchela", "Kais", "Chechar", "Babor", "Ouled Rechache", "Bouhmama"],
+  "41 Souk Ahras": ["Souk Ahras", "Sédrata", "M'daourouch", "Taoura", "Merahna", "Haddada"],
+  "42 Tipaza": ["Tipaza", "Cherchell", "Kolea", "Hadjout", "Bou Ismaïl", "Fouka", "Damous", "Gouraya"],
+  "43 Mila": ["Mila", "Chelghoum Laïd", "Grarem Gouga", "Ferdjioua", "Teleghma", "Oued Endja"],
+  "44 Aïn Defla": ["Aïn Defla", "Miliana", "Khemis Miliana", "Hammam Righa", "Djendel", "Boumedfa"],
+  "45 Naâma": ["Naâma", "Mécheria", "Aïn Séfra", "Moghrar", "Tiout", "Asla"],
+  "46 Aïn Témouchent": ["Aïn Témouchent", "Béni Saf", "Hammam Bou Hadjar", "El Amria", "El Malah"],
+  "47 Ghardaïa": ["Ghardaïa", "Metlili", "El Guerrara", "Bounoura", "Zelfana", "Dhayet Bendhahoua"],
+  "48 Relizane": ["Relizane", "Oued Rhiou", "Mazouna", "Zemmora", "Ammi Moussa", "Yellel"],
+  "49 Timimoun": ["Timimoun", "Aougrout", "Ksar Kaddour"],
+  "50 Bordj Badji Mokhtar": ["Bordj Badji Mokhtar", "Timiaouine"],
+  "51 Ouled Djellal": ["Ouled Djellal", "Sidi Khaled", "Besbes", "Ras El Miad"],
+  "52 Béni Abbès": ["Béni Abbès", "Taghit", "Kerzaz", "El Ouata", "Igli", "Tabelbala"],
+  "53 In Salah": ["In Salah", "In Ghar", "Foggaret Ezzaouia"],
+  "54 In Guezzam": ["In Guezzam", "Tin Zaouatine"],
+  "55 Touggourt": ["Touggourt", "Nezla", "Tebesbest", "Zaouia El Abidia", "Sidi Slimane"],
+  "56 Djanet": ["Djanet", "Bordj El Haouas"],
+  "57 El M'Ghair": ["El M'Ghair", "Djamaa", "Mrara", "Still"],
+  "58 El Meniaa": ["El Meniaa", "Hassi Gara", "Hassi El Khebi"]
 };
 
-// Simple pseudo-random hash generator for fake coords per wilaya if missing
-const getHash = (str) => {
-  let hash = 0;
-  for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
-  return hash;
-};
-
-export const getWilayaData = (wilayaName) => {
-  if (!wilayaName) return null;
-  const match = Object.keys(CUSTOM_DATA).find(k => k.toLowerCase() === wilayaName.toLowerCase());
-  if (match) return { id: wilayaName, nom: wilayaName, ...CUSTOM_DATA[match] };
+export const getWilayaData = (wilayaFull) => {
+  if (!wilayaFull) return null;
+  const communes = CUSTOM_DATA[wilayaFull] || [];
   
-  // Predictable pseudorandom coordinates within Algeria bounds (approx 21-36 lat, -8-11 lng)
-  const hash = Math.abs(getHash(wilayaName));
-  const lat = 28 + (hash % 8) + ((hash % 100) / 100);
-  const lng = -2 + (hash % 10) + ((hash % 100) / 100);
+  // Basic coords mapping for center points (approximate)
+  const coords = {
+    "16 Alger": { lat: 36.7538, lng: 3.0588 },
+    "31 Oran": { lat: 35.6987, lng: -0.6308 },
+    "25 Constantine": { lat: 36.3650, lng: 6.6147 },
+    "23 Annaba": { lat: 36.9000, lng: 7.7667 },
+    "19 Sétif": { lat: 36.1911, lng: 5.4137 },
+    "05 Batna": { lat: 35.5558, lng: 6.1736 },
+    "09 Blida": { lat: 36.4700, lng: 2.8277 },
+    "13 Tlemcen": { lat: 34.8783, lng: -1.3150 },
+    "30 Ouargla": { lat: 31.9493, lng: 5.3250 },
+    "11 Tamanrasset": { lat: 22.7850, lng: 5.5228 },
+    "47 Ghardaïa": { lat: 32.4909, lng: 3.6735 },
+    "29 Mascara": { lat: 35.3964, lng: 0.1403 }
+  };
+
+  const base = coords[wilayaFull] || { lat: 28.0, lng: 2.0 };
 
   return {
-    id: wilayaName,
-    nom: wilayaName,
-    lat,
-    lng,
-    communes: [`Commune Centre de ${wilayaName}`, `Commune Périphérique A`, `Commune Périphérique B`],
-    zones: [`Zone Industrielle Primaire ${wilayaName}`, `Zone d'activités tertiaires`]
+    id: wilayaFull,
+    nom: wilayaFull,
+    lat: base.lat,
+    lng: base.lng,
+    communes: communes
   };
 };
 
