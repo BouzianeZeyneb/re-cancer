@@ -22,7 +22,8 @@
     "react-router-dom": "6.20.0",
     "react-scripts": "5.0.1",
     "recharts": "^3.8.1",
-    "socket.io-client": "4.7.2"
+    "socket.io-client": "4.7.2",
+    "xlsx": "^0.18.5"
   },
   "overrides": {
     "resolve-url-loader": "4.0.0"

@@ -49,46 +49,68 @@ export default function Patients() {
   
   const fileInputRef = React.useRef(null);
 
-  const handleImportCSV = (e) => {
+  const handleImportFiles = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
-    const reader = new FileReader();
-    reader.onload = async (event) => {
-      const text = event.target.result;
-      const lines = text.split('\n');
-      const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-      
-      let count = 0;
-      toast.loading('Importation en cours...', { id: 'import' });
-      
-      for(let i = 1; i < lines.length; i++) {
-        const line = lines[i].split(',').map(v => v.trim());
-        if (line.length < 2) continue;
+    const extension = file.name.split('.').pop().toLowerCase();
+    toast.loading('Importation en cours...', { id: 'import' });
+    
+    try {
+      let data = [];
+      if (extension === 'xlsx' || extension === 'xls') {
+        const XLSX = await import('xlsx');
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer);
+        const sheet = workbook.Sheets[workbook.SheetNames[0]];
+        data = XLSX.utils.sheet_to_json(sheet);
+      } else {
+        const text = await file.text();
+        const delimiter = extension === 'csv' ? ',' : (text.includes('\t') ? '\t' : (text.includes(';') ? ';' : ','));
+        const lines = text.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
         
-        const p = {};
-        headers.forEach((h, idx) => {
-          if (h.includes('nom')) p.nom = line[idx];
-          if (h.includes('prenom') || h.includes('prénom')) p.prenom = line[idx];
-          if (h.includes('sexe') || h.includes('genre')) p.sexe = line[idx]?.toUpperCase()[0] === 'F' ? 'F' : 'M';
-          if (h.includes('nais') || h.includes('dob')) p.date_naissance = line[idx];
-          if (h.includes('tel')) p.telephone = line[idx];
-          if (h.includes('carte') || h.includes('national')) p.num_carte_nationale = line[idx];
+        data = lines.slice(1).map(line => {
+          const values = line.split(delimiter).map(v => v.trim());
+          const obj = {};
+          headers.forEach((h, i) => obj[h] = values[i]);
+          return obj;
         });
-        
+      }
+
+      let count = 0;
+      const api = await import('../utils/api');
+      
+      for (const row of data) {
+        const p = {};
+        Object.entries(row).forEach(([k, v]) => {
+          const key = String(k).toLowerCase();
+          if (key.includes('nom')) p.nom = v;
+          if (key.includes('prenom') || key.includes('prénom')) p.prenom = v;
+          if (key.includes('sexe') || key.includes('genre')) p.sexe = String(v).toUpperCase()[0] === 'F' ? 'F' : 'M';
+          if (key.includes('nais') || key.includes('dob') || key.includes('birth')) p.date_naissance = v;
+          if (key.includes('tel')) p.telephone = v;
+          if (key.includes('carte') || key.includes('chifa') || key.includes('nss')) p.num_carte_nationale = v;
+          if (key.includes('wilaya')) p.wilaya = v;
+          if (key.includes('commune')) p.commune = v;
+          if (key.includes('adresse')) p.adresse = v;
+        });
+
         if (p.nom && p.prenom) {
           try {
-            const api = require('../utils/api'); // Dynamic import for safety
             await api.createPatient(p);
             count++;
-          } catch(err) { console.error('CSV row err:', err); }
+          } catch (err) { console.error('Row import error:', err); }
         }
       }
+      
       toast.success(`${count} patients importés avec succès`, { id: 'import' });
       load();
-    };
-    reader.readAsText(file);
-    e.target.value = ''; // Reset input
+    } catch (err) {
+      console.error('Import global error:', err);
+      toast.error('Erreur lors de l\'importation', { id: 'import' });
+    }
+    e.target.value = '';
   };
 
   const getAge = (dob) => {
@@ -126,9 +148,10 @@ export default function Patients() {
           gap: 16, 
           alignItems: 'center',
           marginBottom: 24,
-          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)'
+          boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.05)',
+          flexWrap: 'wrap'
       }}>
-          <div style={{ flex: 1, position: 'relative' }}>
+          <div style={{ flex: 1, minWidth: 250, position: 'relative' }}>
             <svg style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }} width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
             <input
               className="form-control"
@@ -138,14 +161,33 @@ export default function Patients() {
               onChange={e => setSearch(e.target.value)}
             />
           </div>
-          <select className="form-control" style={{ width: 180, background: '#f8fafc', border: 'none' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
-            <option value="">Tous les types</option>
-            {CANCER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-          </select>
-          <select className="form-control" style={{ width: 180, background: '#f8fafc', border: 'none' }} value={stadeFilter} onChange={e => setStadeFilter(e.target.value)}>
-            <option value="">Tous les stades</option>
-            {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
-          </select>
+          
+          <div style={{ display: 'flex', gap: 12 }}>
+            <input 
+              type="file" 
+              ref={fileInputRef} 
+              style={{ display: 'none' }} 
+              accept=".csv,.xlsx,.xls,.txt" 
+              onChange={handleImportFiles}
+            />
+            <button 
+              className="btn btn-outline" 
+              onClick={() => fileInputRef.current.click()}
+              style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc' }}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+              Importer (CSV/Excel/Txt)
+            </button>
+
+            <select className="form-control" style={{ width: 180, background: '#f8fafc', border: 'none' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
+              <option value="">Tous les types</option>
+              {CANCER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+            </select>
+            <select className="form-control" style={{ width: 180, background: '#f8fafc', border: 'none' }} value={stadeFilter} onChange={e => setStadeFilter(e.target.value)}>
+              <option value="">Tous les stades</option>
+              {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
+            </select>
+          </div>
       </div>
 
       <div className="card" style={{ border: '1px solid #e2e8f0', overflow: 'hidden' }}>

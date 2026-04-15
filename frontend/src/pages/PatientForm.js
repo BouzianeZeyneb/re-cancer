@@ -58,6 +58,72 @@ export default function PatientForm() {
   // État pour la gestion des doublons
   const [duplicateInfo, setDuplicateInfo] = useState(null);
   const [mergeChoices, setMergeChoices] = useState({});
+  const fileInputRef = useRef(null);
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const extension = file.name.split('.').pop().toLowerCase();
+    toast.loading('Importation en cours...', { id: 'import' });
+    try {
+      let data = [];
+      if (extension === 'xlsx' || extension === 'xls') {
+        const XLSX = await import('xlsx');
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer);
+        data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+      } else {
+        const text = await file.text();
+        const delimiter = extension === 'csv' ? (text.includes(';') ? ';' : ',') : (text.includes('\t') ? '\t' : ',');
+        const lines = text.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+        data = lines.slice(1).map(line => {
+          const values = line.split(delimiter).map(v => v.trim());
+          const obj = {};
+          headers.forEach((h, i) => obj[h] = values[i]);
+          return obj;
+        });
+      }
+
+      if (data.length === 1) {
+        // Pre-fill form if single patient
+        const row = data[0];
+        const newForm = { ...form };
+        Object.entries(row).forEach(([k, v]) => {
+          const key = String(k).toLowerCase();
+          if (key.includes('nom')) newForm.nom = v;
+          if (key.includes('prenom') || key.includes('prénom')) newForm.prenom = v;
+          if (key.includes('sexe')) newForm.sexe = String(v).toUpperCase()[0] === 'F' ? 'F' : 'M';
+          if (key.includes('nais') || key.includes('dob')) newForm.date_naissance = String(v).slice(0, 10);
+          if (key.includes('tel')) newForm.telephone = v;
+          if (key.includes('carte')) newForm.num_carte_nationale = v;
+        });
+        setForm(newForm);
+        toast.success('Formulaire rempli depuis le fichier', { id: 'import' });
+      } else if (data.length > 1) {
+        // Bulk import
+        let count = 0;
+        for (const row of data) {
+          const p = {};
+          Object.entries(row).forEach(([k, v]) => {
+            const key = String(k).toLowerCase();
+            if (key.includes('nom')) p.nom = v;
+            if (key.includes('prenom') || key.includes('prénom')) p.prenom = v;
+            if (key.includes('sexe')) p.sexe = String(v).toUpperCase()[0] === 'F' ? 'F' : 'M';
+            if (key.includes('nais') || key.includes('dob')) p.date_naissance = String(v).slice(0, 10);
+            if (key.includes('tel')) p.telephone = v;
+            if (key.includes('carte')) p.num_carte_nationale = v;
+          });
+          if (p.nom && p.prenom) {
+            try { await createPatient(p); count++; } catch (err) {}
+          }
+        }
+        toast.success(`${count} patients importés.`, { id: 'import' });
+        navigate('/patients');
+      }
+    } catch (err) { toast.error('Erreur import', { id: 'import' }); }
+    e.target.value = '';
+  };
 
   const MERGE_FIELDS = [
     { key: 'nom', label: 'Nom' },
@@ -354,6 +420,10 @@ export default function PatientForm() {
               <button type="button" className={`btn ${voiceMode ? 'btn-danger' : 'btn-outline'}`}
                 onClick={() => { setVoiceMode(!voiceMode); if(!voiceMode) toast('🎤 Mode vocal activé!', { duration:3000 }); }}>
                 🎤 {voiceMode ? 'Vocal ON' : 'Mode Vocal'}
+              </button>
+              <button type="button" className="btn btn-outline" onClick={() => fileInputRef.current.click()} style={{ background: '#f0f9ff', color: '#0369a1', borderColor: '#bae6fd' }}>
+                📁 Importer Fichier (Excel/CSV)
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.txt" onChange={handleImport} />
               </button>
               {voiceMode && (
                 <button type="button" className={`btn ${isListening ? 'btn-danger' : 'btn-outline'}`} onClick={() => isListening ? stopVoice() : startVoice()}>

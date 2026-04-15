@@ -122,7 +122,24 @@ const getRawStatsData = async (req, res) => {
   }
 };
 
-const getAuditLogs = async (req, res) => { /* simplified */ res.json([]); };
+const getAuditLogs = async (req, res) => {
+  try {
+    const [logs] = await pool.execute(`
+      SELECT 
+        al.*, 
+        u.nom as user_nom, 
+        u.prenom as user_prenom, 
+        u.role as user_role 
+      FROM audit_logs al
+      LEFT JOIN users u ON al.user_id = u.id
+      ORDER BY al.created_at DESC
+      LIMIT 100
+    `);
+    res.json(logs);
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
 const analyzeWilayaIA = async (req, res) => { res.json({}); };
 const analyzePatientIA = async (req, res) => { res.json({}); };
 const askGlobalIA = async (req, res) => {
