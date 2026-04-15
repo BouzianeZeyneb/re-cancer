@@ -209,9 +209,38 @@ const createPatient = async (req, res) => {
     const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool } = req.body;
     
     await pool.execute(
+<<<<<<< HEAD
       `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool, created_by) 
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', req.user.id]
+=======
+      `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, created_by) 
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        id, 
+        nom || null, 
+        prenom || null, 
+        date_naissance || null, 
+        sexe || 'M', 
+        telephone || null, 
+        num_carte_nationale || null, 
+        num_carte_chifa || null, 
+        adresse || null, 
+        commune || null, 
+        wilaya || null, 
+        latitude || null, 
+        longitude || null, 
+        fumeur || false, 
+        alcool || false, 
+        activite_sportive || false, 
+        autres_medicaments || null, 
+        autres_facteurs_risque || null, 
+        assurance || null, 
+        groupe_sanguin || null, 
+        email || null, 
+        req.user.id
+      ]
+>>>>>>> c3387bfadc418d8646aa4b00d0420e42ac75c683
     );
 
     await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom }, req.ip);

@@ -20,7 +20,7 @@ import CasDetail from './pages/CasDetail';
 import Statistiques from './pages/Statistiques';
 import CarteSIG from './pages/CarteSIG';
 import Utilisateurs from './pages/Utilisateurs';
-import { AuditLogs } from './pages/AuditLogs';
+import AuditLogs from './pages/AuditLogs';
 import AdminSettings from './pages/AdminSettings';
 import RCPList from './pages/RCPList';
 import RCPDetail from './pages/RCPDetail';
@@ -85,6 +85,7 @@ function AppRoutes() {
       <Route path="/doublons" element={<ProtectedRoute allowedRoles={['admin']}><Doublons /></ProtectedRoute>} />
       <Route path="/carte-sig" element={<ProtectedRoute allowedRoles={['admin']}><CarteSIG /></ProtectedRoute>} />
       <Route path="/utilisateurs" element={<ProtectedRoute allowedRoles={['admin']}><Utilisateurs /></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
       <Route path="/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
       
       {/* Partagés */}
