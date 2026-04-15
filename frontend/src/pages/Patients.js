@@ -47,14 +47,27 @@ export default function Patients() {
     }
   };
   
+  const [showImportOptions, setShowImportOptions] = useState(false);
   const fileInputRef = React.useRef(null);
+  const [importType, setImportType] = useState('');
+
+  const triggerFileInput = (type) => {
+    setImportType(type);
+    if (type === 'xlsx') fileInputRef.current.accept = ".xlsx,.xls";
+    else if (type === 'csv') fileInputRef.current.accept = ".csv";
+    else if (type === 'txt') fileInputRef.current.accept = ".txt";
+    else fileInputRef.current.accept = ".csv,.xlsx,.xls,.txt";
+    
+    fileInputRef.current.click();
+    setShowImportOptions(false);
+  };
 
   const handleImportFiles = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
     
     const extension = file.name.split('.').pop().toLowerCase();
-    toast.loading('Importation en cours...', { id: 'import' });
+    const loadingToast = toast.loading('Importation en cours...', { id: 'import' });
     
     try {
       let data = [];
@@ -66,49 +79,90 @@ export default function Patients() {
         data = XLSX.utils.sheet_to_json(sheet);
       } else {
         const text = await file.text();
-        const delimiter = extension === 'csv' ? ',' : (text.includes('\t') ? '\t' : (text.includes(';') ? ';' : ','));
-        const lines = text.split('\n').filter(l => l.trim());
-        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+        const firstLine = text.split('\n')[0];
+        // Détecter dynamiquement le délimiteur (virgule, point-virgule ou tabulation)
+        const delimiter = firstLine.includes(';') ? ';' : (firstLine.includes('\t') ? '\t' : ',');
         
+        const lines = text.split('\n').map(l => l.trim()).filter(l => l);
+        if (lines.length < 2) throw new Error('Fichier vide ou mal formaté');
+        
+        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""));
         data = lines.slice(1).map(line => {
           const values = line.split(delimiter).map(v => v.trim());
           const obj = {};
-          headers.forEach((h, i) => obj[h] = values[i]);
+          headers.forEach((h, i) => {
+            if (values[i] !== undefined) obj[h] = values[i];
+          });
           return obj;
         });
       }
 
+      if (!data.length) throw new Error('Aucune donnée trouvée dans le fichier');
+
       let count = 0;
+      let duplicates = 0;
+      let errors = 0;
       const api = await import('../utils/api');
       
       for (const row of data) {
         const p = {};
         Object.entries(row).forEach(([k, v]) => {
-          const key = String(k).toLowerCase();
+          if (!v) return;
+          const key = String(k).toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""); // Normaliser les accents
           if (key.includes('nom')) p.nom = v;
-          if (key.includes('prenom') || key.includes('prénom')) p.prenom = v;
-          if (key.includes('sexe') || key.includes('genre')) p.sexe = String(v).toUpperCase()[0] === 'F' ? 'F' : 'M';
-          if (key.includes('nais') || key.includes('dob') || key.includes('birth')) p.date_naissance = v;
+          if (key.includes('prenom')) p.prenom = v;
+          if (key.includes('sexe') || key.includes('genre')) {
+            const val = String(v).toUpperCase().trim();
+            p.sexe = (val.startsWith('F') || val.includes('FEMME')) ? 'F' : 'M';
+          }
+          if (key.includes('nais') || key.includes('dob') || key.includes('birth')) {
+            // Tenter de normaliser la date (DD/MM/YYYY ou DD-MM-YYYY vers YYYY-MM-DD)
+            let val = String(v).trim();
+            if (val.includes('/') || (val.includes('-') && val.split('-')[0].length < 4)) {
+              const parts = val.split(/[/-]/);
+              if (parts.length === 3) {
+                // On assume DD/MM/YYYY
+                val = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+              }
+            }
+            p.date_naissance = val;
+          }
+          if (key.includes('nationale') || key.includes('cni') || key.includes('identity')) p.num_carte_nationale = v;
+          if (key.includes('chifa')) p.num_carte_chifa = v;
           if (key.includes('tel')) p.telephone = v;
-          if (key.includes('carte') || key.includes('chifa') || key.includes('nss')) p.num_carte_nationale = v;
           if (key.includes('wilaya')) p.wilaya = v;
           if (key.includes('commune')) p.commune = v;
           if (key.includes('adresse')) p.adresse = v;
+          if (key.includes('assurance')) p.assurance = v;
+          if (key.includes('groupe')) p.groupe_sanguin = v;
+          if (key.includes('email')) p.email = v;
         });
 
         if (p.nom && p.prenom) {
           try {
-            await api.createPatient(p);
+            await api.createPatient({ ...p, forceSave: true }); // On force l'importation en batch
             count++;
-          } catch (err) { console.error('Row import error:', err); }
+          } catch (err) { 
+            if (err.response?.status === 409) duplicates++;
+            else {
+              console.error('Row import error:', err); 
+              errors++;
+            }
+          }
         }
       }
       
-      toast.success(`${count} patients importés avec succès`, { id: 'import' });
+      if (count > 0) {
+        toast.success(`${count} patients importés${duplicates > 0 ? ` (${duplicates} doublons ignorés)` : ''}`, { id: 'import', duration: 5000 });
+      } else if (duplicates > 0) {
+        toast.error(`${duplicates} patients déjà existants (aucun ajout)`, { id: 'import', duration: 5000 });
+      } else {
+        toast.error('Aucun patient n\'a pu être importé. Vérifiez le format du fichier.', { id: 'import', duration: 5000 });
+      }
       load();
     } catch (err) {
       console.error('Import global error:', err);
-      toast.error('Erreur lors de l\'importation', { id: 'import' });
+      toast.error('Erreur: ' + (err.message || 'Format de fichier non supporté'), { id: 'import' });
     }
     e.target.value = '';
   };
@@ -162,22 +216,40 @@ export default function Patients() {
             />
           </div>
           
-          <div style={{ display: 'flex', gap: 12 }}>
+          <div className="dropdown-container">
             <input 
               type="file" 
               ref={fileInputRef} 
               style={{ display: 'none' }} 
-              accept=".csv,.xlsx,.xls,.txt" 
               onChange={handleImportFiles}
             />
             <button 
               className="btn btn-outline" 
-              onClick={() => fileInputRef.current.click()}
+              onClick={() => setShowImportOptions(!showImportOptions)}
               style={{ display: 'flex', alignItems: 'center', gap: 8, background: '#f8fafc' }}
             >
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-              Importer (CSV/Excel/Txt)
+              Importer
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" style={{ marginLeft: 4, transform: showImportOptions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s' }}><polyline points="6 9 12 15 18 9"/></svg>
             </button>
+
+            {showImportOptions && (
+              <div className="dropdown-menu">
+                <button className="dropdown-item" onClick={() => triggerFileInput('xlsx')}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="8" y1="13" x2="16" y2="13"/><line x1="8" y1="17" x2="16" y2="17"/><polyline points="10 9 9 9 8 9"/></svg>
+                  Fichier Excel (.xlsx, .xls)
+                </button>
+                <button className="dropdown-item" onClick={() => triggerFileInput('csv')}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><path d="M8 13h8"/><path d="M8 17h8"/><path d="M10 9H9h-1"/></svg>
+                  Fichier CSV (.csv)
+                </button>
+                <button className="dropdown-item" onClick={() => triggerFileInput('txt')}>
+                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><line x1="10" y1="9" x2="8" y2="9"/></svg>
+                  Fichier Texte (.txt)
+                </button>
+              </div>
+            )}
+          </div>
 
             <select className="form-control" style={{ width: 180, background: '#f8fafc', border: 'none' }} value={typeFilter} onChange={e => setTypeFilter(e.target.value)}>
               <option value="">Tous les types</option>
@@ -188,7 +260,6 @@ export default function Patients() {
               {STAGES.map(s => <option key={s} value={s}>{s}</option>)}
             </select>
           </div>
-      </div>
 
       <div className="card" style={{ border: '1px solid #e2e8f0', overflow: 'hidden' }}>
         {loading ? (

@@ -1,0 +1,4 @@
+nom,prenom,sexe,date_naissance,wilaya,commune,adresse,telephone,num_carte_nationale,num_carte_chifa,email,groupe_sanguin
+BOUZIANE,Zeyneb,F,15/03/1992,Alger,Alger,Quartier Vert,0550123456,123456789,987654321,zeyneb@example.com,A+
+MESSAOUDI,Ahmed,M,22/11/1975,Oran,Oran,Cité 500 logts,0661987654,112233445,554433221,ahmed@example.com,O-
+BELKACEM,Samira,F,30/07/1988,Sétif,Sétif,Rue Liberté,0770554433,998877665,667788990,samira@example.com,AB+
