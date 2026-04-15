@@ -146,6 +146,7 @@ router.get('/doublons', authMiddleware, detectDoublons);
 const {
   getAnapath, createAnapath, updateAnapath, deleteAnapath,
   getBiologie, getBiologieByPatient, createBiologie, deleteBiologie,
+  getBiologiePatientStats,
   getImagerie, createImagerie, deleteImagerie,
   getConsultations, createConsultation, deleteConsultation,
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
@@ -157,6 +158,7 @@ router.post('/anapath', authMiddleware, createAnapath);
 router.put('/anapath/:id', authMiddleware, updateAnapath);
 router.delete('/anapath/:id', authMiddleware, deleteAnapath);
 
+router.get('/biologie/patient-stats', authMiddleware, getBiologiePatientStats);
 router.get('/biologie/patient/:patientId', authMiddleware, getBiologieByPatient);
 router.get('/biologie/:caseId', authMiddleware, getBiologie);
 router.post('/biologie', authMiddleware, createBiologie);
@@ -178,10 +180,11 @@ router.get('/chimio-seances/:caseId', authMiddleware, getChimioSeances);
 router.post('/chimio-seances', authMiddleware, createChimioSeance);
 
 // Lab requests
-const { createRequest, getRequestsByCase, getRequestsForLabo, uploadPdf } = require('../controllers/labRequestsController');
+const { createRequest, getRequestsByCase, getRequestsForLabo, uploadPdf, getLabRequestsByPatient } = require('../controllers/labRequestsController');
 const uploadLab = require('../middleware/upload');
 router.post('/lab-requests', authMiddleware, requireRole('admin', 'medecin'), createRequest);
 router.get('/lab-requests/case/:caseId', authMiddleware, getRequestsByCase);
+router.get('/lab-requests/patient/:patientId', authMiddleware, getLabRequestsByPatient);
 router.get('/lab-requests/labo', authMiddleware, requireRole('laboratoire'), getRequestsForLabo);
 router.put('/lab-requests/:id/upload', authMiddleware, requireRole('laboratoire'), uploadLab.single('pdf'), uploadPdf);
 

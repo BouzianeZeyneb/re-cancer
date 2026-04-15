@@ -16,6 +16,14 @@ ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, T
 
 const STATUS_COLORS = { 'Normal': '#22c55e', 'Bas': '#3b82f6', 'Haut': '#f59e0b', 'Critique': '#e63946' };
 
+const ANALYSES_CATEGORIES = {
+  'Hématologie & Hémostase': ['NFS', 'Frottis sanguin', 'Groupage sanguin', 'VS', 'TP / INR', 'TCA', 'Fibrinogène'],
+  'Biochimie & Ionogramme': ['Glycémie', 'Urée', 'Créatinine', 'Sodium (Na)', 'Potassium (K)', 'Calcium (Ca)'],
+  'Bilan Hépatique': ['ASAT (TGO)', 'ALAT (TGP)', 'Gamma-GT', 'Bilirubine totale'],
+  'Marqueurs Tumoraux': ['ACE', 'CA 15-3', 'CA 125', 'CA 19-9', 'PSA', 'AFP'],
+  'Hormonologie & Inflammation': ['TSH', 'CRP', 'Œstradiol', 'Progestérone']
+};
+
 export default function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -32,6 +40,12 @@ export default function PatientDetail() {
   const [formData, setFormData] = useState({});
   const set = (k, v) => setFormData(p => ({ ...p, [k]: v }));
 
+  const [labRequests, setLabRequests] = useState([]);
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [labos, setLabos] = useState([]);
+  const [requestData, setRequestData] = useState({ labo_id: '', analyses_demandees: [], notes_labo: '' });
+  const setReq = (k, v) => setRequestData(p => ({ ...p, [k]: v }));
+
   useEffect(() => {
     getPatient(id).then(r => setPatient(r.data)).catch(() => navigate('/patients')).finally(() => setLoading(false));
     api.get('/champs-dynamiques').then(r => setChampsDynamiques(r.data)).catch(() => {});
@@ -41,6 +55,8 @@ export default function PatientDetail() {
       setValeursDynamiques(vals);
     }).catch(() => {});
     api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
+    api.get(`/lab-requests/patient/${id}`).then(r => setLabRequests(r.data)).catch(()=>{});
+    api.get('/users/role/laboratoire').then(r => setLabos(r.data)).catch(()=>{});
   }, [id, navigate]);
 
   useEffect(() => {
@@ -71,6 +87,30 @@ export default function PatientDetail() {
       setShowForm(false);
       setFormData({});
       api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
+    } catch(e) { toast.error('Erreur: ' + (e.response?.data?.message || e.message)); }
+  };
+
+  const handleRequestLab = async () => {
+    try {
+      if (!requestData.labo_id) return toast.error('Veuillez sélectionner un laborantin');
+      let analysesArray = requestData.analyses_demandees;
+      if (typeof analysesArray === 'string') {
+        analysesArray = analysesArray.split(',').map(a => a.trim()).filter(a => a);
+      }
+      if (analysesArray.length === 0) return toast.error('Veuillez spécifier les analyses');
+      
+      const payload = {
+         patient_id: id,
+         labo_id: requestData.labo_id,
+         analyses_demandees: analysesArray,
+         notes_labo: requestData.notes_labo
+      };
+      
+      await api.post('/lab-requests', payload);
+      toast.success('Demande envoyée au laboratoire !');
+      setShowRequestForm(false);
+      setRequestData({ labo_id: '', analyses_demandees: [], notes_labo: '' });
+      api.get(`/lab-requests/patient/${id}`).then(r => setLabRequests(r.data)).catch(()=>{});
     } catch(e) { toast.error('Erreur: ' + (e.response?.data?.message || e.message)); }
   };
 
@@ -142,7 +182,6 @@ export default function PatientDetail() {
       <div className="tabs">
         <button className={`tab ${tab === 'info' ? 'active' : ''}`} onClick={() => setTab('info')}>Informations</button>
         <button className={`tab ${tab === 'styles_vie' ? 'active' : ''}`} onClick={() => setTab('styles_vie')}>Styles de Vie</button>
-        <button className={`tab ${tab === 'analyses' ? 'active' : ''}`} onClick={() => setTab('analyses')}>Analyses Biologie ({biologie.length})</button>
         <button className={`tab ${tab === 'cancers' ? 'active' : ''}`} onClick={() => setTab('cancers')}>Cancers ({patient.cancer_cases?.length || 0})</button>
         <button className={`tab ${tab === 'rdv' ? 'active' : ''}`} onClick={() => setTab('rdv')}>Rendez-vous ({patient.rendez_vous?.length || 0})</button>
       </div>
@@ -279,10 +318,98 @@ export default function PatientDetail() {
       )}
 
       {tab === 'analyses' && (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+        
+        {/* Section Demandes au labo */}
+        <div className="card" style={{ border: '2px solid #bae6fd'}}>
+          <div className="card-header" style={{ background: '#f0f9ff' }}>
+            <h2>📋 Demandes d'Analyses au Laboratoire ({labRequests.length})</h2>
+            <button className="btn btn-primary btn-sm" onClick={() => setShowRequestForm(!showRequestForm)}>+ Demander des analyses</button>
+          </div>
+          {showRequestForm && (
+            <div style={{ padding: '24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
+                <div>
+                  <div className="form-group is-required">
+                    <label className="form-label">Laborantin Destinataire</label>
+                    <select className="form-control" value={requestData.labo_id} onChange={e => setReq('labo_id', e.target.value)}>
+                      <option value="">-- Sélectionner --</option>
+                      {labos.map(l => <option key={l.id} value={l.id}>{l.prenom} {l.nom}</option>)}
+                    </select>
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Notes particulières</label>
+                    <textarea className="form-control" rows={3} placeholder="Urgent, à jeun, etc..." value={requestData.notes_labo} onChange={e => setReq('notes_labo', e.target.value)} />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="form-label">Sélectionner les analyses</label>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                    {Object.entries(ANALYSES_CATEGORIES).map(([cat, items]) => (
+                      <div key={cat} style={{ background: 'white', padding: 12, borderRadius: 10, border: '1px solid #e2e8f0' }}>
+                        <div style={{ fontSize: 11, fontWeight: 700, color: '#0f4c81', marginBottom: 8, textTransform: 'uppercase' }}>{cat}</div>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+                          {items.map(item => (
+                            <label key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 13, cursor: 'pointer' }}>
+                              <input type="checkbox" checked={requestData.analyses_demandees.includes(item)} onChange={e => {
+                                const active = e.target.checked;
+                                setReq('analyses_demandees', active ? [...requestData.analyses_demandees, item] : requestData.analyses_demandees.filter(a => a !== item));
+                              }} />
+                              {item}
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+              <div style={{ display: 'flex', gap: 12, marginTop: 24, justifyContent: 'flex-end', borderTop: '1px solid #e2e8f0', paddingTop: 16 }}>
+                <button className="btn btn-outline" onClick={() => setShowRequestForm(false)}>Annuler</button>
+                <button className="btn btn-primary" onClick={handleRequestLab} style={{ minWidth: 180 }}>Envoyer la demande</button>
+              </div>
+            </div>
+          )}
+          <div className="card-body">
+             {labRequests.length === 0 ? <p style={{color: '#64748b'}}>Aucune demande d'analyses en cours.</p> : (
+               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                 <thead><tr style={{ background: '#f1f5f9' }}>
+                   {['Date','Laborantin','Analyses','Notes','Statut','Résultat PDF'].map(h => <th key={h} style={{ padding: '10px 12px', textAlign: 'left', fontSize: 11, fontWeight: 700, color: '#475569', textTransform: 'uppercase' }}>{h}</th>)}
+                 </tr></thead>
+                 <tbody>
+                   {labRequests.map((r, i) => {
+                     let anals = [];
+                     try { anals = typeof r.analyses_demandees === 'string' ? JSON.parse(r.analyses_demandees) : r.analyses_demandees; } catch(e){}
+                     return (
+                       <tr key={r.id} style={{ borderTop: '1px solid #e2e8f0' }}>
+                         <td style={{ padding: '10px 12px' }}>{new Date(r.created_at).toLocaleDateString()}</td>
+                         <td style={{ padding: '10px 12px' }}>{r.labo_prenom} {r.labo_nom}</td>
+                         <td style={{ padding: '10px 12px' }}>{anals?.join(', ')}</td>
+                         <td style={{ padding: '10px 12px' }}>{r.notes_labo || '-'}</td>
+                         <td style={{ padding: '10px 12px' }}>
+                            <span className={r.statut === 'En attente' ? 'badge badge-orange' : 'badge badge-green'}>{r.statut}</span>
+                         </td>
+                         <td style={{ padding: '10px 12px' }}>
+                            {r.fichier_pdf ? (
+                              <a href={`http://localhost:5000${r.fichier_pdf}`} target="_blank" rel="noreferrer" style={{color: '#0284c7', fontWeight: 600}}>📄 Voir PDF</a>
+                            ) : (
+                              <span style={{color: '#94a3b8'}}>-</span>
+                            )}
+                         </td>
+                       </tr>
+                     );
+                   })}
+                 </tbody>
+               </table>
+             )}
+          </div>
+        </div>
+
         <div className="card">
           <div className="card-header">
-            <h2>🧪 Résultats d'Analyses ({biologie.length})</h2>
-            <button className="btn btn-primary btn-sm" onClick={() => setShowForm(!showForm)}>+ Ajouter Analyse</button>
+            <h2>🧪 Résultats d'Analyses Saisis ({biologie.length})</h2>
+            <button className="btn btn-outline btn-sm" onClick={() => setShowForm(!showForm)}>+ Saisie Manuelle</button>
           </div>
           {showForm && (
             <div style={{ padding: '16px 24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
@@ -352,6 +479,7 @@ export default function PatientDetail() {
               </table>
             }
           </div>
+        </div>
         </div>
       )}
 
