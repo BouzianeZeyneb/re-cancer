@@ -64,6 +64,39 @@ const getDashboardStats = async (req, res) => {
       GROUP BY p.wilaya ORDER BY value DESC LIMIT 10
     `, params);
 
+    const [parTopographie] = await pool.execute(`
+      SELECT topographie_icdo3 as name, COUNT(*) as value 
+      FROM cancer_cases WHERE topographie_icdo3 IS NOT NULL ${whereClauseTemplate}
+      GROUP BY topographie_icdo3 ORDER BY value DESC LIMIT 8
+    `, params);
+
+    const [parMorphologie] = await pool.execute(`
+      SELECT morphologie_icdo3 as name, COUNT(*) as value 
+      FROM cancer_cases WHERE morphologie_icdo3 IS NOT NULL ${whereClauseTemplate}
+      GROUP BY morphologie_icdo3 ORDER BY value DESC LIMIT 8
+    `, params);
+
+    const [parStade] = await pool.execute(`
+      SELECT stade as name, COUNT(*) as value 
+      FROM cancer_cases WHERE stade IS NOT NULL ${whereClauseTemplate}
+      GROUP BY stade ORDER BY value DESC
+    `, params);
+
+    const [parGrade] = await pool.execute(`
+      SELECT grade_histologique as name, COUNT(*) as value 
+      FROM cancer_cases WHERE grade_histologique IS NOT NULL ${whereClauseTemplate}
+      GROUP BY grade_histologique ORDER BY value DESC
+    `, params);
+
+    const [parTabac] = await pool.execute(`
+      SELECT cc.sous_type as name, 
+             SUM(CASE WHEN p.fumeur = 1 THEN 1 ELSE 0 END) as value
+      FROM cancer_cases cc
+      JOIN patients p ON cc.patient_id = p.id
+      WHERE 1=1 ${whereClauseTemplate.replace(/date_diagnostic/g, 'cc.date_diagnostic')}
+      GROUP BY cc.sous_type ORDER BY value DESC LIMIT 5
+    `, params);
+
     const [recent] = await pool.execute(`
       SELECT p.id as patientId, cc.id as caseId, p.nom, p.prenom, p.sexe, TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) as age, 
              cc.sous_type as diagnostic, cc.stade, cc.statut_patient, cc.created_at
@@ -86,7 +119,95 @@ const getDashboardStats = async (req, res) => {
        parSexe,
        parAge,
        parWilaya,
+       parTopographie,
+       parMorphologie,
+       parStade,
+       parGrade,
+       parTabac,
        recentDossiers: recent
+    });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
+const getLocalizedStats = async (req, res) => {
+  try {
+    const { wilaya, type_cancer, topographie_icdo3, morphologie_icdo3 } = req.query;
+    let filterCondition = '';
+    const params = [];
+
+    if (wilaya) { filterCondition += ' AND p.wilaya = ?'; params.push(wilaya); }
+    if (type_cancer) { filterCondition += ' AND cc.type_cancer = ?'; params.push(type_cancer); }
+    if (topographie_icdo3) { filterCondition += ' AND cc.topographie_icdo3 = ?'; params.push(topographie_icdo3); }
+    if (morphologie_icdo3) { filterCondition += ' AND cc.morphologie_icdo3 = ?'; params.push(morphologie_icdo3); }
+
+    const whereClause = filterCondition;
+
+    // Totals locally
+    const [totaux] = await pool.execute(`
+      SELECT COUNT(*) as total,
+             SUM(CASE WHEN cc.stade = 'Stade IV' THEN 1 ELSE 0 END) as stadeIV
+      FROM cancer_cases cc
+      JOIN patients p ON cc.patient_id = p.id
+      WHERE 1=1 ${whereClause}
+    `, params);
+
+    const [parStade] = await pool.execute(`
+      SELECT cc.stade as name, COUNT(*) as value 
+      FROM cancer_cases cc
+      JOIN patients p ON cc.patient_id = p.id
+      WHERE 1=1 ${whereClause} AND cc.stade IS NOT NULL
+      GROUP BY cc.stade ORDER BY value DESC
+    `, params);
+
+    const [parSexe] = await pool.execute(`
+      SELECT p.sexe, COUNT(*) as count 
+      FROM patients p 
+      JOIN cancer_cases cc ON p.id = cc.patient_id 
+      WHERE 1=1 ${whereClause}
+      GROUP BY p.sexe
+    `, params);
+
+    const [parAge] = await pool.execute(`
+      SELECT 
+        CASE 
+          WHEN TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) < 30 THEN '0-29'
+          WHEN TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) < 50 THEN '30-49'
+          WHEN TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) < 70 THEN '50-69'
+          ELSE '70+'
+        END as name,
+        COUNT(*) as value
+      FROM patients p
+      JOIN cancer_cases cc ON p.id = cc.patient_id
+      WHERE 1=1 ${whereClause}
+      GROUP BY name
+    `, params);
+
+    const [parTopographie] = await pool.execute(`
+      SELECT topographie_icdo3 as name, COUNT(*) as value 
+      FROM cancer_cases cc
+      JOIN patients p ON cc.patient_id = p.id
+      WHERE 1=1 ${whereClause} AND cc.topographie_icdo3 IS NOT NULL
+      GROUP BY cc.topographie_icdo3 ORDER BY value DESC LIMIT 10
+    `, params);
+
+    const [parMorphologie] = await pool.execute(`
+      SELECT morphologie_icdo3 as name, COUNT(*) as value 
+      FROM cancer_cases cc
+      JOIN patients p ON cc.patient_id = p.id
+      WHERE 1=1 ${whereClause} AND cc.morphologie_icdo3 IS NOT NULL
+      GROUP BY cc.morphologie_icdo3 ORDER BY value DESC LIMIT 10
+    `, params);
+
+    res.json({
+      total: totaux[0].total,
+      stadeIV: totaux[0].stadeIV,
+      parStade,
+      parSexe: parSexe.map(s => ({ name: s.sexe === 'M' ? 'Hommes' : 'Femmes', value: s.count })),
+      parAge,
+      parTopographie,
+      parMorphologie
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -240,5 +361,6 @@ module.exports = {
   analyzeWilayaIA, 
   analyzePatientIA, 
   askGlobalIA,
-  getRawStatsData
+  getRawStatsData,
+  getLocalizedStats
 };

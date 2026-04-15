@@ -24,7 +24,8 @@ const initialForm = {
   nom: '', prenom: '', date_naissance: '', sexe: 'M', telephone: '',
   num_carte_nationale: '', num_carte_chifa: '', adresse: '', commune: '', wilaya: '',
   assurance: '', groupe_sanguin: '', email: '', profession: '',
-  fumeur: false, alcool: false, activite_sportive: false,
+  consommation_tabac: 'Inconnu', consommation_alcool: 'Inconnu',
+  activite_sportive: false,
   autres_medicaments: '', autres_facteurs_risque: '',
   antecedents_medicaux: '', antecedents_familiaux: ''
 };
@@ -84,7 +85,8 @@ export default function PatientForm() {
           num_carte_nationale: p.num_carte_nationale||'', num_carte_chifa: p.num_carte_chifa||'',
           adresse: p.adresse||'', commune: p.commune||'', wilaya: p.wilaya||'',
           assurance: p.assurance||'', groupe_sanguin: p.groupe_sanguin||'',
-          fumeur: Boolean(p.fumeur), alcool: Boolean(p.alcool), activite_sportive: Boolean(p.activite_sportive),
+          consommation_tabac: p.consommation_tabac||'Inconnu', consommation_alcool: p.consommation_alcool||'Inconnu',
+          activite_sportive: Boolean(p.activite_sportive),
           autres_medicaments: p.autres_medicaments||'', autres_facteurs_risque: p.autres_facteurs_risque||''
         });
         api.get(`/valeurs-dynamiques/${id}`).then(r => {
@@ -476,23 +478,32 @@ export default function PatientForm() {
                     </div>
 
                     <div style={{ marginTop: 30 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 20 }}>Maladies Chroniques</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                          {[
-                            'Diabète type 1', 'Diabète type 2', 'Hypertension artérielle', 
-                            'Insuffisance rénale', 'Insuffisance cardiaque', 'BPCO / Asthme', 
-                            'Hépatite B / C', 'Cirrhose', 'VIH / SIDA'
-                          ].map(m => (
-                            <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px', border: '1px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', background: maladiesChroniques.includes(m) ? '#f0f9ff' : 'white' }}>
-                              <input type="checkbox" checked={maladiesChroniques.includes(m)} 
-                                onChange={e => {
-                                  if (e.target.checked) setMaladiesChroniques([...maladiesChroniques, m]);
-                                  else setMaladiesChroniques(maladiesChroniques.filter(x => x !== m));
-                                }} 
-                              />
-                              <span style={{ fontSize: 14, fontWeight: 600 }}>{m}</span>
-                            </label>
-                          ))}
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 20 }}>Habitudes & Facteurs de Risque</div>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label className="form-label">Consommation de Tabac</label>
+                            <select className="form-control" value={form.consommation_tabac} onChange={e => set('consommation_tabac', e.target.value)}>
+                              <option value="Non-fumeur">Non-fumeur</option>
+                              <option value="Ex-fumeur">Ex-fumeur</option>
+                              <option value="Fumeur actif">Fumeur actif</option>
+                              <option value="Inconnu">Inconnu</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Consommation d'Alcool</label>
+                            <select className="form-control" value={form.consommation_alcool} onChange={e => set('consommation_alcool', e.target.value)}>
+                              <option value="Abstinent">Abstinent</option>
+                              <option value="Occasionnelle">Occasionnelle</option>
+                              <option value="Régulière">Régulière</option>
+                              <option value="Inconnu">Inconnu</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 20 }}>
+                          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={form.activite_sportive} onChange={e => set('activite_sportive', e.target.checked)} />
+                            <span style={{ fontWeight: 600 }}>Pratique une activité sportive régulière</span>
+                          </label>
                         </div>
                     </div>
                 </div>

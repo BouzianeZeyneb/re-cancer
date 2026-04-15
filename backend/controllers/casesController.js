@@ -43,7 +43,7 @@ const getCaseById = async (req, res) => {
 const createCase = async (req, res) => {
   try {
     const id = uuidv4();
-    const { patient_id, type_cancer, sous_type, anomalies_genetiques, etat, stade, taille_cancer, rapport_anatomopathologique, medecin_traitant, medecin_inapte, numero_lecteur, date_diagnostic, decision_rcp, localisation, lateralite, code_cim10, type_histologique, grade_histologique, numero_bloc, tnm_t, tnm_n, tnm_m, recepteur_er, recepteur_pr, her2, nb_ganglions_envahis, sites_metastatiques, date_premiers_symptomes, etablissement_diagnostiqueur, medecin_diagnostiqueur, base_diagnostic } = req.body;
+    const { patient_id, type_cancer, sous_type, anomalies_genetiques, etat, stade, taille_cancer, rapport_anatomopathologique, medecin_traitant, medecin_inapte, numero_lecteur, date_diagnostic, decision_rcp, localisation, lateralite, code_cim10, type_histologique, grade_histologique, numero_bloc, tnm_t, tnm_n, tnm_m, recepteur_er, recepteur_pr, her2, nb_ganglions_envahis, sites_metastatiques, date_premiers_symptomes, etablissement_diagnostiqueur, medecin_diagnostiqueur, base_diagnostic, icd_o_topography, icd_o_morphology, behavior_code, date_derniere_nouvelle, cause_deces } = req.body;
     const n = v => (v === undefined || v === '' ? null : v);
     await pool.execute(
       `INSERT INTO cancer_cases (
@@ -52,15 +52,17 @@ const createCase = async (req, res) => {
         localisation, lateralite, code_cim10, type_histologique, grade_histologique, numero_bloc,
         tnm_t, tnm_n, tnm_m, recepteur_er, recepteur_pr, her2,
         nb_ganglions_envahis, sites_metastatiques, date_premiers_symptomes,
-        etablissement_diagnostiqueur, medecin_diagnostiqueur, base_diagnostic
-      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+        etablissement_diagnostiqueur, medecin_diagnostiqueur, base_diagnostic,
+        icd_o_topography, icd_o_morphology, behavior_code, date_derniere_nouvelle, cause_deces
+      ) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
         id, patient_id, type_cancer, n(sous_type), n(anomalies_genetiques), etat, n(stade), n(taille_cancer)||null, n(rapport_anatomopathologique),
         n(medecin_traitant)||null, n(medecin_inapte)||null, n(numero_lecteur), date_diagnostic, n(decision_rcp), req.user.id,
         n(localisation), n(lateralite), n(code_cim10), n(type_histologique), n(grade_histologique), n(numero_bloc),
         n(tnm_t), n(tnm_n), n(tnm_m), n(recepteur_er)||'Inconnu', n(recepteur_pr)||'Inconnu', n(her2)||'Inconnu',
         n(nb_ganglions_envahis), n(sites_metastatiques), n(date_premiers_symptomes),
-        n(etablissement_diagnostiqueur), n(medecin_diagnostiqueur), n(base_diagnostic)
+        n(etablissement_diagnostiqueur), n(medecin_diagnostiqueur), n(base_diagnostic),
+        n(icd_o_topography), n(icd_o_morphology), n(behavior_code), n(date_derniere_nouvelle), n(cause_deces)
       ]
     );
     await auditLog(req.user.id, 'CREATE_CASE', 'cancer_cases', id, { patient_id, type_cancer }, req.ip);
@@ -73,7 +75,7 @@ const createCase = async (req, res) => {
 const updateCase = async (req, res) => {
   try {
     const { id } = req.params;
-    const { type_cancer, sous_type, anomalies_genetiques, etat, stade, taille_cancer, rapport_anatomopathologique, medecin_traitant, numero_lecteur, date_diagnostic, statut_patient, date_deces, decision_rcp, localisation, lateralite, code_cim10, type_histologique, grade_histologique, numero_bloc, tnm_t, tnm_n, tnm_m, recepteur_er, recepteur_pr, her2, nb_ganglions_envahis, sites_metastatiques, date_premiers_symptomes, etablissement_diagnostiqueur, medecin_diagnostiqueur, base_diagnostic } = req.body;
+    const { type_cancer, sous_type, anomalies_genetiques, etat, stade, taille_cancer, rapport_anatomopathologique, medecin_traitant, numero_lecteur, date_diagnostic, statut_patient, date_deces, decision_rcp, localisation, lateralite, code_cim10, type_histologique, grade_histologique, numero_bloc, tnm_t, tnm_n, tnm_m, recepteur_er, recepteur_pr, her2, nb_ganglions_envahis, sites_metastatiques, date_premiers_symptomes, etablissement_diagnostiqueur, medecin_diagnostiqueur, base_diagnostic, icd_o_topography, icd_o_morphology, behavior_code, date_derniere_nouvelle, cause_deces } = req.body;
     const n = v => (v === undefined || v === '' ? null : v);
     
     await pool.execute(
@@ -83,7 +85,8 @@ const updateCase = async (req, res) => {
         localisation=?, lateralite=?, code_cim10=?, type_histologique=?, grade_histologique=?, numero_bloc=?,
         tnm_t=?, tnm_n=?, tnm_m=?, recepteur_er=?, recepteur_pr=?, her2=?,
         nb_ganglions_envahis=?, sites_metastatiques=?, date_premiers_symptomes=?,
-        etablissement_diagnostiqueur=?, medecin_diagnostiqueur=?, base_diagnostic=?
+        etablissement_diagnostiqueur=?, medecin_diagnostiqueur=?, base_diagnostic=?,
+        icd_o_topography=?, icd_o_morphology=?, behavior_code=?, date_derniere_nouvelle=?, cause_deces=?
       WHERE id=?`,
       [
         type_cancer, n(sous_type), n(anomalies_genetiques), etat, n(stade), n(taille_cancer)||null, n(rapport_anatomopathologique),
@@ -92,6 +95,7 @@ const updateCase = async (req, res) => {
         n(tnm_t), n(tnm_n), n(tnm_m), n(recepteur_er)||'Inconnu', n(recepteur_pr)||'Inconnu', n(her2)||'Inconnu',
         n(nb_ganglions_envahis), n(sites_metastatiques), n(date_premiers_symptomes),
         n(etablissement_diagnostiqueur), n(medecin_diagnostiqueur), n(base_diagnostic),
+        n(icd_o_topography), n(icd_o_morphology), n(behavior_code), n(date_derniere_nouvelle), n(cause_deces),
         id
       ]
     );

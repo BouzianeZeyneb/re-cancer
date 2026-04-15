@@ -262,6 +262,8 @@ const initMedicalTables = async () => {
   const conn = await pool.getConnection();
   try {
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS localisation VARCHAR(200)`);
+    await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS topographie_icdo3 VARCHAR(20)`);
+    await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS morphologie_icdo3 VARCHAR(20)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS tnm_t VARCHAR(20)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS tnm_n VARCHAR(20)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS tnm_m VARCHAR(20)`);
@@ -382,6 +384,7 @@ const initMedicalTables = async () => {
         id VARCHAR(36) PRIMARY KEY,
         case_id VARCHAR(36) NOT NULL,
         date_consultation DATE NOT NULL,
+        motif VARCHAR(200),
         poids DECIMAL(5,2),
         taille DECIMAL(5,2),
         tension_arterielle VARCHAR(20),

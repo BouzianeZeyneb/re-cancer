@@ -71,8 +71,9 @@ router.get('/rendez-vous', authMiddleware, async (req, res) => {
 });
 
 // Statistics & AI routes
-const { getDashboardStats, getAuditLogs, analyzeWilayaIA, analyzePatientIA, askGlobalIA, getRawStatsData } = require('../controllers/statsController');
+const { getDashboardStats, getAuditLogs, analyzeWilayaIA, analyzePatientIA, askGlobalIA, getRawStatsData, getLocalizedStats } = require('../controllers/statsController');
 router.get('/stats/dashboard', authMiddleware, getDashboardStats);
+router.get('/stats/localized', authMiddleware, getLocalizedStats);
 router.get('/stats/raw', authMiddleware, getRawStatsData);
 router.post('/stats/ia-analysis', authMiddleware, analyzeWilayaIA);
 router.post('/stats/analyze-patient', authMiddleware, analyzePatientIA);
@@ -150,9 +151,12 @@ const {
   getImagerie, createImagerie, deleteImagerie,
   getConsultations, createConsultation, deleteConsultation,
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
-  getChimioSeances, createChimioSeance
+  getChimioSeances, createChimioSeance,
+  getDocumentsByPatient, createDocument,
+  getAnapathByPatient, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
 } = require('../controllers/medicalController');
 
+router.get('/anapath/patient/:patientId', authMiddleware, getAnapathByPatient);
 router.get('/anapath/:caseId', authMiddleware, getAnapath);
 router.post('/anapath', authMiddleware, createAnapath);
 router.put('/anapath/:id', authMiddleware, updateAnapath);
@@ -164,20 +168,28 @@ router.get('/biologie/:caseId', authMiddleware, getBiologie);
 router.post('/biologie', authMiddleware, createBiologie);
 router.delete('/biologie/:id', authMiddleware, deleteBiologie);
 
+router.get('/imagerie/patient/:patientId', authMiddleware, getImagerieByPatient);
 router.get('/imagerie/:caseId', authMiddleware, getImagerie);
 router.post('/imagerie', authMiddleware, createImagerie);
 router.delete('/imagerie/:id', authMiddleware, deleteImagerie);
 
+router.get('/consultations/patient/:patientId', authMiddleware, getConsultationsByPatient);
 router.get('/consultations/:caseId', authMiddleware, getConsultations);
 router.post('/consultations', authMiddleware, createConsultation);
 router.delete('/consultations/:id', authMiddleware, deleteConsultation);
 
+router.get('/effets-secondaires/patient/:patientId', authMiddleware, getEffetsByPatient);
 router.get('/effets-secondaires/:caseId', authMiddleware, getEffetsSecondaires);
 router.post('/effets-secondaires', authMiddleware, createEffetSecondaire);
 router.put('/effets-secondaires/:id/resoudre', authMiddleware, resolveEffet);
 
+router.get('/traitements/patient/:patientId', authMiddleware, getTraitementsByPatient);
+
 router.get('/chimio-seances/:caseId', authMiddleware, getChimioSeances);
 router.post('/chimio-seances', authMiddleware, createChimioSeance);
+
+router.get('/documents/patient/:patientId', authMiddleware, getDocumentsByPatient);
+router.post('/documents', authMiddleware, createDocument);
 
 // Lab requests
 const { createRequest, getRequestsByCase, getRequestsForLabo, uploadPdf, getLabRequestsByPatient } = require('../controllers/labRequestsController');
