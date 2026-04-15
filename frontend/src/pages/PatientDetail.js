@@ -35,6 +35,14 @@ const ETAT_PILL = {
 const INTERP_COLORS = { Normal: '#16a34a', Bas: '#2563eb', Haut: '#d97706', Critique: '#dc2626' };
 const GRADE_COLORS  = { 'Grade 1': '#16a34a', 'Grade 2': '#d97706', 'Grade 3': '#ea580c', 'Grade 4': '#dc2626' };
 
+const ANALYSES_CATEGORIES = {
+  'Hématologie & Hémostase': ['NFS', 'Frottis sanguin', 'Groupage sanguin', 'VS', 'TP / INR', 'TCA', 'Fibrinogène'],
+  'Biochimie & Ionogramme': ['Glycémie', 'Urée', 'Créatinine', 'Sodium (Na)', 'Potassium (K)', 'Calcium (Ca)'],
+  'Bilan Hépatique': ['ASAT (TGO)', 'ALAT (TGP)', 'Gamma-GT', 'Bilirubine totale'],
+  'Marqueurs Tumoraux': ['ACE', 'CA 15-3', 'CA 125', 'CA 19-9', 'PSA', 'AFP'],
+  'Hormonologie & Inflammation': ['TSH', 'CRP', 'Œstradiol', 'Progestérone']
+};
+
 function InfoRow({ label, value }) {
   return (
     <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center',
@@ -107,12 +115,19 @@ export default function PatientDetail() {
   const [selectedEffect,  setSelectedEffect]  = useState(null);
   const [selectedImgerie, setSelectedImgerie] = useState(null);
 
+  const [labRequests, setLabRequests] = useState([]);
+  const [showRequestForm, setShowRequestForm] = useState(false);
+  const [labos, setLabos] = useState([]);
+  const [requestData, setRequestData] = useState({ labo_id: '', analyses_demandees: [], notes_labo: '' });
+  const setReq = (k, v) => setRequestData(p => ({ ...p, [k]: v }));
+
   useEffect(() => {
     setLoading(true);
     Promise.all([
       getPatient(id),
       api.get(`/cases/patient/${id}`).catch(() => ({ data: [] })),
       api.get(`/biologie/patient/${id}`).catch(() => ({ data: [] })),
+      api.get(`/lab-requests/patient/${id}`).catch(() => ({ data: [] })),
       api.get(`/anapath/case`).catch(() => ({ data: [] })),
       api.get(`/imagerie/patient/${id}`).catch(() => ({ data: [] })),
       api.get(`/traitements/patient/${id}`).catch(() => ({ data: [] })),
@@ -120,16 +135,19 @@ export default function PatientDetail() {
       api.get(`/effets-secondaires/patient/${id}`).catch(() => ({ data: [] })),
       api.get('/champs-dynamiques').catch(() => ({ data: [] })),
       api.get(`/valeurs-dynamiques/${id}`).catch(() => ({ data: [] })),
-    ]).then(([pRes, casRes, bioRes, anRes, imgRes, trRes, consultRes, effRes, chRes, vRes]) => {
+      api.get('/users/role/laboratoire').catch(() => ({ data: [] })),
+    ]).then(([pRes, casRes, bioRes, labRes, anRes, imgRes, trRes, consultRes, effRes, chRes, vRes, lboRes]) => {
       setPatient(pRes.data);
       setCases(Array.isArray(casRes.data) ? casRes.data : casRes.data?.cases || []);
       setBiologie(Array.isArray(bioRes.data) ? bioRes.data : []);
+      setLabRequests(Array.isArray(labRes.data) ? labRes.data : []);
       setAnapath(Array.isArray(anRes.data) ? anRes.data : []);
       setImagerie(Array.isArray(imgRes.data) ? imgRes.data : []);
       setTraitements(Array.isArray(trRes.data) ? trRes.data : []);
       setConsultations(Array.isArray(consultRes.data) ? consultRes.data : []);
       setEffets(Array.isArray(effRes.data) ? effRes.data : []);
       setChampsDyn(Array.isArray(chRes.data) ? chRes.data : []);
+      setLabos(Array.isArray(lboRes.data) ? lboRes.data : []);
       const vv = {};
       (Array.isArray(vRes.data) ? vRes.data : []).forEach(v => (vv[v.champ_id] = v.valeur));
       setValsDyn(vv);
@@ -179,6 +197,37 @@ export default function PatientDetail() {
     } finally {
       setAiLoading(false);
     }
+  };
+
+  const handleRequestLab = async () => {
+    try {
+      if (!requestData.labo_id) return toast.error('Veuillez sélectionner un laborantin');
+      let analysesArray = requestData.analyses_demandees;
+      if (typeof analysesArray === 'string') {
+        analysesArray = analysesArray.split(',').map(a => a.trim()).filter(a => a);
+      }
+      if (analysesArray.length === 0) return toast.error('Veuillez spécifier les analyses');
+      
+      const payload = {
+         patient_id: id,
+         labo_id: requestData.labo_id,
+         analyses_demandees: analysesArray,
+         notes_labo: requestData.notes_labo
+      };
+      
+      await api.post('/lab-requests', payload);
+      toast.success('Demande envoyée au laboratoire !');
+      setShowRequestForm(false);
+      setRequestData({ labo_id: '', analyses_demandees: [], notes_labo: '' });
+      api.get(`/lab-requests/patient/${id}`).then(r => setLabRequests(r.data)).catch(()=>{});
+    } catch(e) { toast.error('Erreur: ' + (e.response?.data?.message || e.message)); }
+  };
+
+  const handleDeleteBiologie = async (bId) => {
+    if(!window.confirm('Supprimer cette analyse ?')) return;
+    await api.delete(`/biologie/${bId}`);
+    toast.success('Supprimé');
+    api.get(`/biologie/patient/${id}`).then(r => setBiologie(r.data)).catch(()=>{});
   };
 
   /* ── Biologie add ── */
@@ -453,13 +502,15 @@ export default function PatientDetail() {
 
       {/* ── BIOLOGIE ── */}
       {tab === 'biologie' && (
-        <div>
-          <div style={{ display: 'flex', justifyContent: 'flex-end', marginBottom: 16 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
+          
+          <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 10 }}>
             <button onClick={() => setShowBioForm(!showBioForm)}
               style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
                 background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer' }}>
               + Nouvelle analyse
             </button>
+
           </div>
           {showBioForm && (
             <div style={{ background: 'white', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20, marginBottom: 16 }}>

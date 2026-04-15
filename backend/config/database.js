@@ -519,7 +519,8 @@ const initMedicalTables = async () => {
     await conn.execute(`
       CREATE TABLE IF NOT EXISTS lab_requests (
         id VARCHAR(36) PRIMARY KEY,
-        case_id VARCHAR(36) NOT NULL,
+        patient_id VARCHAR(36),
+        case_id VARCHAR(36),
         medecin_id VARCHAR(36) NOT NULL,
         labo_id VARCHAR(36) NOT NULL,
         analyses_demandees TEXT NOT NULL,
@@ -528,11 +529,17 @@ const initMedicalTables = async () => {
         notes_labo TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
         FOREIGN KEY (case_id) REFERENCES cancer_cases(id) ON DELETE CASCADE,
         FOREIGN KEY (medecin_id) REFERENCES users(id) ON DELETE CASCADE,
         FOREIGN KEY (labo_id) REFERENCES users(id) ON DELETE CASCADE
       )
     `);
+
+    // Migration for lab_requests
+    try { await conn.execute(`ALTER TABLE lab_requests ADD COLUMN patient_id VARCHAR(36)`); } catch(e) {}
+    try { await conn.execute(`ALTER TABLE lab_requests ADD CONSTRAINT fk_lab_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE`); } catch(e) {}
+    try { await conn.execute(`ALTER TABLE lab_requests MODIFY COLUMN case_id VARCHAR(36) NULL`); } catch(e) {}
 
     console.log('✅ Medical modules tables initialized');
   } catch(e) {

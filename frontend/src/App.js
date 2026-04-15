@@ -25,6 +25,8 @@ import AdminSettings from './pages/AdminSettings';
 import RCPList from './pages/RCPList';
 import RCPDetail from './pages/RCPDetail';
 import PatientFormulairePublic from './pages/PatientFormulairePublic';
+import Laboratoire from './pages/Laboratoire';
+import AnalysesBiologie from './pages/AnalysesBiologie';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -87,6 +89,8 @@ function AppRoutes() {
       
       {/* Partagés */}
       <Route path="/statistiques" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Statistiques /></ProtectedRoute>} />
+      <Route path="/laboratoire" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire']}><Laboratoire /></ProtectedRoute>} />
+      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><AnalysesBiologie /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

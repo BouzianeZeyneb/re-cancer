@@ -178,11 +178,31 @@ const createChimioSeance = async (req, res) => {
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
 
+// ===== BIOLOGIE PATIENT STATS (for card list view) =====
+const getBiologiePatientStats = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT
+        p.id AS patient_id,
+        (SELECT COUNT(*) FROM biologie WHERE patient_id = p.id) AS nb_analyses,
+        (SELECT COUNT(*) FROM lab_requests WHERE patient_id = p.id) AS nb_demandes,
+        (SELECT COUNT(*) FROM lab_requests WHERE patient_id = p.id AND statut = 'En attente') AS nb_en_attente,
+        (SELECT MAX(date_examen) FROM biologie WHERE patient_id = p.id) AS derniere_analyse
+      FROM patients p
+    `);
+    // Return as a map { patient_id: stats }
+    const statsMap = {};
+    rows.forEach(r => { statsMap[r.patient_id] = r; });
+    res.json(statsMap);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
 module.exports = {
   getAnapath, createAnapath, updateAnapath, deleteAnapath,
   getBiologie, getBiologieByPatient, createBiologie, deleteBiologie,
   getImagerie, createImagerie, deleteImagerie,
   getConsultations, createConsultation, deleteConsultation,
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
-  getChimioSeances, createChimioSeance
+  getChimioSeances, createChimioSeance,
+  getBiologiePatientStats
 };
