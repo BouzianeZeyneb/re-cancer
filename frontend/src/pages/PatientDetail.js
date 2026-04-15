@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import { getPatient, getCasesByPatient } from '../utils/api';
 import api from '../utils/api';
@@ -83,10 +84,25 @@ function SectionCard({ title, children, action }) {
 export default function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
 
   const [patient,  setPatient]  = useState(null);
   const [loading,  setLoading]  = useState(true);
   const [tab,      setTab]      = useState('resume');
+
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+
+  const confirmDelete = async (hardDelete) => {
+    try {
+      await api.delete(`/patients/${id}${hardDelete ? '?hardDelete=true' : ''}`);
+      toast.success(hardDelete ? 'Patient supprimé définitivement de la base de données' : 'Patient archivé avec succès');
+      navigate('/patients');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Erreur lors de la suppression');
+    } finally {
+      setShowDeleteModal(false);
+    }
+  };
 
   // Data states
   const [cases,    setCases]    = useState([]);
@@ -267,11 +283,25 @@ export default function PatientDetail() {
           </h1>
           <div style={{ fontSize: 13, color: '#94a3b8', fontWeight: 500 }}>{dossierNum}</div>
         </div>
-        <Link to={`/patients/${id}/modifier`}
-          style={{ padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
-            background: 'white', border: '1px solid #e2e8f0', color: '#475569', textDecoration: 'none' }}>
-          Modifier
-        </Link>
+        
+        <div style={{ display: 'flex', gap: 10 }}>
+          {(isAdmin || user?.role === 'medecin') && (
+            <button 
+              onClick={() => setShowDeleteModal(true)}
+              style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+                background: '#fff1f2', border: '1px solid #fecaca', color: '#e11d48', cursor: 'pointer', transition: 'all 0.2s' }}>
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>
+              {isAdmin ? 'Supprimer / Archiver' : 'Archiver'}
+            </button>
+          )}
+          
+          <Link to={`/patients/${id}/modifier`}
+            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '9px 18px', fontSize: 13, fontWeight: 600, borderRadius: 8,
+              background: 'white', border: '1px solid #e2e8f0', color: '#475569', textDecoration: 'none', transition: 'all 0.2s' }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+            Modifier
+          </Link>
+        </div>
       </div>
 
       {/* ── Patient header card ── */}
@@ -847,7 +877,63 @@ export default function PatientDetail() {
         </div>
       )}
 
+      {/* ── MODAL DE SUPPRESSION ── */}
+      {showDeleteModal && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          
+          <div style={{ background: 'white', borderRadius: 16, width: 450, maxWidth: '90%', 
+            padding: 30, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)',
+            animation: 'slideUp 0.3s ease-out' }}>
+            
+            <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fee2e2', color: '#dc2626',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>{isAdmin ? 'Gérer le dossier patient' : 'Archiver le dossier'}</h3>
+                <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.5, margin: 0 }}>
+                  Vous êtes sur le point de retirer ce patient de la liste principale.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button onClick={() => confirmDelete(false)}
+                style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: 12,
+                  background: '#f8fafc', border: '1px solid #e2e8f0', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>📂 Archiver uniquement</span>
+                <span style={{ fontSize: 12, color: '#64748b' }}>Le patient ne sera visible que dans les archives. Les données restent dans la base de données.</span>
+              </button>
+
+              {isAdmin && (
+                <button onClick={() => confirmDelete(true)}
+                  style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: 12,
+                    background: '#fff1f2', border: '1px solid #fecaca', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>🗑 Supprimer définitivement</span>
+                  <span style={{ fontSize: 12, color: '#991b1b' }}>Toutes les traces seront effacées de la base de données. Attention : Action irréversible.</span>
+                </button>
+              )}
+            </div>
+
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => setShowDeleteModal(false)}
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'white', border: '1px solid #e2e8f0',
+                  color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       <style>{`
+        @keyframes slideUp {
+          from { opacity: 0; transform: translateY(20px); }
+          to { opacity: 1; transform: translateY(0); }
+        }
         @keyframes bounce {
           0%, 80%, 100% { transform: translateY(0); }
           40% { transform: translateY(-6px); }
