@@ -24,12 +24,8 @@ const initialForm = {
   nom: '', prenom: '', date_naissance: '', sexe: 'M', telephone: '',
   num_carte_nationale: '', num_carte_chifa: '', adresse: '', commune: '', wilaya: '',
   assurance: '', groupe_sanguin: '', email: '', profession: '',
-<<<<<<< HEAD
   consommation_tabac: 'Inconnu', consommation_alcool: 'Inconnu',
-  activite_sportive: false,
-=======
   fumeur: false, alcool: false, activite_sportive: false,
->>>>>>> sauvegarde-zeyneb
   autres_medicaments: '', autres_facteurs_risque: '',
   antecedents_medicaux: '', antecedents_familiaux: ''
 };

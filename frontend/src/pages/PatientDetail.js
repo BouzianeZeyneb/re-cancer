@@ -435,15 +435,6 @@ export default function PatientDetail() {
             </span>
           </div>
         </div>
-<<<<<<< HEAD
-        <Link to={`/patients/${id}/modifier`}
-          style={{ padding: '10px 24px', fontSize: 14, fontWeight: 700, borderRadius: 12,
-            background: 'white', border: '1px solid #e2e8f0', color: '#334155', textDecoration: 'none',
-            boxShadow: '0 2px 4px rgba(0,0,0,0.02)', transition: 'all 0.2s' }}>
-          Modifier
-        </Link>
-=======
-        
         <div style={{ display: 'flex', gap: 10 }}>
           {(isAdmin || user?.role === 'medecin') && (
             <button 
@@ -462,7 +453,6 @@ export default function PatientDetail() {
             Modifier
           </Link>
         </div>
->>>>>>> sauvegarde-zeyneb
       </div>
 
       {/* ── Patient header card ── */}
@@ -937,7 +927,6 @@ export default function PatientDetail() {
         </div>
       )}
 
-<<<<<<< HEAD
       {/* ════════════════════ MODALS ════════════════════ */}
       
       {showTraitementModal && (
@@ -1227,7 +1216,8 @@ export default function PatientDetail() {
             </div>
           </div>
         </Modal>
-=======
+      )}
+
       {/* ── MODAL DE SUPPRESSION ── */}
       {showDeleteModal && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
@@ -1278,7 +1268,6 @@ export default function PatientDetail() {
             </div>
           </div>
         </div>
->>>>>>> sauvegarde-zeyneb
       )}
 
       <style>{`

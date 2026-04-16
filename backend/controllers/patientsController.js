@@ -212,50 +212,12 @@ const createPatient = async (req, res) => {
     }
 
     const id = uuidv4();
-<<<<<<< HEAD
     const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool } = req.body;
     
     await pool.execute(
       `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool, created_by) 
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', req.user.id]
-=======
-    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession } = req.body;
-    
-    await pool.execute(
-<<<<<<< HEAD
-      `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, created_by) 
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [
-        id, 
-        nom || null, 
-        prenom || null, 
-        date_naissance || null, 
-        sexe || 'M', 
-        telephone || null, 
-        num_carte_nationale || null, 
-        num_carte_chifa || null, 
-        adresse || null, 
-        commune || null, 
-        wilaya || null, 
-        latitude || null, 
-        longitude || null, 
-        fumeur || false, 
-        alcool || false, 
-        activite_sportive || false, 
-        autres_medicaments || null, 
-        autres_facteurs_risque || null, 
-        assurance || null, 
-        groupe_sanguin || null, 
-        email || null, 
-        req.user.id
-      ]
-=======
-      `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, created_by) 
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, req.user.id]
->>>>>>> 97e9fdae (update login + styles)
->>>>>>> sauvegarde-zeyneb
     );
 
     await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom }, req.ip);
@@ -275,19 +237,11 @@ const updatePatient = async (req, res) => {
       return res.status(409).json({ code: 'DUPLICATE_SUSPECTED', similarityInfo: duplicateMatch });
     }
     
-<<<<<<< HEAD
     const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool } = req.body;
     
     await pool.execute(
       `UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, telephone=?, num_carte_nationale=?, num_carte_chifa=?, adresse=?, commune=?, wilaya=?, fumeur=?, alcool=?, activite_sportive=?, autres_medicaments=?, autres_facteurs_risque=?, assurance=?, groupe_sanguin=?, email=?, profession=?, consommation_tabac=?, consommation_alcool=? WHERE id=?`,
       [nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', id]
-=======
-    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession } = req.body;
-    
-    await pool.execute(
-      `UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, telephone=?, num_carte_nationale=?, num_carte_chifa=?, adresse=?, commune=?, wilaya=?, fumeur=?, alcool=?, activite_sportive=?, autres_medicaments=?, autres_facteurs_risque=?, assurance=?, groupe_sanguin=?, email=?, profession=? WHERE id=?`,
-      [nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, id]
->>>>>>> sauvegarde-zeyneb
     );
 
     await auditLog(req.user.id, 'UPDATE_PATIENT', 'patients', id, req.body, req.ip);
