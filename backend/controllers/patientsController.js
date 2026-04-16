@@ -212,9 +212,10 @@ const createPatient = async (req, res) => {
     }
 
     const id = uuidv4();
-    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email } = req.body;
+    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession } = req.body;
     
     await pool.execute(
+<<<<<<< HEAD
       `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, created_by) 
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [
@@ -241,6 +242,11 @@ const createPatient = async (req, res) => {
         email || null, 
         req.user.id
       ]
+=======
+      `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, created_by) 
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, req.user.id]
+>>>>>>> 97e9fdae (update login + styles)
     );
 
     await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom }, req.ip);
@@ -260,11 +266,11 @@ const updatePatient = async (req, res) => {
       return res.status(409).json({ code: 'DUPLICATE_SUSPECTED', similarityInfo: duplicateMatch });
     }
     
-    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email } = req.body;
+    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession } = req.body;
     
     await pool.execute(
-      `UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, telephone=?, num_carte_nationale=?, num_carte_chifa=?, adresse=?, commune=?, wilaya=?, fumeur=?, alcool=?, activite_sportive=?, autres_medicaments=?, autres_facteurs_risque=?, assurance=?, groupe_sanguin=?, email=? WHERE id=?`,
-      [nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, id]
+      `UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, telephone=?, num_carte_nationale=?, num_carte_chifa=?, adresse=?, commune=?, wilaya=?, fumeur=?, alcool=?, activite_sportive=?, autres_medicaments=?, autres_facteurs_risque=?, assurance=?, groupe_sanguin=?, email=?, profession=? WHERE id=?`,
+      [nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, id]
     );
 
     await auditLog(req.user.id, 'UPDATE_PATIENT', 'patients', id, req.body, req.ip);

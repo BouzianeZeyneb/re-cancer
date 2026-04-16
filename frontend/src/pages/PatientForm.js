@@ -23,7 +23,7 @@ const FIELD_MAP = {
 const initialForm = {
   nom: '', prenom: '', date_naissance: '', sexe: 'M', telephone: '',
   num_carte_nationale: '', num_carte_chifa: '', adresse: '', commune: '', wilaya: '',
-  assurance: '', groupe_sanguin: '', email: '',
+  assurance: '', groupe_sanguin: '', email: '', profession: '',
   fumeur: false, alcool: false, activite_sportive: false,
   autres_medicaments: '', autres_facteurs_risque: '',
   antecedents_medicaux: '', antecedents_familiaux: ''
@@ -470,6 +470,28 @@ export default function PatientForm() {
                       <div className="form-group">
                         <label className="form-label">Email</label>
                         <input type="email" className="form-control" value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemple.com" />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">N° Carte Nationale</label>
+                        <input className="form-control" value={form.num_carte_nationale} onChange={e => set('num_carte_nationale', e.target.value)} placeholder="Ex: 123456789" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">N° Carte Chifa</label>
+                        <input className="form-control" value={form.num_carte_chifa} onChange={e => set('num_carte_chifa', e.target.value)} placeholder="Ex: 0123456789" />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Profession / Emploi</label>
+                        <input className="form-control" value={form.profession || ''} onChange={e => set('profession', e.target.value)} placeholder="Ex: Enseignant, Agriculteur, Retraité..." />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Assurance</label>
+                        <input className="form-control" value={form.assurance} onChange={e => set('assurance', e.target.value)} placeholder="Ex: CNAS, CASNOS..." />
                       </div>
                     </div>
 
