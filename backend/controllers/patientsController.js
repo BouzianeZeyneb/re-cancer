@@ -8,8 +8,11 @@ const getAllPatients = async (req, res) => {
     let query = `
       SELECT p.*, 
         (SELECT COUNT(*) FROM cancer_cases WHERE patient_id = p.id) as nb_cancers,
+        (SELECT type_cancer FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as cancer_type,
+        (SELECT stade FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as stade,
         (SELECT statut_patient FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as derniere_statut
-      FROM patients p WHERE 1=1
+      FROM patients p 
+      WHERE p.deleted = false 
     `;
     const params = [];
 
@@ -21,7 +24,10 @@ const getAllPatients = async (req, res) => {
     if (wilaya) { query += ' AND p.wilaya LIKE ?'; params.push(`%${wilaya}%`); }
 
     const offset = (page - 1) * limit;
-    const [countResult] = await pool.execute(query.replace('SELECT p.*,', 'SELECT COUNT(*) as total,').split('FROM patients')[0] + ' FROM patients p WHERE 1=1' + query.split('WHERE 1=1')[1], params);
+    
+    // Total count query
+    const countQuery = `SELECT COUNT(*) as total FROM patients p WHERE p.deleted = false ${query.split('WHERE p.deleted = false')[1] || ''}`;
+    const [countResult] = await pool.execute(countQuery, params);
 
     query += ' ORDER BY p.created_at DESC LIMIT ? OFFSET ?';
     params.push(parseInt(limit), offset);
@@ -206,12 +212,50 @@ const createPatient = async (req, res) => {
     }
 
     const id = uuidv4();
+<<<<<<< HEAD
     const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool } = req.body;
     
     await pool.execute(
       `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool, created_by) 
        VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', req.user.id]
+=======
+    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession } = req.body;
+    
+    await pool.execute(
+<<<<<<< HEAD
+      `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, created_by) 
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [
+        id, 
+        nom || null, 
+        prenom || null, 
+        date_naissance || null, 
+        sexe || 'M', 
+        telephone || null, 
+        num_carte_nationale || null, 
+        num_carte_chifa || null, 
+        adresse || null, 
+        commune || null, 
+        wilaya || null, 
+        latitude || null, 
+        longitude || null, 
+        fumeur || false, 
+        alcool || false, 
+        activite_sportive || false, 
+        autres_medicaments || null, 
+        autres_facteurs_risque || null, 
+        assurance || null, 
+        groupe_sanguin || null, 
+        email || null, 
+        req.user.id
+      ]
+=======
+      `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, created_by) 
+       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, req.user.id]
+>>>>>>> 97e9fdae (update login + styles)
+>>>>>>> sauvegarde-zeyneb
     );
 
     await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom }, req.ip);
@@ -231,11 +275,19 @@ const updatePatient = async (req, res) => {
       return res.status(409).json({ code: 'DUPLICATE_SUSPECTED', similarityInfo: duplicateMatch });
     }
     
+<<<<<<< HEAD
     const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool } = req.body;
     
     await pool.execute(
       `UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, telephone=?, num_carte_nationale=?, num_carte_chifa=?, adresse=?, commune=?, wilaya=?, fumeur=?, alcool=?, activite_sportive=?, autres_medicaments=?, autres_facteurs_risque=?, assurance=?, groupe_sanguin=?, email=?, profession=?, consommation_tabac=?, consommation_alcool=? WHERE id=?`,
       [nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', id]
+=======
+    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession } = req.body;
+    
+    await pool.execute(
+      `UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, telephone=?, num_carte_nationale=?, num_carte_chifa=?, adresse=?, commune=?, wilaya=?, fumeur=?, alcool=?, activite_sportive=?, autres_medicaments=?, autres_facteurs_risque=?, assurance=?, groupe_sanguin=?, email=?, profession=? WHERE id=?`,
+      [nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, id]
+>>>>>>> sauvegarde-zeyneb
     );
 
     await auditLog(req.user.id, 'UPDATE_PATIENT', 'patients', id, req.body, req.ip);
@@ -249,12 +301,25 @@ const updatePatient = async (req, res) => {
 const deletePatient = async (req, res) => {
   try {
     const { id } = req.params;
-    const [cases] = await pool.execute('SELECT id FROM cancer_cases WHERE patient_id = ?', [id]);
-    if (cases.length > 0) {
-      return res.status(400).json({ message: `Ce patient a ${cases.length} dossier(s) de cancer associé(s). Suppression impossible.` });
+    const { hardDelete } = req.query; // Admin can specify ?hardDelete=true
+
+    // Check if user is admin for hard delete
+    const isAdmin = req.user.role === 'admin';
+
+    if (hardDelete === 'true' && isAdmin) {
+      // Pour une suppression définitive, on vérifie quand même s'il y a des dossiers
+      const [cases] = await pool.execute('SELECT id FROM cancer_cases WHERE patient_id = ?', [id]);
+      if (cases.length > 0) {
+        return res.status(400).json({ message: `Ce patient a ${cases.length} dossier(s) associé(s). Impossible de supprimer définitivement de la base de données.` });
+      }
+      await pool.execute('DELETE FROM patients WHERE id = ?', [id]);
+      await auditLog(req.user.id, 'HARD_DELETE_PATIENT', 'patients', id, {}, req.ip);
+    } else {
+      // Soft Delete (Archive) - Accessible par Admin et Médecin
+      await pool.execute('UPDATE patients SET deleted = true WHERE id = ?', [id]);
+      await auditLog(req.user.id, 'SOFT_DELETE_PATIENT', 'patients', id, {}, req.ip);
     }
-    await pool.execute('DELETE FROM patients WHERE id = ?', [id]);
-    await auditLog(req.user.id, 'DELETE_PATIENT', 'patients', id, {}, req.ip);
+
     res.json({ message: 'Patient supprimé avec succès' });
   } catch (error) {
     res.status(500).json({ message: error.message });
