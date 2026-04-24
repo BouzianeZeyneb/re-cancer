@@ -41,7 +41,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (allowedRoles && !allowedRoles.includes(safeRole)) {
     const path = window.location.pathname;
     if (path === '/') {
-      if (safeRole === 'laboratoire') return <Navigate to="/demandes-labo" replace />;
+      if (safeRole === 'laboratoire') return <Navigate to="/laboratoire" replace />;
       if (safeRole === 'medecin' || safeRole === 'anapath') return <Navigate to="/patients" replace />;
     }
     
@@ -91,7 +91,7 @@ function AppRoutes() {
       {/* Partagés */}
       <Route path="/statistiques" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Statistiques /></ProtectedRoute>} />
       <Route path="/laboratoire" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire']}><Laboratoire /></ProtectedRoute>} />
-      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><AnalysesBiologie /></ProtectedRoute>} />
+      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><AnalysesBiologie /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

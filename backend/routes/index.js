@@ -194,10 +194,10 @@ router.post('/documents', authMiddleware, createDocument);
 // Lab requests
 const { createRequest, getRequestsByCase, getRequestsForLabo, uploadPdf, getLabRequestsByPatient } = require('../controllers/labRequestsController');
 const uploadLab = require('../middleware/upload');
-router.post('/lab-requests', authMiddleware, requireRole('admin', 'medecin'), createRequest);
+router.post('/lab-requests', authMiddleware, requireRole('admin', 'medecin', 'laboratoire'), createRequest);
 router.get('/lab-requests/case/:caseId', authMiddleware, getRequestsByCase);
 router.get('/lab-requests/patient/:patientId', authMiddleware, getLabRequestsByPatient);
-router.get('/lab-requests/labo', authMiddleware, requireRole('laboratoire'), getRequestsForLabo);
+router.get('/lab-requests/labo', authMiddleware, requireRole('laboratoire', 'admin', 'medecin'), getRequestsForLabo);
 router.put('/lab-requests/:id/upload', authMiddleware, requireRole('laboratoire'), uploadLab.single('pdf'), uploadPdf);
 
 module.exports = router;

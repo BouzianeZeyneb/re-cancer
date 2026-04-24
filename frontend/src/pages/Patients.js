@@ -2,6 +2,8 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getPatients, deletePatient } from '../utils/api';
+import api from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { format, differenceInYears, parseISO } from 'date-fns';
 
@@ -14,6 +16,9 @@ export default function Patients() {
   const [typeFilter, setTypeFilter] = useState('');
   const [stadeFilter, setStadeFilter] = useState('');
   const navigate = useNavigate();
+  const { user, isAdmin } = useAuth();
+  const [showDeleteModal, setShowDeleteModal] = useState(false);
+  const [patientToDelete, setPatientToDelete] = useState(null);
 
   const CANCER_TYPES = ["Sein", "Poumon", "Colorectal", "Prostate", "Estomac", "Foie", "Vessie", "Rein", "Lymphome", "Leucémie", "Autres"];
   const STAGES = ["I", "II", "III", "IV", "Inconnu"];
@@ -32,18 +37,26 @@ export default function Patients() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-  }, [search, sexeFilter]);
+  }, [search, sexeFilter, typeFilter, stadeFilter]);
 
   useEffect(() => { load(); }, [load]);
 
-  const handleDelete = async (id, nom, prenom) => {
-    if (!window.confirm(`Supprimer le patient ${prenom} ${nom} ?`)) return;
+  const openDeleteModal = (e, patient) => {
+    e.stopPropagation();
+    setPatientToDelete(patient);
+    setShowDeleteModal(true);
+  };
+
+  const confirmDelete = async (hardDelete) => {
     try {
-      await deletePatient(id);
-      toast.success('Patient supprimé');
+      await api.delete(`/patients/${patientToDelete.id}${hardDelete ? '?hardDelete=true' : ''}`);
+      toast.success(hardDelete ? 'Patient supprimé définitivement de la base de données' : 'Patient archivé avec succès');
       load();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Erreur lors de la suppression');
+    } finally {
+      setShowDeleteModal(false);
+      setPatientToDelete(null);
     }
   };
   
@@ -102,7 +115,7 @@ export default function Patients() {
       let count = 0;
       let duplicates = 0;
       let errors = 0;
-      const api = await import('../utils/api');
+      const apiModule = await import('../utils/api');
       
       for (const row of data) {
         const p = {};
@@ -116,12 +129,10 @@ export default function Patients() {
             p.sexe = (val.startsWith('F') || val.includes('FEMME')) ? 'F' : 'M';
           }
           if (key.includes('nais') || key.includes('dob') || key.includes('birth')) {
-            // Tenter de normaliser la date (DD/MM/YYYY ou DD-MM-YYYY vers YYYY-MM-DD)
             let val = String(v).trim();
             if (val.includes('/') || (val.includes('-') && val.split('-')[0].length < 4)) {
               const parts = val.split(/[/-]/);
               if (parts.length === 3) {
-                // On assume DD/MM/YYYY
                 val = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
               }
             }
@@ -140,7 +151,7 @@ export default function Patients() {
 
         if (p.nom && p.prenom) {
           try {
-            await api.createPatient({ ...p, forceSave: true }); // On force l'importation en batch
+            await apiModule.createPatient({ ...p, forceSave: true }); // On force l'importation en batch
             count++;
           } catch (err) { 
             if (err.response?.status === 409) duplicates++;
@@ -275,13 +286,14 @@ export default function Patients() {
                   <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Stade</th>
                   <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Statut</th>
                   <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0' }}>Médecin</th>
+                  <th style={{ padding: '16px 24px', fontSize: 12, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, borderBottom: '1px solid #e2e8f0', textAlign: 'right' }}>Actions</th>
                 </tr>
               </thead>
               <tbody>
                 {patients.map(p => (
                   <tr key={p.id} onClick={() => navigate(`/patients/${p.id}`)} style={{ cursor: 'pointer', transition: 'background 0.2s' }}>
                     <td style={{ padding: '20px 24px', fontSize: 13, borderBottom: '1px solid #f1f5f9', color: '#0ea5e9', fontWeight: 600 }}>
-                        ONC-2024-{String(p.id).padStart(3, '0')}
+                        PAT-{new Date(p.created_at || Date.now()).getFullYear()}-{String(p.patient_seq || 0).padStart(4, '0')}
                     </td>
                     <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
                       <div style={{ fontWeight: 700, color: '#0f172a', fontSize: 14 }}>{p.nom} {p.prenom}</div>
@@ -301,6 +313,11 @@ export default function Patients() {
                     <td style={{ padding: '20px 24px', fontSize: 14, color: '#64748b', borderBottom: '1px solid #f1f5f9' }}>
                         Dr. {p.medecin || 'Khelifi'}
                     </td>
+                    <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
+                      <button onClick={(e) => openDeleteModal(e, p)} style={{ background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', padding: '8px', borderRadius: '8px', display: 'inline-flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} title="Supprimer">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path><line x1="10" y1="11" x2="10" y2="17"></line><line x1="14" y1="11" x2="14" y2="17"></line></svg>
+                      </button>
+                    </td>
                   </tr>
                 ))}
               </tbody>
@@ -308,6 +325,57 @@ export default function Patients() {
           </div>
         )}
       </div>
+
+      {/* ── MODAL DE SUPPRESSION ── */}
+      {showDeleteModal && patientToDelete && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, 
+          background: 'rgba(15, 23, 42, 0.4)', backdropFilter: 'blur(4px)',
+          display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999 }}>
+          
+          <div style={{ background: 'white', borderRadius: 16, width: 450, maxWidth: '90%', 
+            padding: 30, boxShadow: '0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04)' }}>
+            
+            <div style={{ display: 'flex', gap: 16, marginBottom: 20 }}>
+              <div style={{ width: 48, height: 48, borderRadius: '50%', background: '#fee2e2', color: '#dc2626',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+              </div>
+              <div>
+                <h3 style={{ fontSize: 18, fontWeight: 700, color: '#0f172a', margin: '0 0 8px 0' }}>{isAdmin ? 'Gérer le dossier patient' : 'Archiver le dossier'}</h3>
+                <p style={{ fontSize: 13, color: '#475569', lineHeight: 1.5, margin: 0 }}>
+                  Vous êtes sur le point de retirer le patient <strong>{patientToDelete.prenom} {patientToDelete.nom}</strong> de la liste principale.
+                </p>
+              </div>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <button onClick={() => confirmDelete(false)}
+                style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: 12,
+                  background: '#f8fafc', border: '1px solid #e2e8f0', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>📂 Archiver uniquement</span>
+                <span style={{ fontSize: 12, color: '#64748b' }}>Le patient ne sera visible que dans les archives. Les données restent dans la base de données.</span>
+              </button>
+
+              {isAdmin && (
+                <button onClick={() => confirmDelete(true)}
+                  style={{ display: 'flex', flexDirection: 'column', padding: '16px', borderRadius: 12,
+                    background: '#fff1f2', border: '1px solid #fecaca', cursor: 'pointer', textAlign: 'left', transition: 'all 0.2s' }}>
+                  <span style={{ fontSize: 14, fontWeight: 700, color: '#dc2626', marginBottom: 4 }}>🗑 Supprimer définitivement</span>
+                  <span style={{ fontSize: 12, color: '#991b1b' }}>Toutes les traces seront effacées de la base de données. Attention : Action irréversible.</span>
+                </button>
+              )}
+            </div>
+
+            <div style={{ marginTop: 24, display: 'flex', justifyContent: 'flex-end' }}>
+              <button onClick={() => { setShowDeleteModal(false); setPatientToDelete(null); }}
+                style={{ padding: '10px 20px', borderRadius: 8, background: 'white', border: '1px solid #e2e8f0',
+                  color: '#475569', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                Annuler
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }
