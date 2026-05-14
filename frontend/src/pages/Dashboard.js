@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getDashboardStats } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 
 const WILAYAS = [
@@ -21,8 +22,23 @@ const CANCER_TYPES = ["Sein", "Poumon", "Colorectal", "Prostate", "Estomac", "Fo
 const COLORS_SEXE = ['#3b82f6', '#ec4899'];
 const COLORS_TYPE = ['#6366f1', '#f59e0b'];
 
+const getAlertStyles = (text) => {
+  const t = text.toLowerCase();
+  if (t.includes('globules') || t.includes('plaquettes')) return { bg: '#fef2f2', border: '#fee2e2', text: '#991b1b', icon: '#dc2626' };
+  if (t.includes('chimio')) return { bg: '#fff7ed', border: '#ffedd5', text: '#9a3412', icon: '#ea580c' };
+  if (t.includes('anapath')) return { bg: '#f0f9ff', border: '#e0f2fe', text: '#075985', icon: '#0284c7' };
+  return { bg: '#f8fafc', border: '#f1f5f9', text: '#475569', icon: '#64748b' };
+};
+
+const formatDateSimple = (dateStr) => {
+  if (!dateStr) return 'Aujourd\'hui';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+};
+
 export default function Dashboard() {
   const navigate = useNavigate();
+  const { isAdmin } = useAuth();
   const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
@@ -77,12 +93,25 @@ export default function Dashboard() {
       <div style={{ padding: '0 10px 40px' }}>
         
         {/* KPI HEADERS */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 16, marginBottom: 32 }}>
+        <div style={{ 
+          display: 'grid', 
+          gridTemplateColumns: isAdmin ? 'repeat(4, 1fr)' : 'repeat(5, 1fr)', 
+          gap: 16, 
+          marginBottom: 32 
+        }}>
           <KPIMiniCard label="Total Patients" value={t.patients || 0} />
           <KPIMiniCard label="Nouveaux ce mois" value={t.nouveauxMois || 0} />
           <KPIMiniCard label="Sous chimiothérapie" value={t.enTraitement || 0} />
           <KPIMiniCard label="Patients en suivi" value={t.suivi || 0} />
           <KPIMiniCard label="Cas Stade IV" value={t.stadeIV || 0} />
+          
+          {isAdmin && (
+            <>
+              <KPIMiniCard label="Nombre de laboratoires" value={t.labos || 0} />
+              <KPIMiniCard label="Nombre d'Anapath" value={t.anapaths || 0} />
+              <KPIMiniCard label="Nombre de médecins" value={t.medecins || 0} />
+            </>
+          )}
         </div>
 
         <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 24, marginBottom: 32 }}>
@@ -90,48 +119,98 @@ export default function Dashboard() {
             <div className="card" style={{ padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9' }}>
                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 18 }}>⚠️</span>
+                    <span style={{ fontSize: 18 }}>🚨</span>
                     <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', margin: 0 }}>Situations Critiques</h3>
                   </div>
                   <button style={{ color: '#0ea5e9', background: 'none', border: 'none', fontSize: 12, fontWeight: 700, cursor: 'pointer' }}>Tout surveiller</button>
                </div>
-               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                 {(stats?.recentDossiers?.slice(0, 2) || []).map((d, idx) => (
-                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '14px 18px', borderRadius: 12, background: '#fff1f270', border: '1px solid #fecdd330' }}>
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                        <div style={{ fontSize: 18 }}>{idx === 0 ? '🩸' : '⏳'}</div>
-                        <div>
-                           <div style={{ fontSize: 13, fontWeight: 800, color: '#9f1239' }}>{idx === 0 ? 'Alerte Globules' : 'Retard Chimio'} : {d.nom} {d.prenom}</div>
-                           <div style={{ fontSize: 11, color: '#e11d48', opacity: 0.8 }}>{d.diagnostic} — {d.stade}</div>
-                        </div>
-                      </div>
-                      {/* LE LIEN VA MAINTENANT DIRECTEMENT AU DOSSIER MEDICAL (CAS-CANCER) */}
-                      <button onClick={() => navigate(`/cas-cancer/${d.caseId}`)} className="btn btn-sm btn-primary" style={{ borderRadius: 8, height: 36, padding: '0 16px', fontWeight: 800 }}>Voir le dossier</button>
-                   </div>
-                 ))}
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                 {(stats?.recentDossiers?.slice(0, 4) || []).map((d, idx) => {
+                   const alertText = idx % 2 === 0 ? `Alerte Globules : ${d.nom}` : `Retard Chimio : ${d.nom}`;
+                   const styles = getAlertStyles(alertText);
+                   return (
+                    <div key={idx} style={{ 
+                      display: 'flex', 
+                      justifyContent: 'space-between', 
+                      alignItems: 'center', 
+                      padding: '12px 16px', 
+                      borderRadius: 14, 
+                      background: styles.bg, 
+                      border: `1px solid ${styles.border}` 
+                    }}>
+                       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
+                         <div style={{ fontSize: 16, color: styles.icon }}>⚠️</div>
+                         <div>
+                            <div style={{ fontSize: 13, fontWeight: 800, color: styles.text }}>{alertText}</div>
+                            <div style={{ fontSize: 11, color: styles.text, opacity: 0.6 }}>Aujourd'hui</div>
+                         </div>
+                       </div>
+                       <button 
+                         onClick={() => navigate(`/cas-cancer/${d.caseId}`)} 
+                         style={{ 
+                            background: '#0f172a', 
+                            color: 'white', 
+                            border: 'none', 
+                            borderRadius: 8, 
+                            padding: '6px 14px', 
+                            fontSize: 11, 
+                            fontWeight: 700,
+                            cursor: 'pointer'
+                         }}
+                       >
+                         Voir le dossier
+                       </button>
+                    </div>
+                   );
+                 })}
                  {!stats?.recentDossiers?.length && <div style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: 20 }}>Aucune alerte critique pour le moment.</div>}
                </div>
             </div>
 
-            {/* QUICK SEARCH */}
-            <div className="card" style={{ padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9', background: 'linear-gradient(135deg, #f8fafc 0%, #ffffff 100%)' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', marginBottom: 16 }}>Recherche Express</h3>
-                <p style={{ fontSize: 12, color: '#64748b', marginBottom: 20 }}>Consultez un dossier patient en saisissant son nom.</p>
-                <div style={{ position: 'relative' }}>
-                   <input type="text" value={searchQuery} onChange={e => setSearchQuery(e.target.value)} onKeyDown={e => e.key === 'Enter' && handleQuickSearch()} placeholder="Nom du patient..." style={{ width: '100%', height: 48, borderRadius: 12, border: '1px solid #e2e8f0', padding: '0 16px', fontSize: 14, fontWeight: 600, outline: 'none' }} />
-                   <button onClick={handleQuickSearch} style={{ position: 'absolute', right: 8, top: 8, height: 32, padding: '0 12px', background: '#0f172a', color: 'white', border: 'none', borderRadius: 8, fontSize: 11, fontWeight: 700 }}>Chercher</button>
+            {/* DERNIERS PATIENTS AJOUTÉS */}
+            <div className="card" style={{ padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9' }}>
+                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', marginBottom: 20 }}>Derniers patients ajoutés</h3>
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                  {(stats?.recentPatients || []).map((p, idx) => (
+                    <div 
+                      key={p.id} 
+                      onClick={() => navigate(`/patients/${p.id}`)}
+                      style={{ 
+                        display: 'flex', 
+                        justifyContent: 'space-between', 
+                        alignItems: 'center', 
+                        padding: '12px 16px', 
+                        borderRadius: 14, 
+                        border: '1px solid #f1f5f9',
+                        cursor: 'pointer',
+                        transition: 'all 0.2s'
+                      }}
+                      onMouseOver={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
+                      onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
+                    >
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>👤</div>
+                        <div>
+                          <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.nom} {p.prenom}</div>
+                          <div style={{ fontSize: 11, color: '#94a3b8' }}>Ajouté le {formatDateSimple(p.created_at)}</div>
+                        </div>
+                      </div>
+                      <div style={{ color: '#94a3b8', fontSize: 18 }}>›</div>
+                    </div>
+                  ))}
+                  {!stats?.recentPatients?.length && <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: 20 }}>Aucun patient récent.</div>}
                 </div>
             </div>
         </div>
 
         {/* FILTERS */}
-        <div style={{ background: 'white', padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9', display: 'flex', gap: 16, marginBottom: 32, alignItems: 'flex-end', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
+        <div style={{ background: 'white', padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9', display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 32, alignItems: 'flex-end', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
            <FilterSelect label="Wilaya" value={filterWilaya} options={WILAYAS} onChange={setFilterWilaya} placeholder="Toutes les Wilayas" />
            <FilterSelect label="Type de Cancer" value={filterType} options={CANCER_TYPES} onChange={setFilterType} placeholder="Tous les Types" />
            <FilterSelect label="Sexe" value={filterSexe} options={['M', 'F']} onChange={setFilterSexe} placeholder="Tous les Sexes" />
            <div style={{ width: 100 }}>
               <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>Année</label>
-              <select className="form-control" value={filterAnnee} onChange={e => setFilterAnnee(e.target.value)} style={{ borderRadius: 10, height: 40, fontSize: 13 }}>
+              <select className="form-control" value={filterAnnee} onChange={e => setFilterAnnee(e.target.value)} style={{ borderRadius: 10, padding: '8px 40px 8px 16px', fontSize: 13, height: 'auto' }}>
                 <option value="">Toutes</option>
                 <option value="2026">2026</option>
                 <option value="2025">2025</option>
@@ -220,11 +299,11 @@ export default function Dashboard() {
 
 function FilterSelect({ label, value, options, onChange, placeholder }) {
   return (
-    <div style={{ flex: 1 }}>
+    <div style={{ flex: 1, minWidth: 200 }}>
        <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>{label}</label>
-       <select className="form-control" value={value} onChange={e => onChange(e.target.value)} style={{ borderRadius: 10, height: 40, fontSize: 13 }}>
+       <select className="form-control" value={value} onChange={e => onChange(e.target.value)} style={{ borderRadius: 10, padding: '8px 40px 8px 16px', fontSize: 13, width: '100%', height: 'auto' }}>
           <option value="">{placeholder}</option>
-          {options.map(o => <option key={o} value={o}>{o === 'M' ? 'Masculin' : o === 'F' ? 'Féminin' : (o.length > 20 ? o.substring(0,20)+'...' : o)}</option>)}
+          {options.map(o => <option key={o} value={o}>{o === 'M' ? 'Masculin' : o === 'F' ? 'Féminin' : (o.length > 25 ? o.substring(0,25)+'...' : o)}</option>)}
        </select>
     </div>
   );

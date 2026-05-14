@@ -25,6 +25,11 @@ const getDashboardStats = async (req, res) => {
     const [enTraitement] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE statut_patient = 'En traitement' ${whereClauseTemplate}`, params);
     const [nouveauxMois] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE MONTH(created_at) = MONTH(CURRENT_DATE) AND YEAR(created_at) = YEAR(CURRENT_DATE)`);
     const [stadeIV] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE stade = 'Stade IV' ${whereClauseTemplate}`, params);
+    
+    // Admin only stats (always fetched, filtered on frontend)
+    const [totalLabos] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'laboratoire' AND actif = true");
+    const [totalAnapath] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'anapath' AND actif = true");
+    const [totalMedecins] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'medecin' AND actif = true");
 
     const [parType] = await pool.execute(`
       SELECT type_cancer, COUNT(*) as count FROM cancer_cases WHERE 1=1 ${whereClauseTemplate} GROUP BY type_cancer
@@ -73,6 +78,11 @@ const getDashboardStats = async (req, res) => {
       LIMIT 10
     `);
 
+    // Top 3 last added patients
+    const [recentPatients] = await pool.execute(`
+      SELECT id, nom, prenom, created_at FROM patients ORDER BY created_at DESC LIMIT 3
+    `);
+
     res.json({ 
        totaux: { 
          patients: totalPatients[0].total, 
@@ -80,13 +90,17 @@ const getDashboardStats = async (req, res) => {
          suivi: enTraitement[0].total,
          enTraitement: enTraitement[0].total,
          nouveauxMois: nouveauxMois[0].total,
-         stadeIV: stadeIV[0].total
+         stadeIV: stadeIV[0].total,
+         labos: totalLabos[0].total,
+         anapaths: totalAnapath[0].total,
+         medecins: totalMedecins[0].total
        },
        parType,
        parSexe,
        parAge,
        parWilaya,
-       recentDossiers: recent
+       recentDossiers: recent,
+       recentPatients: recentPatients
     });
   } catch (error) {
     res.status(500).json({ message: error.message });
