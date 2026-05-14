@@ -23,7 +23,8 @@ const FIELD_MAP = {
 const initialForm = {
   nom: '', prenom: '', date_naissance: '', sexe: 'M', telephone: '',
   num_carte_nationale: '', num_carte_chifa: '', adresse: '', commune: '', wilaya: '',
-  assurance: '', groupe_sanguin: '', email: '',
+  assurance: '', groupe_sanguin: '', email: '', profession: '',
+  consommation_tabac: 'Inconnu', consommation_alcool: 'Inconnu',
   fumeur: false, alcool: false, activite_sportive: false,
   autres_medicaments: '', autres_facteurs_risque: '',
   antecedents_medicaux: '', antecedents_familiaux: ''
@@ -58,6 +59,72 @@ export default function PatientForm() {
   // État pour la gestion des doublons
   const [duplicateInfo, setDuplicateInfo] = useState(null);
   const [mergeChoices, setMergeChoices] = useState({});
+  const fileInputRef = useRef(null);
+
+  const handleImport = async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const extension = file.name.split('.').pop().toLowerCase();
+    toast.loading('Importation en cours...', { id: 'import' });
+    try {
+      let data = [];
+      if (extension === 'xlsx' || extension === 'xls') {
+        const XLSX = await import('xlsx');
+        const buffer = await file.arrayBuffer();
+        const workbook = XLSX.read(buffer);
+        data = XLSX.utils.sheet_to_json(workbook.Sheets[workbook.SheetNames[0]]);
+      } else {
+        const text = await file.text();
+        const delimiter = extension === 'csv' ? (text.includes(';') ? ';' : ',') : (text.includes('\t') ? '\t' : ',');
+        const lines = text.split('\n').filter(l => l.trim());
+        const headers = lines[0].split(delimiter).map(h => h.trim().toLowerCase());
+        data = lines.slice(1).map(line => {
+          const values = line.split(delimiter).map(v => v.trim());
+          const obj = {};
+          headers.forEach((h, i) => obj[h] = values[i]);
+          return obj;
+        });
+      }
+
+      if (data.length === 1) {
+        // Pre-fill form if single patient
+        const row = data[0];
+        const newForm = { ...form };
+        Object.entries(row).forEach(([k, v]) => {
+          const key = String(k).toLowerCase();
+          if (key.includes('nom')) newForm.nom = v;
+          if (key.includes('prenom') || key.includes('prénom')) newForm.prenom = v;
+          if (key.includes('sexe')) newForm.sexe = String(v).toUpperCase()[0] === 'F' ? 'F' : 'M';
+          if (key.includes('nais') || key.includes('dob')) newForm.date_naissance = String(v).slice(0, 10);
+          if (key.includes('tel')) newForm.telephone = v;
+          if (key.includes('carte')) newForm.num_carte_nationale = v;
+        });
+        setForm(newForm);
+        toast.success('Formulaire rempli depuis le fichier', { id: 'import' });
+      } else if (data.length > 1) {
+        // Bulk import
+        let count = 0;
+        for (const row of data) {
+          const p = {};
+          Object.entries(row).forEach(([k, v]) => {
+            const key = String(k).toLowerCase();
+            if (key.includes('nom')) p.nom = v;
+            if (key.includes('prenom') || key.includes('prénom')) p.prenom = v;
+            if (key.includes('sexe')) p.sexe = String(v).toUpperCase()[0] === 'F' ? 'F' : 'M';
+            if (key.includes('nais') || key.includes('dob')) p.date_naissance = String(v).slice(0, 10);
+            if (key.includes('tel')) p.telephone = v;
+            if (key.includes('carte')) p.num_carte_nationale = v;
+          });
+          if (p.nom && p.prenom) {
+            try { await createPatient(p); count++; } catch (err) {}
+          }
+        }
+        toast.success(`${count} patients importés.`, { id: 'import' });
+        navigate('/patients');
+      }
+    } catch (err) { toast.error('Erreur import', { id: 'import' }); }
+    e.target.value = '';
+  };
 
   const MERGE_FIELDS = [
     { key: 'nom', label: 'Nom' },
@@ -84,7 +151,8 @@ export default function PatientForm() {
           num_carte_nationale: p.num_carte_nationale||'', num_carte_chifa: p.num_carte_chifa||'',
           adresse: p.adresse||'', commune: p.commune||'', wilaya: p.wilaya||'',
           assurance: p.assurance||'', groupe_sanguin: p.groupe_sanguin||'',
-          fumeur: Boolean(p.fumeur), alcool: Boolean(p.alcool), activite_sportive: Boolean(p.activite_sportive),
+          consommation_tabac: p.consommation_tabac||'Inconnu', consommation_alcool: p.consommation_alcool||'Inconnu',
+          activite_sportive: Boolean(p.activite_sportive),
           autres_medicaments: p.autres_medicaments||'', autres_facteurs_risque: p.autres_facteurs_risque||''
         });
         api.get(`/valeurs-dynamiques/${id}`).then(r => {
@@ -355,6 +423,10 @@ export default function PatientForm() {
                 onClick={() => { setVoiceMode(!voiceMode); if(!voiceMode) toast('🎤 Mode vocal activé!', { duration:3000 }); }}>
                 🎤 {voiceMode ? 'Vocal ON' : 'Mode Vocal'}
               </button>
+              <button type="button" className="btn btn-outline" onClick={() => fileInputRef.current.click()} style={{ background: '#f0f9ff', color: '#0369a1', borderColor: '#bae6fd' }}>
+                📁 Importer Fichier (Excel/CSV)
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.txt" onChange={handleImport} />
+              </button>
               {voiceMode && (
                 <button type="button" className={`btn ${isListening ? 'btn-danger' : 'btn-outline'}`} onClick={() => isListening ? stopVoice() : startVoice()}>
                   {isListening ? '⏹ Arrêter Dictée' : '▶ Démarrer Dictée Intelligente'}
@@ -400,6 +472,28 @@ export default function PatientForm() {
                       <div className="form-group">
                         <label className="form-label">Email</label>
                         <input type="email" className="form-control" value={form.email} onChange={e => set('email', e.target.value)} placeholder="email@exemple.com" />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">N° Carte Nationale</label>
+                        <input className="form-control" value={form.num_carte_nationale} onChange={e => set('num_carte_nationale', e.target.value)} placeholder="Ex: 123456789" />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">N° Carte Chifa</label>
+                        <input className="form-control" value={form.num_carte_chifa} onChange={e => set('num_carte_chifa', e.target.value)} placeholder="Ex: 0123456789" />
+                      </div>
+                    </div>
+
+                    <div className="form-row">
+                      <div className="form-group">
+                        <label className="form-label">Profession / Emploi</label>
+                        <input className="form-control" value={form.profession || ''} onChange={e => set('profession', e.target.value)} placeholder="Ex: Enseignant, Agriculteur, Retraité..." />
+                      </div>
+                      <div className="form-group">
+                        <label className="form-label">Assurance</label>
+                        <input className="form-control" value={form.assurance} onChange={e => set('assurance', e.target.value)} placeholder="Ex: CNAS, CASNOS..." />
                       </div>
                     </div>
 
@@ -454,23 +548,32 @@ export default function PatientForm() {
                     </div>
 
                     <div style={{ marginTop: 30 }}>
-                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 20 }}>Maladies Chroniques</div>
-                        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
-                          {[
-                            'Diabète type 1', 'Diabète type 2', 'Hypertension artérielle', 
-                            'Insuffisance rénale', 'Insuffisance cardiaque', 'BPCO / Asthme', 
-                            'Hépatite B / C', 'Cirrhose', 'VIH / SIDA'
-                          ].map(m => (
-                            <label key={m} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px', border: '1px solid #e2e8f0', borderRadius: 12, cursor: 'pointer', background: maladiesChroniques.includes(m) ? '#f0f9ff' : 'white' }}>
-                              <input type="checkbox" checked={maladiesChroniques.includes(m)} 
-                                onChange={e => {
-                                  if (e.target.checked) setMaladiesChroniques([...maladiesChroniques, m]);
-                                  else setMaladiesChroniques(maladiesChroniques.filter(x => x !== m));
-                                }} 
-                              />
-                              <span style={{ fontSize: 14, fontWeight: 600 }}>{m}</span>
-                            </label>
-                          ))}
+                        <div style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', marginBottom: 20 }}>Habitudes & Facteurs de Risque</div>
+                        <div className="form-row">
+                          <div className="form-group">
+                            <label className="form-label">Consommation de Tabac</label>
+                            <select className="form-control" value={form.consommation_tabac} onChange={e => set('consommation_tabac', e.target.value)}>
+                              <option value="Non-fumeur">Non-fumeur</option>
+                              <option value="Ex-fumeur">Ex-fumeur</option>
+                              <option value="Fumeur actif">Fumeur actif</option>
+                              <option value="Inconnu">Inconnu</option>
+                            </select>
+                          </div>
+                          <div className="form-group">
+                            <label className="form-label">Consommation d'Alcool</label>
+                            <select className="form-control" value={form.consommation_alcool} onChange={e => set('consommation_alcool', e.target.value)}>
+                              <option value="Abstinent">Abstinent</option>
+                              <option value="Occasionnelle">Occasionnelle</option>
+                              <option value="Régulière">Régulière</option>
+                              <option value="Inconnu">Inconnu</option>
+                            </select>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: 20 }}>
+                          <label className="form-label" style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer' }}>
+                            <input type="checkbox" checked={form.activite_sportive} onChange={e => set('activite_sportive', e.target.checked)} />
+                            <span style={{ fontWeight: 600 }}>Pratique une activité sportive régulière</span>
+                          </label>
                         </div>
                     </div>
                 </div>

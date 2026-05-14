@@ -38,6 +38,7 @@ export default function Login() {
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>Adresse Email</label>
             <input
               type="email"
+              autoComplete="username"
               style={{ width: '100%', padding: '12px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '15px' }}
               placeholder="Email"
               value={form.email}
@@ -49,6 +50,7 @@ export default function Login() {
             <label style={{ display: 'block', marginBottom: '8px', fontSize: '14px', fontWeight: '600', color: '#374151' }}>Mot de passe</label>
             <input
               type="password"
+              autoComplete="current-password"
               style={{ width: '100%', padding: '12px', border: '1px solid #D1D5DB', borderRadius: '4px', fontSize: '15px' }}
               placeholder="Mot de passe"
               value={form.password}

@@ -43,14 +43,12 @@ const DATA_SOURCES = [
   { id: 'sexe', label: '2. Répartition par sexe' },
   { id: 'age', label: '3. Distribution par tranche d\'âge' },
   { id: 'stade', label: '4. Distribution par stade' },
-  { id: 'evolution', label: '5. Évolution annuelle (2015-2024)' },
-  { id: 'taux', label: '6. Taux d\'incidence standardisé' },
-  { id: 'survie', label: '7. Taux de survie (1, 3, 5 ans)' },
-  { id: 'wilaya', label: '8. Répartition par wilaya' },
-  { id: 'traitement', label: '9. Types de traitement reçu' },
-  { id: 'risque', label: '10. Facteurs de risque' },
-  { id: 'delai', label: '11. Délai diagnostic → traitement' },
-  { id: 'histologie', label: '12. Type histologique' },
+  { id: 'wilaya', label: '5. Répartition par wilaya' },
+  { id: 'topographie', label: '6. Topographies (ICD-O-3)' },
+  { id: 'morphologie', label: '7. Morphologies (ICD-O-3)' },
+  { id: 'grade', label: '8. Grades Histologiques (SBR/G)' },
+  { id: 'tabac', label: '9. Corrélation : Cancers vs Tabac' },
+  { id: 'traitement', label: '10. Types de traitement reçu' },
 ];
 
 // --- MOCK DATA FACTORY ---
@@ -74,10 +72,10 @@ const getMockData = (sourceId) => {
 
 export default function Statistiques() {
   const [widgets, setWidgets] = useState(() => {
-    const saved = localStorage.getItem('oncotrack_advanced_stats_v2');
+    const saved = localStorage.getItem('oncotrack_advanced_stats_v3');
     return saved ? JSON.parse(saved) : [
-      { id: 'w1', title: 'Incidence par Wilaya', type: 'bar-v', source: 'wilaya', size: 'M', color: '#0ea5e9', xAxis: 'Wilayas', yAxis: 'Nb Cas', showLegend: true, orientation: 'vertical', dataLabels: true, data: getMockData('wilaya') },
-      { id: 'w2', title: 'Répartition Sexe', type: 'donut', source: 'sexe', size: 'M', color: '#6366f1', xAxis: 'Genre', yAxis: 'Effectif', showLegend: true, orientation: 'vertical', dataLabels: true, data: getMockData('sexe') }
+      { id: 'w1', title: 'Incidence par Topographie (ICD-O-3)', type: 'bar-v', source: 'topographie', size: 'M', color: '#0ea5e9', xAxis: 'Codes C', yAxis: 'Nb Cas', showLegend: true, orientation: 'vertical', dataLabels: true, data: [] },
+      { id: 'w2', title: 'Répartition par Stade', type: 'pie', source: 'stade', size: 'M', color: '#6366f1', xAxis: 'Stade', yAxis: 'Effectif', showLegend: true, orientation: 'vertical', dataLabels: true, data: [] }
     ];
   });
 
@@ -87,27 +85,37 @@ export default function Statistiques() {
   const [stats, setStats] = useState(null);
 
   useEffect(() => {
-    localStorage.setItem('oncotrack_advanced_stats_v2', JSON.stringify(widgets));
+    localStorage.setItem('oncotrack_advanced_stats_v3', JSON.stringify(widgets));
   }, [widgets]);
 
+  // Moved outside for export
+  const getChartData = (source, rawStats) => mapSourceToData(source, rawStats);
+
   useEffect(() => {
-    api.get('/stats/dashboard').then(res => setStats(res.data)).catch(console.error);
+    api.get('/stats/dashboard').then(res => {
+      setStats(res.data);
+      // Update data for all existing widgets based on real stats
+      setWidgets(prev => prev.map(w => ({
+        ...w,
+        data: mapSourceToData(w.source, res.data)
+      })));
+    }).catch(console.error);
   }, []);
 
   const handleCreateNew = () => {
     setTempConfig({
       id: Date.now().toString(),
-      title: 'Mon nouveau graphique',
+      title: 'Nouveau Rapport Clinique',
       type: 'bar-v',
-      source: 'incidence',
+      source: 'topographie',
       size: 'M',
       color: '#0ea5e9',
-      xAxis: 'Catégories',
-      yAxis: 'Valeurs',
+      xAxis: 'Catégorie',
+      yAxis: 'Nb Cas',
       showLegend: true,
       orientation: 'vertical',
       dataLabels: true,
-      data: getMockData('incidence')
+      data: mapSourceToData('topographie', stats)
     });
     setModalOpen(true);
   };
@@ -120,11 +128,15 @@ export default function Statistiques() {
   const syncUpdate = (updates) => {
     setTempConfig(prev => {
       const next = { ...prev, ...updates };
-      if (updates.source) next.data = getMockData(updates.source);
+      if (updates.source) next.data = mapSourceToData(updates.source, stats);
       return next;
     });
     if (editingId) {
-      setWidgets(prev => prev.map(w => w.id === editingId ? { ...tempConfig, ...updates, data: updates.source ? getMockData(updates.source) : tempConfig.data } : w));
+      setWidgets(prev => prev.map(w => w.id === editingId ? { 
+        ...tempConfig, 
+        ...updates, 
+        data: updates.source ? mapSourceToData(updates.source, stats) : tempConfig.data 
+      } : w));
     }
   };
 
@@ -327,7 +339,33 @@ function EditorUI({ config, update, isInline }) {
   );
 }
 
-function ChartEngine({ config }) {
+export const mapSourceToData = (source, rawStats) => {
+  if (!rawStats) return [];
+  // Support for localized stats which might have different structure
+  if (rawStats.total !== undefined) {
+     switch (source) {
+       case 'sexe': return rawStats.parSexe;
+       case 'age': return rawStats.parAge;
+       case 'stade': return rawStats.parStade;
+       default: return [];
+     }
+  }
+
+  switch (source) {
+    case 'incidence': return rawStats.parType?.map(d => ({ name: d.type_cancer, value: d.count })) || [];
+    case 'sexe': return rawStats.parSexe?.map(d => ({ name: d.sexe === 'M' ? 'Hommes' : 'Femmes', value: d.count })) || [];
+    case 'age': return rawStats.parAge || [];
+    case 'wilaya': return rawStats.parWilaya || [];
+    case 'topographie': return rawStats.parTopographie || [];
+    case 'morphologie': return rawStats.parMorphologie || [];
+    case 'stade': return rawStats.parStade || [];
+    case 'grade': return rawStats.parGrade || [];
+    case 'tabac': return rawStats.parTabac || [];
+    default: return [];
+  }
+};
+
+export function ChartEngine({ config }) {
   const { type, data, color, showLegend, xAxis, yAxis } = config;
   const colors = PALETTES.modern;
 
@@ -433,12 +471,24 @@ function ChartEngine({ config }) {
   );
 }
 
-function KPICard({ label, value, trend }) {
+export function KPICard({ label, value, trend }) {
   return (
-    <div className="card" style={{ padding: '32px', borderRadius: 24, border: '1px solid #f1f5f9', background: 'white', boxShadow: '0 4px 10px rgba(0,0,0,0.015)' }}>
-      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 12, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.8 }}>{label}</div>
-      <div style={{ fontSize: 44, fontWeight: 900, color: '#1e293b', marginBottom: 8 }}>{value}</div>
-      <div style={{ fontSize: 12, color: '#10b981', fontWeight: 800 }}>{trend}</div>
+    <div className="card" style={{ 
+      padding: '32px', 
+      borderRadius: 24, 
+      border: '1px solid rgba(255, 255, 255, 0.4)', 
+      background: 'linear-gradient(135deg, rgba(255,255,255,1) 0%, rgba(248,250,252,1) 100%)', 
+      boxShadow: '0 10px 25px -5px rgba(0,0,0,0.05), 0 8px 10px -6px rgba(0,0,0,0.05)',
+      position: 'relative',
+      overflow: 'hidden'
+    }}>
+      <div style={{ position: 'absolute', top: 0, right: 0, width: '100px', height: '100px', background: 'radial-gradient(circle, rgba(59,130,246,0.03) 0%, transparent 70%)', transform: 'translate(30%, -30%)' }} />
+      <div style={{ fontSize: 11, color: '#64748b', marginBottom: 12, fontWeight: 800, textTransform: 'uppercase', letterSpacing: 1.2, fontFamily: 'Outfit' }}>{label}</div>
+      <div style={{ fontSize: 44, fontWeight: 900, color: '#0f172a', marginBottom: 8, fontFamily: 'Outfit', letterSpacing: '-1px' }}>{value}</div>
+      <div style={{ fontSize: 12, color: '#2563eb', fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <span style={{ width: 6, height: 6, borderRadius: '50%', background: '#2563eb', boxShadow: '0 0 10px #2563eb' }} />
+        {trend}
+      </div>
     </div>
   );
 }

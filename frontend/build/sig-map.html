@@ -1,0 +1,1110 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OncoTrack - SIG Map</title>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
+    <!-- Leaflet -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    
+    <style>
+        :root {
+            --navy: #0d1b2a;
+            --panel: #1b2838;
+            --card: #1e3045;
+            --accent-blue: #3b82f6;
+            --accent-teal: #0ea5e9;
+            --border: rgba(255,255,255,0.07);
+            
+            --risk-low: #22c55e;
+            --risk-med: #f59e0b;
+            --risk-high: #f97316;
+            --risk-crit: #ef4444;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: 'Inter', 'Segoe UI', sans-serif;
+        }
+
+        body {
+            background-color: var(--navy);
+            color: #f8fafc;
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+        }
+
+        /* SIDEBAR */
+        .sidebar {
+            width: 340px;
+            background-color: var(--panel);
+            height: 100%;
+            display: flex;
+            flex-direction: column;
+            border-right: 1px solid var(--border);
+            z-index: 1000;
+        }
+        
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            font-size: 1.25rem;
+            font-weight: 600;
+        }
+
+        .scroll-area {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+        }
+
+        /* Scrollbar */
+        .scroll-area::-webkit-scrollbar {
+            width: 6px;
+        }
+        .scroll-area::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        .scroll-area::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 4px;
+        }
+
+        .section {
+            background-color: var(--card);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            margin-bottom: 16px;
+            overflow: hidden;
+            transition: all 0.2s ease;
+        }
+
+        .section-header {
+            padding: 14px 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            user-select: none;
+            background: rgba(255,255,255,0.02);
+            font-weight: 600;
+        }
+        .section-header:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        .section-header.active .chevron {
+            transform: rotate(180deg);
+        }
+        .section-title {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .chevron {
+            transition: transform 0.2s ease;
+        }
+
+        .section-content {
+            padding: 16px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+        .section-content.open {
+            display: block;
+        }
+
+        /* Buttons */
+        .btn {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            width: 100%;
+            padding: 10px 14px;
+            border-radius: 8px;
+            border: 1px solid rgba(255,255,255,0.1);
+            background: var(--card);
+            color: white;
+            cursor: pointer;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+            margin-bottom: 8px;
+        }
+        .btn:last-child {
+            margin-bottom: 0;
+        }
+        .btn:hover {
+            background: rgba(255,255,255,0.05);
+        }
+        
+        .btn-layer.active {
+            background: rgba(59, 130, 246, 0.2);
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
+        }
+        .btn-fusion.active {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
+            border-color: transparent;
+            color: white;
+        }
+        
+        .btn-select.active {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
+            background: rgba(59, 130, 246, 0.1);
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
+            border: none;
+        }
+        .btn-primary:hover {
+            opacity: 0.9;
+            transform: translateY(-1px);
+        }
+        
+        .btn-text {
+            background: transparent;
+            border: none;
+            padding: 6px;
+            width: auto;
+            color: #94a3b8;
+        }
+        .btn-text:hover {
+            color: white;
+            background: rgba(255,255,255,0.1);
+        }
+
+        /* Forms */
+        .form-group {
+            margin-bottom: 12px;
+        }
+        .form-label {
+            display: block;
+            font-size: 0.8rem;
+            color: #94a3b8;
+            margin-bottom: 6px;
+        }
+        .form-control {
+            width: 100%;
+            background: var(--navy);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 8px;
+            padding: 9px 12px;
+            font-size: 0.9rem;
+            outline: none;
+            transition: all 0.2s;
+        }
+        .form-control:focus {
+            border-color: var(--accent-blue);
+            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
+        }
+        .form-control[readonly] {
+            opacity: 0.7;
+            cursor: not-allowed;
+        }
+        .form-row {
+            display: flex;
+            gap: 12px;
+        }
+        .form-row > * {
+            flex: 1;
+        }
+        
+        .hint-text {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 0.8rem;
+            color: var(--accent-blue);
+            margin-bottom: 12px;
+            background: rgba(59, 130, 246, 0.1);
+            padding: 8px;
+            border-radius: 6px;
+        }
+
+        /* Map */
+        #map-container {
+            flex: 1;
+            position: relative;
+        }
+        #map {
+            width: 100%;
+            height: 100%;
+            background-color: #0f172a;
+        }
+
+        /* Floating UI Elements */
+        .floating-bar {
+            position: absolute;
+            top: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
+            background: rgba(30, 48, 69, 0.9);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            padding: 10px 20px;
+            border-radius: 30px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            pointer-events: auto;
+            cursor: pointer;
+            transition: all 0.2s;
+            opacity: 0;
+            visibility: hidden;
+        }
+        .floating-bar.visible {
+            opacity: 1;
+            visibility: visible;
+        }
+        .floating-bar:hover {
+            background: rgba(40, 60, 85, 0.95);
+        }
+
+        .info-panel {
+            position: absolute;
+            bottom: 30px;
+            right: 30px;
+            z-index: 1000;
+            background: rgba(30, 48, 69, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            width: 320px;
+            padding: 20px;
+            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            transform: translateY(20px);
+            opacity: 0;
+            visibility: hidden;
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        }
+        .info-panel.visible {
+            transform: translateY(0);
+            opacity: 1;
+            visibility: visible;
+        }
+        .info-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 15px;
+        }
+        .info-title {
+            font-size: 1.1rem;
+            font-weight: 600;
+            margin-bottom: 4px;
+        }
+        .info-subtitle {
+            font-size: 0.85rem;
+            color: #94a3b8;
+        }
+        .info-close {
+            cursor: pointer;
+            color: #94a3b8;
+        }
+        .info-close:hover {
+            color: white;
+        }
+        .info-stats {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        .info-stat {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.9rem;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .info-stat:last-child {
+            border-bottom: none;
+        }
+        .info-stat span:first-child {
+            color: #94a3b8;
+        }
+
+        /* Risk Badges & Markers */
+        .badge {
+            padding: 4px 10px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            display: inline-flex;
+            align-items: center;
+        }
+        .badge-low { background: rgba(34, 197, 94, 0.15); color: var(--risk-low); border: 1px solid rgba(34, 197, 94, 0.3); }
+        .badge-med { background: rgba(245, 158, 11, 0.15); color: var(--risk-med); border: 1px solid rgba(245, 158, 11, 0.3); }
+        .badge-high { background: rgba(249, 115, 22, 0.15); color: var(--risk-high); border: 1px solid rgba(249, 115, 22, 0.3); }
+        .badge-crit { background: rgba(239, 68, 68, 0.15); color: var(--risk-crit); border: 1px solid rgba(239, 68, 68, 0.3); }
+
+        /* Map Markers */
+        .custom-marker {
+            background: #1b2838;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid white;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
+            transition: all 0.2s;
+        }
+        .custom-marker svg {
+            width: 18px;
+            height: 18px;
+            color: white;
+            stroke-width: 1.5;
+        }
+        .custom-marker.selected {
+            width: 44px !important;
+            height: 44px !important;
+            margin-left: -22px !important;
+            margin-top: -22px !important;
+            box-shadow: 0 0 15px rgba(255,255,255,0.4);
+            z-index: 1000 !important;
+            border-color: #fff !important; /* Brighter border when selected */
+        }
+        
+        .marker-low { border-color: var(--risk-low); }
+        .marker-med { border-color: var(--risk-med); }
+        .marker-high { border-color: var(--risk-high); }
+        .marker-crit { border-color: var(--risk-crit); }
+
+        /* Zone List Cards */
+        .zone-card {
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 12px;
+            margin-bottom: 10px;
+            border: 1px solid transparent;
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: stretch;
+            gap: 12px;
+        }
+        .zone-card:hover {
+            background: rgba(255,255,255,0.05);
+            border-color: rgba(255,255,255,0.1);
+        }
+        .zone-card.active {
+            border-color: var(--accent-blue);
+            background: rgba(59, 130, 246, 0.1);
+        }
+        .zone-dot {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            margin-top: 6px;
+            flex-shrink: 0;
+        }
+        .zone-content {
+            flex: 1;
+        }
+        .zone-title {
+            font-weight: 600;
+            font-size: 0.9rem;
+            margin-bottom: 4px;
+        }
+        .zone-loc {
+            font-size: 0.75rem;
+            color: #94a3b8;
+            margin-bottom: 8px;
+            font-weight: normal;
+        }
+        .zone-actions {
+            display: flex;
+            flex-direction: column;
+            justify-content: flex-start;
+            gap: 4px;
+        }
+
+        /* Leaflet Popups override */
+        .leaflet-popup-content-wrapper {
+            background: rgba(30, 48, 69, 0.95);
+            backdrop-filter: blur(10px);
+            color: white;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+        }
+        .leaflet-popup-tip {
+            background: rgba(30, 48, 69, 0.95);
+        }
+        .leaflet-popup-content {
+            margin: 14px;
+        }
+        .custom-tooltip {
+            background: var(--card);
+            border: 1px solid rgba(255,255,255,0.1);
+            color: white;
+            border-radius: 6px;
+            padding: 8px;
+        }
+        .leaflet-tooltip-top:before {
+            border-top-color: var(--card);
+        }
+
+    </style>
+</head>
+<body>
+
+    <aside class="sidebar">
+        <div class="sidebar-header">
+            <i data-lucide="layers"></i>
+            SIG OncoTrack
+        </div>
+        
+        <div class="scroll-area">
+            
+            <!-- Section 1: Couches -->
+            <div class="section">
+                <div class="section-header active" onclick="toggleSection(this)">
+                    <div class="section-title"><i data-lucide="layers"></i> Contrôle des Couches</div>
+                    <i data-lucide="chevron-down" class="chevron"></i>
+                </div>
+                <div class="section-content open" id="layer-controls">
+                    <button class="btn btn-layer" onclick="setLayer('cancer')" id="btn-cancer">
+                        <i data-lucide="activity"></i> Cancer Uniquement
+                    </button>
+                    <button class="btn btn-layer" onclick="setLayer('risk')" id="btn-risk">
+                        <i data-lucide="shield-alert"></i> Risques Uniquement
+                    </button>
+                    <button class="btn btn-layer btn-fusion active" onclick="setLayer('fusion')" id="btn-fusion">
+                        <i data-lucide="layers"></i> Fusion (Corrélations)
+                    </button>
+                </div>
+            </div>
+
+            <!-- Section 2: Sélection -->
+            <div class="section">
+                <div class="section-content open" style="border-top: none; padding-top: 5px;">
+                    <button class="btn" id="btn-select-mode" onclick="toggleSelectMode()">
+                        <i data-lucide="mouse-pointer-2"></i> Sélectionner une zone
+                    </button>
+                </div>
+            </div>
+
+            <!-- Section 3: Add Zone -->
+            <div class="section">
+                <div class="section-header active" onclick="toggleSection(this)">
+                    <div class="section-title"><i data-lucide="map-pin"></i> Ajouter une Zone</div>
+                    <i data-lucide="chevron-down" class="chevron"></i>
+                </div>
+                <div class="section-content open">
+                    <div class="hint-text" id="add-hint">
+                        <i data-lucide="info" style="width: 14px; height: 14px;"></i> 
+                        Cliquez sur la carte pour auto-remplir
+                    </div>
+                    
+                    <form id="add-zone-form" onsubmit="handleFormSubmit(event)">
+                        <input type="hidden" id="edit-id">
+                        
+                        <div class="form-group">
+                            <label class="form-label">Nom de la zone</label>
+                            <input type="text" id="z-name" class="form-control" required placeholder="Ex: Usine Arzew">
+                        </div>
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Wilaya</label>
+                                <select id="z-wilaya" class="form-control" required>
+                                    <option value="">Choisir...</option>
+                                    <option value="16">16 - Alger</option>
+                                    <option value="23">23 - Annaba</option>
+                                    <option value="31">31 - Oran</option>
+                                    <option value="29">29 - Mascara</option>
+                                    <option value="11">11 - Tamanrasset</option>
+                                    <option value="06">06 - Bejaia</option>
+                                    <option value="19">19 - Sétif</option>
+                                    <option value="13">13 - Tlemcen</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Ville / Commune</label>
+                                <input type="text" id="z-city" class="form-control" required>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Latitude</label>
+                                <input type="text" id="z-lat" class="form-control" readonly placeholder="Auto">
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Longitude</label>
+                                <input type="text" id="z-lng" class="form-control" readonly placeholder="Auto">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label class="form-label">Type de Risque</label>
+                                <select id="z-type" class="form-control" required>
+                                    <option value="factory">Zone industrielle</option>
+                                    <option value="droplets">Eau de mer / eau polluée</option>
+                                    <option value="radiation">Zone nucléaire</option>
+                                    <option value="sun">Exposition solaire</option>
+                                    <option value="flame">Aliments fumés/salés</option>
+                                    <option value="scissors">Abattoir / Hépatite</option>
+                                    <option value="leaf">Pesticides</option>
+                                    <option value="flask-conical">Usine chimique</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Niveau</label>
+                                <select id="z-level" class="form-control" required>
+                                    <option value="low">Faible</option>
+                                    <option value="med">Moyen</option>
+                                    <option value="high">Élevé</option>
+                                    <option value="crit">Critique</option>
+                                </select>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Notes (Optionnel)</label>
+                            <input type="text" id="z-notes" class="form-control" placeholder="Détails additionnels...">
+                        </div>
+
+                        <button type="submit" class="btn btn-primary" id="btn-submit">
+                            <i data-lucide="plus-circle"></i> Ajouter la Zone
+                        </button>
+                        <button type="button" class="btn" style="display: none; margin-top: 8px;" id="btn-cancel" onclick="resetForm()">
+                            Annuler
+                        </button>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Section 4: Liste -->
+            <div class="section">
+                <div class="section-header active" onclick="toggleSection(this)">
+                    <div class="section-title"><i data-lucide="list"></i> Zones Enregistrées</div>
+                    <i data-lucide="chevron-down" class="chevron"></i>
+                </div>
+                <div class="section-content open" id="zone-list-container">
+                    <!-- Zones injected here -->
+                </div>
+            </div>
+
+            <!-- Section 5: Export/Import -->
+            <div class="section">
+                <div class="section-header" onclick="toggleSection(this)">
+                    <div class="section-title"><i data-lucide="download"></i> Exportation</div>
+                    <i data-lucide="chevron-down" class="chevron"></i>
+                </div>
+                <div class="section-content">
+                    <button class="btn" onclick="exportData('geojson')"><i data-lucide="download"></i> Exporter GeoJSON</button>
+                    <button class="btn" onclick="exportData('csv')"><i data-lucide="download"></i> Exporter CSV</button>
+                    <button class="btn"><i data-lucide="upload"></i> Importer fichier</button>
+                </div>
+            </div>
+
+        </div>
+    </aside>
+
+    <main id="map-container">
+        
+        <!-- Top Pills -->
+        <div class="floating-bar" id="pill-pick" onclick="cancelPickMode()">
+            <i data-lucide="map-pin"></i> Mode placement actif — Cliquez pour annuler
+        </div>
+        <div class="floating-bar" id="pill-select" onclick="toggleSelectMode()">
+            <i data-lucide="mouse-pointer-2"></i> Mode sélection actif — Cliquez pour annuler
+        </div>
+
+        <div id="map"></div>
+
+        <!-- Info Panel -->
+        <div class="info-panel" id="info-panel">
+            <div class="info-header">
+                <div>
+                    <div class="info-title" id="ip-title">Zone Industrielle</div>
+                    <div class="info-subtitle" id="ip-loc">Oran, Arzew</div>
+                </div>
+                <i data-lucide="x" class="info-close" onclick="closeInfoPanel()"></i>
+            </div>
+            
+            <div class="info-stats">
+                <div class="info-stat">
+                    <span>Niveau de Risque</span>
+                    <span id="ip-badge" class="badge">Élevé</span>
+                </div>
+                <div class="info-stat">
+                    <span>Type principal</span>
+                    <span id="ip-type">Usine Chimique</span>
+                </div>
+                <div class="info-stat">
+                    <span>Corrélations Cancer</span>
+                    <span style="color: #fca5a5;">Forte (Poumon)</span>
+                </div>
+                <div class="info-stat" style="display: block; padding-top: 10px; color: #cbd5e1; font-size: 0.85rem;" id="ip-notes">
+                    Notes additionnelles ici.
+                </div>
+            </div>
+
+            <div style="display: flex; gap: 8px;">
+                <button class="btn" style="flex: 1;" onclick="editSelectedZone()">
+                    <i data-lucide="pencil"></i> Modifier
+                </button>
+                <button class="btn" style="flex: 1; border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="deleteSelectedZone()">
+                    <i data-lucide="trash-2"></i> Supprimer
+                </button>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        // Init Lucide
+        lucide.createIcons();
+
+        // State
+        let map;
+        let cancerLayerGroup;
+        let riskLayerGroup;
+        let currentLayer = 'fusion'; // cancer, risk, fusion
+        let appMode = 'view'; // view, select, pick
+        
+        const riskColors = {
+            low: '#22c55e',
+            med: '#f59e0b',
+            high: '#f97316',
+            crit: '#ef4444'
+        };
+
+        const riskLabels = {
+            low: 'Faible',
+            med: 'Moyen',
+            high: 'Élevé',
+            crit: 'Critique'
+        };
+
+        const typeLabels = {
+            'factory': 'Zone industrielle',
+            'droplets': 'Eau de mer / eau polluée',
+            'radiation': 'Zone nucléaire',
+            'sun': 'Exposition solaire',
+            'flame': 'Aliments fumés/salés',
+            'scissors': 'Abattoir / Hépatite',
+            'leaf': 'Pesticides',
+            'flask-conical': 'Usine chimique'
+        };
+
+        let zones = [];
+        let markers = {}; // ID to map Marker
+        let activeZoneId = null;
+
+        // Leaflet setup
+        function initMap() {
+            map = L.map('map', {zoomControl: false}).setView([28.0339, 1.6596], 6);
+            L.control.zoom({ position: 'topright' }).addTo(map);
+
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+                attribution: '&copy; CartoDB',
+                subdomains: 'abcd',
+                maxZoom: 20
+            }).addTo(map);
+
+            cancerLayerGroup = L.layerGroup().addTo(map);
+            riskLayerGroup = L.layerGroup().addTo(map);
+
+            map.on('click', function(e) {
+                if (appMode === 'view' || appMode === 'pick') {
+                    // Fill form coords
+                    document.getElementById('z-lat').value = e.latlng.lat.toFixed(6);
+                    document.getElementById('z-lng').value = e.latlng.lng.toFixed(6);
+                    
+                    // Auto-open add form
+                    const formSection = document.getElementById('add-zone-form').closest('.section-content');
+                    if (!formSection.classList.contains('open')) {
+                        formSection.previousElementSibling.click();
+                    }
+                    
+                    // Pulse animation
+                    const tempCircle = L.circleMarker(e.latlng, {
+                        radius: 8, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.5
+                    }).addTo(map);
+                    setTimeout(() => map.removeLayer(tempCircle), 500);
+
+                } else if (appMode === 'select') {
+                    selectZone(null);
+                }
+            });
+
+            loadData();
+            renderMapData();
+        }
+
+        // Data Management
+        function loadData() {
+            const stored = localStorage.getItem('sig_oncotrack_v1');
+            if (stored) {
+                zones = JSON.parse(stored);
+            } else {
+                // Populate sample Data exactly as requested
+                zones = [
+                    { id: '1', name: 'Annaba industrial', wilaya: '23', city: 'El Hadjar', lat: 36.8042, lng: 7.7214, type: 'factory', level: 'high', notes: 'Fumées lourdes' },
+                    { id: '2', name: 'Oran seawater', wilaya: '31', city: 'Oran', lat: 35.7056, lng: -0.6493, type: 'droplets', level: 'med', notes: 'Rejets urbains dans la mer' },
+                    { id: '3', name: 'Mascara pesticides', wilaya: '29', city: 'Ghriss', lat: 35.3411, lng: 0.0519, type: 'leaf', level: 'crit', notes: 'Usage intensif produits chimiques agricoles' },
+                    { id: '4', name: 'Tamanrasset sun', wilaya: '11', city: 'Tamanrasset', lat: 22.7850, lng: 5.5228, type: 'sun', level: 'high', notes: 'Forte exposition UV' }
+                ];
+                saveData();
+            }
+        }
+
+        function saveData() {
+            localStorage.setItem('sig_oncotrack_v1', JSON.stringify(zones));
+            renderSidebarList();
+            renderRiskLayers();
+        }
+
+        // Rendering Map Layers
+        function renderMapData() {
+            renderCancerLayers();
+            renderRiskLayers();
+            updateLayerVisibility();
+        }
+
+        function renderCancerLayers() {
+            cancerLayerGroup.clearLayers();
+            // 18 Cancer Data points for major Algerian wilayas
+            const cancerPoints = [
+                { lat: 36.7525, lng: 3.0419, cases: 1450, wilaya: 'Alger' },
+                { lat: 35.6911, lng: -0.6416, cases: 980, wilaya: 'Oran' },
+                { lat: 36.7538, lng: 5.0567, cases: 540, wilaya: 'Bejaia' },
+                { lat: 36.1898, lng: 5.4108, cases: 720, wilaya: 'Sétif' },
+                { lat: 36.8967, lng: 7.7562, cases: 880, wilaya: 'Annaba' },
+                { lat: 34.8767, lng: -1.3168, cases: 410, wilaya: 'Tlemcen' },
+                { lat: 36.2644, lng: 6.6147, cases: 650, wilaya: 'Constantine' },
+                { lat: 31.9493, lng: 5.3250, cases: 120, wilaya: 'Ouargla' },
+                { lat: 33.7915, lng: 2.8726, cases: 80, wilaya: 'Laghouat' },
+                { lat: 35.2078, lng: -0.6306, cases: 450, wilaya: 'Sidi Bel Abbès' },
+                { lat: 36.3650, lng: 6.2709, cases: 290, wilaya: 'Mila' },
+                { lat: 35.3468, lng: 1.3283, cases: 150, wilaya: 'Tiaret' },
+                { lat: 36.8188, lng: 4.8878, cases: 580, wilaya: 'Jijel' },
+                { lat: 36.4601, lng: 2.8335, cases: 920, wilaya: 'Blida' },
+                { lat: 34.6728, lng: 3.2505, cases: 210, wilaya: 'Djelfa' },
+                { lat: 36.2798, lng: 1.2584, cases: 380, wilaya: 'Chlef' },
+                { lat: 35.5397, lng: -0.0617, cases: 260, wilaya: 'Mascara' },
+                { lat: 34.8466, lng: 5.7262, cases: 340, wilaya: 'Biskra' }
+            ];
+
+            cancerPoints.forEach(pt => {
+                const radius = Math.max(10, Math.sqrt(pt.cases) * 0.8);
+                const circle = L.circleMarker([pt.lat, pt.lng], {
+                    radius: radius,
+                    color: '#ec4899',
+                    weight: 1,
+                    fillColor: '#ec4899',
+                    fillOpacity: 0.35
+                });
+                
+                const tooltipHtml = `
+                    <div style="text-align: center;">
+                        <div style="font-weight: 600;">Wilaya de ${pt.wilaya}</div>
+                        <div style="color: #fbcfe8; font-size: 0.9rem;">${pt.cases} cas enregistrés</div>
+                    </div>
+                `;
+                circle.bindTooltip(tooltipHtml, { className: 'custom-tooltip', direction: 'top' });
+                circle.addTo(cancerLayerGroup);
+            });
+        }
+
+        function renderRiskLayers() {
+            riskLayerGroup.clearLayers();
+            markers = {};
+
+            zones.forEach(zone => {
+                const color = riskColors[zone.level];
+                
+                // Construct Lucide icon dynamically
+                const iconHtml = `<i data-lucide="${zone.type}"></i>`;
+                
+                const divIcon = L.divIcon({
+                    className: '',
+                    html: `<div class="custom-marker marker-${zone.level}" id="marker-${zone.id}">
+                             ${iconHtml}
+                           </div>`,
+                    iconSize: [36, 36],
+                    iconAnchor: [18, 18]
+                });
+
+                const marker = L.marker([zone.lat, zone.lng], { icon: divIcon });
+                
+                marker.on('click', (e) => {
+                    L.DomEvent.stopPropagation(e);
+                    selectZone(zone.id);
+                });
+
+                marker.addTo(riskLayerGroup);
+                markers[zone.id] = marker;
+            });
+
+            setTimeout(() => {
+                lucide.createIcons({
+                    root: document.getElementById('map')
+                });
+            }, 100);
+        }
+
+        // UI Interactions
+        function toggleSection(el) {
+            el.classList.toggle('active');
+            const content = el.nextElementSibling;
+            content.classList.toggle('open');
+        }
+
+        function setLayer(layer) {
+            currentLayer = layer;
+            document.querySelectorAll('.btn-layer').forEach(b => b.classList.remove('active'));
+            document.getElementById('btn-' + layer).classList.add('active');
+            updateLayerVisibility();
+        }
+
+        function updateLayerVisibility() {
+            if (currentLayer === 'cancer') {
+                if(!map.hasLayer(cancerLayerGroup)) map.addLayer(cancerLayerGroup);
+                if(map.hasLayer(riskLayerGroup)) map.removeLayer(riskLayerGroup);
+            } else if (currentLayer === 'risk') {
+                if(!map.hasLayer(riskLayerGroup)) map.addLayer(riskLayerGroup);
+                if(map.hasLayer(cancerLayerGroup)) map.removeLayer(cancerLayerGroup);
+            } else {
+                if(!map.hasLayer(cancerLayerGroup)) map.addLayer(cancerLayerGroup);
+                if(!map.hasLayer(riskLayerGroup)) map.addLayer(riskLayerGroup);
+            }
+        }
+
+        function toggleSelectMode() {
+            const btn = document.getElementById('btn-select-mode');
+            if (appMode === 'select') {
+                appMode = 'view';
+                btn.classList.remove('active');
+                document.getElementById('pill-select').classList.remove('visible');
+            } else {
+                appMode = 'select';
+                btn.classList.add('active');
+                document.getElementById('pill-select').classList.add('visible');
+                document.getElementById('pill-pick').classList.remove('visible');
+            }
+        }
+
+        function cancelPickMode() {
+            appMode = 'view';
+            document.getElementById('pill-pick').classList.remove('visible');
+        }
+
+        function selectZone(id) {
+            activeZoneId = id;
+            
+            // Reset styles
+            document.querySelectorAll('.custom-marker').forEach(el => el.classList.remove('selected'));
+            document.querySelectorAll('.zone-card').forEach(el => el.classList.remove('active'));
+            
+            if (!id) {
+                closeInfoPanel();
+                return;
+            }
+
+            // Map Marker
+            const markerEl = document.getElementById('marker-' + id);
+            if (markerEl) markerEl.classList.add('selected');
+
+            // Sidebar Card
+            const cardEl = document.getElementById('card-' + id);
+            if (cardEl) {
+                cardEl.classList.add('active');
+                cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+            }
+
+            // Fly to
+            const zone = zones.find(z => z.id === id);
+            if (zone) {
+                map.flyTo([zone.lat, zone.lng], 10, { duration: 0.8 });
+                showInfoPanel(zone);
+            }
+        }
+
+        // Info Panel
+        function showInfoPanel(zone) {
+            const panel = document.getElementById('info-panel');
+            document.getElementById('ip-title').textContent = zone.name;
+            document.getElementById('ip-loc').textContent = `Wilaya ${zone.wilaya}, ${zone.city}`;
+            
+            const badge = document.getElementById('ip-badge');
+            badge.className = `badge badge-${zone.level}`;
+            badge.textContent = riskLabels[zone.level];
+
+            document.getElementById('ip-type').textContent = typeLabels[zone.type];
+            document.getElementById('ip-notes').textContent = zone.notes || 'Aucune note additionnelle.';
+            
+            panel.classList.add('visible');
+        }
+
+        function closeInfoPanel() {
+            document.getElementById('info-panel').classList.remove('visible');
+        }
+
+        // Form handling
+        function handleFormSubmit(e) {
+            e.preventDefault();
+            
+            const isEdit = document.getElementById('edit-id').value;
+            const newZone = {
+                id: isEdit ? isEdit : Date.now().toString(),
+                name: document.getElementById('z-name').value,
+                wilaya: document.getElementById('z-wilaya').value,
+                city: document.getElementById('z-city').value,
+                lat: parseFloat(document.getElementById('z-lat').value) || 36.0,
+                lng: parseFloat(document.getElementById('z-lng').value) || 3.0,
+                type: document.getElementById('z-type').value,
+                level: document.getElementById('z-level').value,
+                notes: document.getElementById('z-notes').value,
+            };
+
+            if (isEdit) {
+                zones = zones.map(z => z.id === isEdit ? newZone : z);
+            } else {
+                zones.push(newZone);
+            }
+
+            saveData();
+            resetForm();
+            selectZone(newZone.id);
+            
+            if (appMode === 'pick') cancelPickMode();
+        }
+
+        function resetForm() {
+            document.getElementById('add-zone-form').reset();
+            document.getElementById('edit-id').value = '';
+            document.getElementById('btn-submit').innerHTML = '<i data-lucide="plus-circle"></i> Ajouter la Zone';
+            document.getElementById('btn-cancel').style.display = 'none';
+            lucide.createIcons();
+        }
+
+        function editSelectedZone() {
+            if (!activeZoneId) return;
+            const zone = zones.find(z => z.id === activeZoneId);
+            if (!zone) return;
+
+            document.getElementById('edit-id').value = zone.id;
+            document.getElementById('z-name').value = zone.name;
+            document.getElementById('z-wilaya').value = zone.wilaya;
+            document.getElementById('z-city').value = zone.city;
+            document.getElementById('z-lat').value = zone.lat;
+            document.getElementById('z-lng').value = zone.lng;
+            document.getElementById('z-type').value = zone.type;
+            document.getElementById('z-level').value = zone.level;
+            document.getElementById('z-notes').value = zone.notes;
+
+            document.getElementById('btn-submit').innerHTML = '<i data-lucide="pencil"></i> Mettre à jour';
+            document.getElementById('btn-cancel').style.display = 'block';
+
+            // Open section 3
+            const addSection = document.getElementById('add-zone-form').closest('.section-content');
+            if(!addSection.classList.contains('open')) {
+                addSection.previousElementSibling.click();
+            }
+            addSection.scrollIntoView({ behavior: 'smooth' });
+            
+            lucide.createIcons();
+        }
+
+        function deleteSelectedZone() {
+            if (!activeZoneId) return;
+            if (confirm('Voulez-vous vraiment supprimer cette zone ?')) {
+                zones = zones.filter(z => z.id !== activeZoneId);
+                saveData();
+                selectZone(null);
+            }
+        }
+
+        function renderSidebarList() {
+            const container = document.getElementById('zone-list-container');
+            container.innerHTML = '';
+
+            zones.forEach(zone => {
+                const div = document.createElement('div');
+                div.className = `zone-card ${zone.id === activeZoneId ? 'active' : ''}`;
+                div.id = `card-${zone.id}`;
+                div.onclick = () => selectZone(zone.id);
+
+                div.innerHTML = `
+                    <div class="zone-dot" style="background: ${riskColors[zone.level]}"></div>
+                    <div class="zone-content">
+                        <div class="zone-title">${zone.name}</div>
+                        <div class="zone-loc">${zone.city} (W.${zone.wilaya})</div>
+                    </div>
+                    <div class="zone-actions">
+                        <button class="btn-text" title="Modifier" onclick="event.stopPropagation(); activeZoneId='${zone.id}'; editSelectedZone();"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
+                        <button class="btn-text" title="Supprimer" onclick="event.stopPropagation(); activeZoneId='${zone.id}'; deleteSelectedZone();"><i data-lucide="trash-2" style="width: 14px; height: 14px; color: #ef4444;"></i></button>
+                    </div>
+                `;
+                container.appendChild(div);
+            });
+            
+            lucide.createIcons({ root: container });
+        }
+
+        function exportData(format) {
+            let dataStr = "";
+            let dataUri = "";
+            let exportFileDefaultName = "sig_zones";
+
+            if (format === 'geojson') {
+                const geojson = {
+                    type: "FeatureCollection",
+                    features: zones.map(z => ({
+                        type: "Feature",
+                        geometry: { type: "Point", coordinates: [z.lng, z.lat] },
+                        properties: { ...z }
+                    }))
+                };
+                dataStr = JSON.stringify(geojson, null, 2);
+                dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
+                exportFileDefaultName += ".geojson";
+            } else {
+                const header = "id,name,wilaya,city,lat,lng,type,level,notes\n";
+                const rows = zones.map(z => `${z.id},"${z.name}",${z.wilaya},"${z.city}",${z.lat},${z.lng},${z.type},${z.level},"${z.notes}"`).join("\n");
+                dataStr = header + rows;
+                dataUri = 'data:text/csv;charset=utf-8,'+ encodeURIComponent(dataStr);
+                exportFileDefaultName += ".csv";
+            }
+
+            let linkElement = document.createElement('a');
+            linkElement.setAttribute('href', dataUri);
+            linkElement.setAttribute('download', exportFileDefaultName);
+            document.body.appendChild(linkElement);
+            linkElement.click();
+            document.body.removeChild(linkElement);
+        }
+
+        // Initialize when DOM ready
+        document.addEventListener('DOMContentLoaded', initMap);
+
+    </script>
+</body>
+</html>

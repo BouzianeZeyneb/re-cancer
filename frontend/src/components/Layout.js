@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import api from '../utils/api';
 import { io } from 'socket.io-client';
+import { useTranslation } from 'react-i18next';
 
 const NavItem = ({ to, icon, label, onClick }) => {
   const location = useLocation();
@@ -29,8 +30,10 @@ const NavItem = ({ to, icon, label, onClick }) => {
 export default function Layout({ children, title }) {
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
+  const { t, i18n } = useTranslation();
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
+  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
 
   useEffect(() => {
     if (user) {
@@ -106,7 +109,7 @@ export default function Layout({ children, title }) {
 
   return (
     <div className="app-layout">
-      <aside className="sidebar">
+      <aside className={`sidebar ${!isSidebarOpen ? 'sidebar-collapsed' : ''}`}>
         <div className="sidebar-logo">
           <div className="sidebar-logo-icon" style={{ background: '#0EA5E9', borderRadius: '12px', boxShadow: 'none' }}>
             <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"></polyline></svg>
@@ -119,27 +122,35 @@ export default function Layout({ children, title }) {
 
         <nav className="sidebar-nav">
           <div className="nav-section-title">PRINCIPAL</div>
-          <NavItem to="/" label="Dashboard" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>} />
-          <NavItem to="/patients" label="Patients" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>} />
+          {(isAdmin || user?.role === 'medecin') && (
+            <NavItem to="/" label={t('sidebar.dashboard')} icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><rect x="14" y="14" width="7" height="7"/></svg>} />
+          )}
+          <NavItem to="/patients" label={t('sidebar.patients')} icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>} />
           <NavItem to="/cas-cancer" label="Diagnostics" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14,2 14,8 20,8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10,9 9,9 8,9"/></svg>} />
 
           <div className="nav-section-title">MODULES</div>
-          <NavItem to="/cas-cancer" label="Anapath" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><path d="M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/><path d="M2 12h20"/></svg>} />
           <NavItem to="/analyses-biologie" label="Analyses Biologie" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8"/><polyline points="8 3 8 8 3 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>} />
           <NavItem to="/laboratoire" label="Laboratoire" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.51"/><path d="M14 2v7.51"/><path d="M2 22h20"/><path d="M9 13.51h6"/><path d="M4.53 13.51a3 3 0 0 0-2.53 3.53C2.26 19.34 3.73 21 5.61 21h12.78c1.88 0 3.35-1.66 3.61-3.96a3 3 0 0 0-2.53-3.53l-1.47-.2v-3.71A2.5 2.5 0 0 0 15.5 7H14V2H10v5H8.5a2.5 2.5 0 0 0-2.5 2.5v3.71l-1.47.2z"/></svg>} />
 
-          <NavItem to="/cas-cancer" label="Imagerie" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>} />
-          <NavItem to="/traitements" label="Traitements" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m2 9 3 3 3-3"/><path d="M13 18H5a2 2 0 0 1-2-2V6"/><path d="m22 15-3-3-3 3"/><path d="M11 6h8a2 2 0 0 1 2 2v10"/></svg>} />
-          <NavItem to="/consultations" label="Consultations" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>} />
+          {(isAdmin || user?.role === 'medecin') && (
+            <>
+              <NavItem to="/cas-cancer" label="Imagerie" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/></svg>} />
+            </>
+          )}
 
           <div className="nav-section-title">SYSTÈME</div>
-          <NavItem to="/rcp" label="Réunions RCP" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>} />
-          <NavItem to="/statistiques" label="Statistiques" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>} />
+          {(isAdmin || user?.role === 'medecin') && (
+            <>
+              <NavItem to="/rcp" label="Réunions RCP" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/></svg>} />
+              <NavItem to="/statistiques" label={t('sidebar.statistics')} icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10"/><line x1="12" y1="20" x2="12" y2="4"/><line x1="6" y1="20" x2="6" y2="14"/></svg>} />
+            </>
+          )}
           {isAdmin && (
             <>
               <NavItem to="/carte-sig" label="Carte SIG" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10"/><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76"/></svg>} />
               <NavItem to="/utilisateurs" label="Utilisateurs" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>} />
-              <NavItem to="/parametres" label="Paramètres" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>} />
+              <NavItem to="/audit" label="Traçabilité" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="12 8 12 12 15 15"/></svg>} />
+              <NavItem to="/parametres" label={t('sidebar.settings')} icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-2 2 2 2 0 01-2-2v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83 0 2 2 0 010-2.83l.06-.06a1.65 1.65 0 00.33-1.82 1.65 1.65 0 00-1.51-1H3a2 2 0 01-2-2 2 2 0 012-2h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 010-2.83 2 2 0 012.83 0l.06.06a1.65 1.65 0 001.82.33H9a1.65 1.65 0 001-1.51V3a2 2 0 012-2 2 2 0 012 2v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 0 2 2 0 010 2.83l-.06.06a1.65 1.65 0 00-.33 1.82V9a1.65 1.65 0 001.51 1H21a2 2 0 012 2 2 2 0 01-2 2h-.09a1.65 1.65 0 00-1.51 1z"/></svg>} />
             </>
           )}
         </nav>
@@ -202,12 +213,33 @@ export default function Layout({ children, title }) {
       </div>
       {/* --- END GLOBAL AI CHAT --- */}
 
-      <main className="main-content">
+      <main className={`main-content ${!isSidebarOpen ? 'expanded' : ''}`}>
         <div className="topbar">
-          <h1 className="topbar-title">{title}</h1>
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+            <button 
+              onClick={() => setIsSidebarOpen(!isSidebarOpen)} 
+              style={{ background: 'transparent', border: 'none', cursor: 'pointer', color: '#64748b', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '8px', borderRadius: '8px' }}
+              title="Toggle Sidebar"
+            >
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <line x1="3" y1="12" x2="21" y2="12"></line>
+                <line x1="3" y1="6" x2="21" y2="6"></line>
+                <line x1="3" y1="18" x2="21" y2="18"></line>
+              </svg>
+            </button>
+            <h1 className="topbar-title" style={{ margin: 0 }}>{title}</h1>
+          </div>
           <div className="topbar-actions">
             
-            {/* Global UI Zoom Controls */}
+            {/* Language Switcher */}
+            <select 
+              value={i18n.language} 
+              onChange={(e) => i18n.changeLanguage(e.target.value)}
+              style={{ marginRight: 15, padding: '4px 8px', borderRadius: 12, border: '1px solid #e2e8f0', background: 'white', color: '#64748b', outline: 'none', cursor: 'pointer' }}>
+              <option value="fr">FR</option>
+              <option value="en">EN</option>
+              <option value="ar">AR</option>
+            </select>
             <div style={{ display: 'flex', alignItems: 'center', marginRight: '15px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '20px', overflow: 'hidden' }}>
               <button 
                 onClick={() => { const el = document.querySelector('.page'); el.style.zoom = Math.max(0.5, (parseFloat(el.style.zoom) || 1) - 0.1); }} 

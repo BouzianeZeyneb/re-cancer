@@ -1,0 +1,42 @@
+{
+  "sidebar": {
+    "dashboard": "Tableau de Bord",
+    "patients": "Patients",
+    "statistics": "Statistiques",
+    "settings": "Paramètres",
+    "logout": "Déconnexion"
+  },
+  "patient_detail": {
+    "title": "Fiche Patient",
+    "subtitle": "Service Oncologie · CHU Sétif",
+    "back": "Retour",
+    "active": "ACTIF",
+    "update": "MÀJ",
+    "edit": "Modifier",
+    "schedule": "Planifier RDV",
+    "gender_age": "Sexe / Âge",
+    "cancer_type": "Type Cancer",
+    "phone": "Téléphone",
+    "admission": "Admission",
+    "male": "Homme",
+    "female": "Femme",
+    "years": "ans",
+    "vitals": {
+      "pulse": "Pouls",
+      "bp": "Tension",
+      "temp": "Temp.",
+      "spo2": "SpO₂"
+    },
+    "tabs": {
+      "summary": "Résumé",
+      "diagnosis": "Diagnostic",
+      "pathology": "Anapath",
+      "biology": "Biologie",
+      "imaging": "Imagerie",
+      "treatment": "Traitement",
+      "consultations": "Consultations",
+      "side_effects": "Effets secondaires",
+      "documents": "Documents"
+    }
+  }
+}

@@ -176,7 +176,14 @@ export default function CasForm() {
     base_diagnostic: '',
     date_diagnostic: new Date().toISOString().slice(0, 10),
     date_premiers_symptomes: '',
-    decision_rcp: ''
+    decision_rcp: '',
+    topographie_icdo3: '',
+    morphologie_icdo3: '',
+    comportement_code: '3',
+    statut_vital: 'Vivant',
+    date_dernieres_nouvelles: new Date().toISOString().slice(0, 10),
+    date_deces: '',
+    cause_deces: ''
   });
 
   const [patients, setPatients] = useState([]);
@@ -513,9 +520,24 @@ export default function CasForm() {
                 <input className="form-control" placeholder="N°..." value={form.numero_bloc} onChange={e => set('numero_bloc', e.target.value)} />
               </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Anomalies Génétiques</label>
-                <input className="form-control" placeholder="BRCA, EGFR..." value={form.anomalies_genetiques} onChange={e => set('anomalies_genetiques', e.target.value)} />
+              <div style={sectionTitle}>Standard International (ICD-O-3)</div>
+              <div className="form-group">
+                <label className="form-label">Topographie (Code C...)</label>
+                <input className="form-control" placeholder="ex: C50.4" value={form.topographie_icdo3} onChange={e => set('topographie_icdo3', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Morphologie (Code M...)</label>
+                <input className="form-control" placeholder="ex: M8500/3" value={form.morphologie_icdo3} onChange={e => set('morphologie_icdo3', e.target.value)} />
+              </div>
+              <div className="form-group">
+                <label className="form-label">Code Comportement</label>
+                <select className="form-control" value={form.comportement_code} onChange={e => set('comportement_code', e.target.value)}>
+                  <option value="0">0: Bénin</option>
+                  <option value="1">1: Incertain / Borderline</option>
+                  <option value="2">2: In situ (Non envahissant)</option>
+                  <option value="3">3: Malignité primaire (Envahissant)</option>
+                  <option value="6">6: Malignité secondaire (Métastatique)</option>
+                </select>
               </div>
             </div>
           </div>
@@ -606,29 +628,56 @@ export default function CasForm() {
           </div>
         </div>
 
-        {/* Section 4: 📋 Informations complémentaires */}
+        {/* Section 5: 🏥 Suivi & État Vital */}
         <div className="form-section-modern">
           <div className="form-section-header">
-            <span style={{ fontSize: 20 }}>📋</span>
-            <h3>Informations complémentaires</h3>
+            <span style={{ fontSize: 20 }}>🏥</span>
+            <h3>Suivi & État Vital</h3>
           </div>
           <div className="form-section-body">
-            <div className="form-group">
-              <label className="form-label">Rapport anatomopathologique / Notes cliniques</label>
-              <textarea className="form-control" rows={3} placeholder="Résumé du rapport ou notes..." value={form.rapport_anatomopathologique} onChange={e => set('rapport_anatomopathologique', e.target.value)} />
-            </div>
             <div className="form-grid-modern">
               <div className="form-group">
-                <label className="form-label">N° Lecteur / Dossier</label>
-                <input className="form-control" placeholder="Identifiant interne..." value={form.numero_lecteur} onChange={e => set('numero_lecteur', e.target.value)} />
+                <label className="form-label">Statut Vital</label>
+                <select className="form-control" value={form.statut_vital} onChange={e => set('statut_vital', e.target.value)}>
+                  <option value="Vivant">Vivant</option>
+                  <option value="Décédé">Décédé</option>
+                  <option value="Inconnu">Inconnu / Perdu de vue</option>
+                </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Décision RCP</label>
-                <input className="form-control" placeholder="S'il y a eu une Réunion de Concertation Pluridisciplinaire..." value={form.decision_rcp} onChange={e => set('decision_rcp', e.target.value)} />
+                <label className="form-label">Dernières nouvelles</label>
+                <input type="date" className="form-control" value={form.date_dernieres_nouvelles} onChange={e => set('date_dernieres_nouvelles', e.target.value)} />
               </div>
+              {form.statut_vital === 'Décédé' && (
+                <>
+                  <div className="form-group">
+                    <label className="form-label">Date du décès</label>
+                    <input type="date" className="form-control" value={form.date_deces} onChange={e => set('date_deces', e.target.value)} />
+                  </div>
+                  <div className="form-group">
+                    <label className="form-label">Cause du décès</label>
+                    <select className="form-control" value={form.cause_deces} onChange={e => set('cause_deces', e.target.value)}>
+                      <option value="">Sélectionner...</option>
+                      <option value="Cancer">Liée au cancer</option>
+                      <option value="Traitement">Liée à la toxicité du traitement</option>
+                      <option value="Autre">Autre cause (non liée)</option>
+                      <option value="Inconnue">Inconnue</option>
+                    </select>
+                  </div>
+                </>
+              )}
             </div>
           </div>
         </div>
+
+        <style>{`
+          .form-section-modern { background: white; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
+          .form-section-header { padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; alignItems: center; gap: 12px; }
+          .form-section-header h3 { margin: 0; font-size: 16px; font-weight: 700; color: #1e293b; }
+          .form-section-body { padding: 24px; }
+          .form-grid-modern { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
+          .section-title-clinical { grid-column: span 2; font-size: 14px; font-weight: 800; color: #3b82f6; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-top: 10px; margin-bottom: 5px; text-transform: uppercase; }
+        `}</style>
 
         <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
           <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>Annuler</button>

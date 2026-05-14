@@ -20,7 +20,7 @@ import CasDetail from './pages/CasDetail';
 import Statistiques from './pages/Statistiques';
 import CarteSIG from './pages/CarteSIG';
 import Utilisateurs from './pages/Utilisateurs';
-import { AuditLogs } from './pages/AuditLogs';
+import AuditLogs from './pages/AuditLogs';
 import AdminSettings from './pages/AdminSettings';
 import RCPList from './pages/RCPList';
 import RCPDetail from './pages/RCPDetail';
@@ -41,7 +41,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (allowedRoles && !allowedRoles.includes(safeRole)) {
     const path = window.location.pathname;
     if (path === '/') {
-      if (safeRole === 'laboratoire') return <Navigate to="/demandes-labo" replace />;
+      if (safeRole === 'laboratoire') return <Navigate to="/laboratoire" replace />;
       if (safeRole === 'medecin' || safeRole === 'anapath') return <Navigate to="/patients" replace />;
     }
     
@@ -85,12 +85,13 @@ function AppRoutes() {
       <Route path="/doublons" element={<ProtectedRoute allowedRoles={['admin']}><Doublons /></ProtectedRoute>} />
       <Route path="/carte-sig" element={<ProtectedRoute allowedRoles={['admin']}><CarteSIG /></ProtectedRoute>} />
       <Route path="/utilisateurs" element={<ProtectedRoute allowedRoles={['admin']}><Utilisateurs /></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
       <Route path="/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
       
       {/* Partagés */}
       <Route path="/statistiques" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Statistiques /></ProtectedRoute>} />
       <Route path="/laboratoire" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire']}><Laboratoire /></ProtectedRoute>} />
-      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><AnalysesBiologie /></ProtectedRoute>} />
+      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><AnalysesBiologie /></ProtectedRoute>} />
 
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

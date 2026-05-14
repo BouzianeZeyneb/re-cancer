@@ -1,0 +1,42 @@
+{
+  "sidebar": {
+    "dashboard": "Dashboard",
+    "patients": "Patients",
+    "statistics": "Statistics",
+    "settings": "Settings",
+    "logout": "Logout"
+  },
+  "patient_detail": {
+    "title": "Patient File",
+    "subtitle": "Oncology Department · CHU Setif",
+    "back": "Back",
+    "active": "ACTIVE",
+    "update": "UPDATED",
+    "edit": "Edit",
+    "schedule": "Schedule Appt",
+    "gender_age": "Gender / Age",
+    "cancer_type": "Cancer Type",
+    "phone": "Phone",
+    "admission": "Admission",
+    "male": "Male",
+    "female": "Female",
+    "years": "years",
+    "vitals": {
+      "pulse": "Pulse",
+      "bp": "Blood Pressure",
+      "temp": "Temp.",
+      "spo2": "SpO₂"
+    },
+    "tabs": {
+      "summary": "Summary",
+      "diagnosis": "Diagnosis",
+      "pathology": "Pathology",
+      "biology": "Biology",
+      "imaging": "Imaging",
+      "treatment": "Treatment",
+      "consultations": "Consultations",
+      "side_effects": "Side Effects",
+      "documents": "Documents"
+    }
+  }
+}

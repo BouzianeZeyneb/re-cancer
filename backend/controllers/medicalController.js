@@ -197,6 +197,81 @@ const getBiologiePatientStats = async (req, res) => {
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
 
+const getAnapathByPatient = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT a.* FROM anapath a
+      JOIN cancer_cases cc ON a.case_id = cc.id
+      WHERE cc.patient_id = ? ORDER BY a.date_prelevement DESC
+    `, [req.params.patientId]);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
+const getTraitementsByPatient = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT t.* FROM traitements t
+      JOIN cancer_cases cc ON t.case_id = cc.id
+      WHERE cc.patient_id = ? ORDER BY t.date_debut DESC
+    `, [req.params.patientId]);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
+const getConsultationsByPatient = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT c.* FROM consultations c
+      JOIN cancer_cases cc ON c.case_id = cc.id
+      WHERE cc.patient_id = ? ORDER BY c.date_consultation DESC
+    `, [req.params.patientId]);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
+const getImagerieByPatient = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT i.* FROM imagerie i
+      JOIN cancer_cases cc ON i.case_id = cc.id
+      WHERE cc.patient_id = ? ORDER BY i.date_examen DESC
+    `, [req.params.patientId]);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
+const getEffetsByPatient = async (req, res) => {
+  try {
+    const [rows] = await pool.execute(`
+      SELECT e.* FROM effets_secondaires e
+      JOIN cancer_cases cc ON e.case_id = cc.id
+      WHERE cc.patient_id = ? ORDER BY e.date_apparition DESC
+    `, [req.params.patientId]);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
+// ===== DOCUMENTS =====
+const getDocumentsByPatient = async (req, res) => {
+  try {
+    const [rows] = await pool.execute('SELECT * FROM documents WHERE patient_id = ? ORDER BY date_doc DESC', [req.params.patientId]);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
+const createDocument = async (req, res) => {
+  try {
+    const id = uuidv4();
+    const { patient_id, titre, categorie, date_doc } = req.body;
+    await pool.execute(
+      'INSERT INTO documents (id, patient_id, titre, categorie, date_doc, created_by) VALUES (?,?,?,?,?,?)',
+      [id, patient_id, titre, categorie, date_doc, req.user.id]
+    );
+    res.status(201).json({ id, message: 'Document ajouté' });
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
 module.exports = {
   getAnapath, createAnapath, updateAnapath, deleteAnapath,
   getBiologie, getBiologieByPatient, createBiologie, deleteBiologie,
@@ -204,5 +279,9 @@ module.exports = {
   getConsultations, createConsultation, deleteConsultation,
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
   getChimioSeances, createChimioSeance,
-  getBiologiePatientStats
+  getBiologiePatientStats,
+  // Documents
+  getDocumentsByPatient, createDocument,
+  // patient-specific medical loads
+  getAnapathByPatient, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
 };

@@ -5,7 +5,7 @@ const pool = mysql.createPool({
   user: process.env.DB_USER || 'root',
   password: process.env.DB_PASSWORD || '',
   database: process.env.DB_NAME || 'cancer_registry',
-  port: process.env.DB_PORT || 3306,
+  port: process.env.DB_PORT || 3307,
   waitForConnections: true,
   connectionLimit: 10,
   queueLimit: 0
@@ -43,6 +43,7 @@ const initDatabase = async () => {
         adresse TEXT,
         commune VARCHAR(100),
         wilaya VARCHAR(100),
+        patient_seq INT AUTO_INCREMENT UNIQUE,
         latitude DECIMAL(10,8),
         longitude DECIMAL(11,8),
         fumeur BOOLEAN DEFAULT false,
@@ -50,12 +51,16 @@ const initDatabase = async () => {
         activite_sportive BOOLEAN DEFAULT false,
         autres_medicaments TEXT,
         autres_facteurs_risque TEXT,
+        deleted BOOLEAN DEFAULT false,
         created_by VARCHAR(36),
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
         FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
       )
     `);
+
+    // Migration: ensure deleted column exists for existing databases
+    try { await conn.execute(`ALTER TABLE patients ADD COLUMN deleted BOOLEAN DEFAULT false`); } catch (e) { }
 
     // Cancer cases table
     await conn.execute(`
@@ -248,10 +253,10 @@ const initDynamicTables = async () => {
       )
     `);
 
-    try { await conn.execute(`ALTER TABLE parametres_globaux ADD COLUMN obligatoire BOOLEAN DEFAULT false`); } catch(e) {}
+    try { await conn.execute(`ALTER TABLE parametres_globaux ADD COLUMN obligatoire BOOLEAN DEFAULT false`); } catch (e) { }
 
     console.log('✅ Dynamic tables initialized');
-  } catch(e) {
+  } catch (e) {
     console.error('Dynamic tables error:', e.message);
   } finally {
     conn.release();
@@ -262,6 +267,8 @@ const initMedicalTables = async () => {
   const conn = await pool.getConnection();
   try {
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS localisation VARCHAR(200)`);
+    await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS topographie_icdo3 VARCHAR(20)`);
+    await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS morphologie_icdo3 VARCHAR(20)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS tnm_t VARCHAR(20)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS tnm_n VARCHAR(20)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS tnm_m VARCHAR(20)`);
@@ -273,17 +280,17 @@ const initMedicalTables = async () => {
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS type_histologique VARCHAR(200)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS grade_histologique VARCHAR(50)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS numero_bloc VARCHAR(100)`);
-    try { await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS recepteur_er ENUM('Positif','Négatif','Inconnu') DEFAULT 'Inconnu'`); } catch(e){}
-    try { await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS recepteur_pr ENUM('Positif','Négatif','Inconnu') DEFAULT 'Inconnu'`); } catch(e){}
-    try { await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS her2 ENUM('Positif','Equivoque','Négatif','Inconnu') DEFAULT 'Inconnu'`); } catch(e){}
+    try { await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS recepteur_er ENUM('Positif','Négatif','Inconnu') DEFAULT 'Inconnu'`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS recepteur_pr ENUM('Positif','Négatif','Inconnu') DEFAULT 'Inconnu'`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS her2 ENUM('Positif','Equivoque','Négatif','Inconnu') DEFAULT 'Inconnu'`); } catch (e) { }
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS nb_ganglions_envahis INT`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS sites_metastatiques TEXT`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS etablissement_diagnostiqueur VARCHAR(200)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS medecin_diagnostiqueur VARCHAR(200)`);
 
     // Traitements Form Update
-    try { await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS intention_therapeutique ENUM('Curatif','Adjuvant','Néo-adjuvant','Palliatif','Prophylactique')`); } catch(e){}
-    try { await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS statut ENUM('Planifié','En cours','Terminé','Pause','Suspendu','Abandonné') DEFAULT 'Planifié'`); } catch(e){}
+    try { await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS intention_therapeutique ENUM('Curatif','Adjuvant','Néo-adjuvant','Palliatif','Prophylactique')`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS statut ENUM('Planifié','En cours','Terminé','Pause','Suspendu','Abandonné') DEFAULT 'Planifié'`); } catch (e) { }
     await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS protocole VARCHAR(200)`);
     await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS ligne_traitement INT`);
     await conn.execute(`ALTER TABLE traitements ADD COLUMN IF NOT EXISTS nb_cycles_prevus INT`);
@@ -303,6 +310,9 @@ const initMedicalTables = async () => {
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_medicaux TEXT`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_familiaux TEXT`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS num_dossier_hospitalier VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS profession VARCHAR(200)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_tabac VARCHAR(100) DEFAULT 'Inconnu'`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_alcool VARCHAR(100) DEFAULT 'Inconnu'`);
 
     // Anapath table
     await conn.execute(`
@@ -355,9 +365,9 @@ const initMedicalTables = async () => {
       )
     `);
 
-    try { await conn.execute(`ALTER TABLE biologie ADD COLUMN patient_id VARCHAR(36)`); } catch(e) {}
-    try { await conn.execute(`ALTER TABLE biologie ADD CONSTRAINT fk_bio_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE`); } catch(e) {}
-    try { await conn.execute(`ALTER TABLE biologie MODIFY COLUMN case_id VARCHAR(36) NULL`); } catch(e) {}
+    try { await conn.execute(`ALTER TABLE biologie ADD COLUMN patient_id VARCHAR(36)`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE biologie ADD CONSTRAINT fk_bio_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE biologie MODIFY COLUMN case_id VARCHAR(36) NULL`); } catch (e) { }
 
     // Imagerie table
     await conn.execute(`
@@ -382,6 +392,7 @@ const initMedicalTables = async () => {
         id VARCHAR(36) PRIMARY KEY,
         case_id VARCHAR(36) NOT NULL,
         date_consultation DATE NOT NULL,
+        motif VARCHAR(200),
         poids DECIMAL(5,2),
         taille DECIMAL(5,2),
         tension_arterielle VARCHAR(20),
@@ -537,12 +548,27 @@ const initMedicalTables = async () => {
     `);
 
     // Migration for lab_requests
-    try { await conn.execute(`ALTER TABLE lab_requests ADD COLUMN patient_id VARCHAR(36)`); } catch(e) {}
-    try { await conn.execute(`ALTER TABLE lab_requests ADD CONSTRAINT fk_lab_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE`); } catch(e) {}
-    try { await conn.execute(`ALTER TABLE lab_requests MODIFY COLUMN case_id VARCHAR(36) NULL`); } catch(e) {}
+    try { await conn.execute(`ALTER TABLE lab_requests ADD COLUMN patient_id VARCHAR(36)`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE lab_requests ADD CONSTRAINT fk_lab_patient FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE lab_requests MODIFY COLUMN case_id VARCHAR(36) NULL`); } catch (e) { }
+
+    // Documents table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS documents (
+        id VARCHAR(36) PRIMARY KEY,
+        patient_id VARCHAR(36) NOT NULL,
+        titre VARCHAR(200),
+        categorie VARCHAR(100),
+        date_doc DATE,
+        fichier VARCHAR(500),
+        created_by VARCHAR(36),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE
+      )
+    `);
 
     console.log('✅ Medical modules tables initialized');
-  } catch(e) {
+  } catch (e) {
     console.error('Medical tables error:', e.message);
   } finally {
     conn.release();

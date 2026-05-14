@@ -1,37 +1,52 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import { getAuditLogs } from '../utils/api';
+import api from '../utils/api';
+import { format, parseISO } from 'date-fns';
+import { fr } from 'date-fns/locale';
 
-export function AuditLogs() {
+export default function AuditLogs() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    getAuditLogs().then(r => setLogs(r.data)).finally(() => setLoading(false));
+    api.get('/stats/audit')
+      .then(res => setLogs(res.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
   }, []);
 
-  const actionColor = {
-    'LOGIN': 'badge-green',
-    'CREATE_PATIENT': 'badge-blue',
-    'UPDATE_PATIENT': 'badge-orange',
-    'DELETE_PATIENT': 'badge-red',
-    'CREATE_CASE': 'badge-purple',
-    'UPDATE_CASE': 'badge-orange',
-    'MERGE_PATIENTS': 'badge-red',
-    'CREATE_USER': 'badge-blue',
-    'UPDATE_USER': 'badge-orange',
-    'DELETE_USER': 'badge-red',
+  const getActionLabel = (action) => {
+    const map = {
+      'LOGIN': 'Connexion',
+      'CREATE_PATIENT': 'Création Patient',
+      'UPDATE_PATIENT': 'Modification Patient',
+      'DELETE_PATIENT': 'Suppression Patient',
+      'CREATE_CASE': 'Nouveau Diagnostic',
+      'UPDATE_CASE': 'Modif. Diagnostic',
+      'ADD_TRAITEMENT': 'Ajout Traitement',
+      'CREATE_USER': 'Nouveau Utilisateur',
+      'DELETE_USER': 'Utilisateur Désactivé',
+      'UPDATE_USER': 'Modif. Utilisateur',
+      'MERGE_PATIENTS': 'Fusion de Patients',
+    };
+    return map[action] || action;
+  };
+
+  const getLogBadge = (action) => {
+    if (action.includes('DELETE')) return 'badge-red';
+    if (action.includes('CREATE') || action.includes('ADD')) return 'badge-green';
+    if (action.includes('UPDATE')) return 'badge-blue';
+    return 'badge-gray';
   };
 
   return (
-    <Layout title="Journaux d'Audit">
+    <Layout title="Traçabilité des Actions">
+      <div style={{ marginBottom: 24 }}>
+        <h1 style={{ fontSize: 24, fontWeight: 800, margin: 0 }}>Traçabilité & Audit</h1>
+        <p style={{ color: 'var(--text-secondary)', fontSize: 14 }}>Historique complet des actions effectuées sur la plateforme par tous les utilisateurs.</p>
+      </div>
+
       <div className="card">
-        <div className="card-header">
-          <h2>Journal d'Audit ({logs.length} entrées)</h2>
-          <div className="alert alert-info" style={{ margin: 0, padding: '6px 12px', fontSize: 12 }}>
-            🔒 Toutes les actions des utilisateurs sont journalisées
-          </div>
-        </div>
         {loading ? (
           <div className="loading-center"><div className="spinner" /></div>
         ) : (
@@ -39,30 +54,37 @@ export function AuditLogs() {
             <table>
               <thead>
                 <tr>
-                  <th>Date/Heure</th>
+                  <th>Date & Heure</th>
                   <th>Utilisateur</th>
+                  <th>Rôle</th>
                   <th>Action</th>
-                  <th>Table</th>
+                  <th>Cible</th>
                   <th>Détails</th>
                   <th>IP</th>
                 </tr>
               </thead>
               <tbody>
-                {logs.map(l => (
-                  <tr key={l.id}>
-                    <td style={{ fontSize: 12.5, color: '#64748b', whiteSpace: 'nowrap' }}>
-                      {new Date(l.created_at).toLocaleString('fr-DZ')}
+                {logs.map(log => (
+                  <tr key={log.id}>
+                    <td style={{ fontSize: 12, fontWeight: 600 }}>
+                      {format(parseISO(log.created_at), 'dd/MM/yyyy HH:mm:ss', { locale: fr })}
                     </td>
                     <td>
-                      <div style={{ fontWeight: 600, fontSize: 13 }}>{l.prenom} {l.nom}</div>
-                      <div style={{ fontSize: 11, color: '#94a3b8' }}>{l.email}</div>
+                      <div style={{ fontWeight: 700 }}>{log.user_prenom} {log.user_nom}</div>
                     </td>
-                    <td><span className={`badge ${actionColor[l.action] || 'badge-gray'}`}>{l.action}</span></td>
-                    <td style={{ fontSize: 12.5, fontFamily: 'JetBrains Mono' }}>{l.table_name || '-'}</td>
-                    <td style={{ fontSize: 12, maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                      {l.details ? JSON.stringify(JSON.parse(l.details)) : '-'}
+                    <td><span className="badge badge-gray">{log.user_role}</span></td>
+                    <td>
+                      <span className={`badge ${getLogBadge(log.action)}`}>
+                        {getActionLabel(log.action)}
+                      </span>
                     </td>
-                    <td style={{ fontSize: 12, fontFamily: 'JetBrains Mono', color: '#94a3b8' }}>{l.ip_address || '-'}</td>
+                    <td style={{ fontSize: 11, color: '#64748b', fontFamily: 'monospace' }}>
+                      {log.record_id ? log.record_id.split('-')[0] : '-'}
+                    </td>
+                    <td style={{ maxWidth: 300, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12, color: '#64748b' }}>
+                      {log.details || '-'}
+                    </td>
+                    <td style={{ fontSize: 11 }}>{log.ip_address || '-'}</td>
                   </tr>
                 ))}
               </tbody>

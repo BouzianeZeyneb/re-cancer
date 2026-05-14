@@ -32,6 +32,8 @@ import {
 import { renderToStaticMarkup } from 'react-dom/server';
 import '../styles/MapOverlays.css';
 import { getAllWilayasData } from '../data/wilayasData';
+import api from '../utils/api';
+import { ChartEngine, mapSourceToData } from './Statistiques';
 
 // Constants & Data
 const ALGERIA_CENTER = [28.0, 2.7];
@@ -57,26 +59,7 @@ const RISK_LEVELS = {
   critical: { color: '#ef4444', label: 'Critique' }
 };
 
-const CANCER_DATA = [
-  { nom: 'Alger', lat: 36.7538, lng: 3.0588, count: 1450 },
-  { nom: 'Oran', lat: 35.6987, lng: -0.6308, count: 980 },
-  { nom: 'Constantine', lat: 36.3650, lng: 6.6147, count: 720 },
-  { nom: 'Annaba', lat: 36.9000, lng: 7.7667, count: 880 },
-  { nom: 'Sétif', lat: 36.1911, lng: 5.4137, count: 650 },
-  { nom: 'Batna', lat: 35.5558, lng: 6.1736, count: 420 },
-  { nom: 'Tlemcen', lat: 34.8783, lng: -1.3150, count: 390 },
-  { nom: 'Blida', lat: 36.4700, lng: 2.8277, count: 580 },
-  { nom: 'Béjaïa', lat: 36.7512, lng: 5.0645, count: 410 },
-  { nom: 'Skikda', lat: 36.8778, lng: 5.9069, count: 520 },
-  { nom: 'Chlef', lat: 36.1647, lng: 1.3318, count: 310 },
-  { nom: 'Ouargla', lat: 31.9493, lng: 5.3250, count: 280 },
-  { nom: 'Tizi Ouzou', lat: 36.7118, lng: 4.0459, count: 490 },
-  { nom: 'Bordj Bou Arréridj', lat: 36.0732, lng: 4.7611, count: 350 },
-  { nom: 'Mascara', lat: 35.3964, lng: 0.1403, count: 290 },
-  { nom: 'Mostaganem', lat: 35.9374, lng: 0.0892, count: 330 },
-  { nom: 'Djelfa', lat: 34.6725, lng: 3.2631, count: 240 },
-  { nom: 'Ghardaïa', lat: 32.4909, lng: 3.6735, count: 180 }
-];
+// Removed STATIC CANCER_DATA
 
 const PRELOADED_ZONES = [
   { id: '1', name: 'Zone Industrielle Annaba', wilaya: '23 Annaba', city: 'El Hadjar', lat: 36.9, lng: 7.7, type: 'factory', risk: 'high', notes: 'Sidérurgie intensive' },
@@ -114,6 +97,12 @@ export default function CarteSIG() {
   const [errors, setErrors] = useState({});
   const [mapRef, setMapRef] = useState(null);
   const [algeriaGeoJson, setAlgeriaGeoJson] = useState(null);
+  const [cancerData, setCancerData] = useState([]);
+  const [loadingMap, setLoadingMap] = useState(false);
+  const [clinicalFilters, setClinicalFilters] = useState({ type: '', topography: '', morphology: '' });
+  const [localizedStats, setLocalizedStats] = useState(null);
+  const [statsModalOpen, setStatsModalOpen] = useState(false);
+  const [selectedWilaya, setSelectedWilaya] = useState(null);
 
   useEffect(() => {
     fetch('https://raw.githubusercontent.com/datasets/geo-countries/master/data/countries.geojson')
@@ -127,7 +116,48 @@ export default function CarteSIG() {
         if (country) setAlgeriaGeoJson(country);
       })
       .catch(err => console.error("Error fetching map data:", err));
+    
+    refreshCancerData();
   }, []);
+
+  const refreshCancerData = async (filters = clinicalFilters) => {
+    try {
+      setLoadingMap(true);
+      const res = await api.get('/stats/dashboard', { params: { 
+        type_cancer: filters.type,
+        topographie_icdo3: filters.topography,
+        morphologie_icdo3: filters.morphology
+      }});
+      
+      // Convert backend parWilaya to map points
+      const allWilayas = getAllWilayasData();
+      const mapped = res.data.parWilaya.map(w => {
+        const wInfo = allWilayas.find(wd => wd.nom.toLowerCase().includes(w.name.toLowerCase()));
+        return {
+          nom: w.name,
+          count: w.value,
+          lat: wInfo ? wInfo.lat : 28,
+          lng: wInfo ? wInfo.lng : 2
+        };
+      });
+      setCancerData(mapped);
+    } catch(e) { console.error(e); }
+    finally { setLoadingMap(false); }
+  };
+
+  const fetchLocalizedStats = async (wilayaName) => {
+    try {
+      setSelectedWilaya(wilayaName);
+      const res = await api.get('/stats/localized', { params: { 
+        wilaya: wilayaName,
+        type_cancer: clinicalFilters.type,
+        topographie_icdo3: clinicalFilters.topography,
+        morphologie_icdo3: clinicalFilters.morphology
+      }});
+      setLocalizedStats(res.data);
+      setStatsModalOpen(true);
+    } catch(e) { console.error(e); }
+  };
 
   const maskGeoJson = useMemo(() => {
     if (!algeriaGeoJson) return null;
@@ -166,7 +196,10 @@ export default function CarteSIG() {
     return wd ? wd.communes : [];
   }, [formData.wilaya, allWilayasData]);
 
-  const maxCases = Math.max(...CANCER_DATA.map(d => d.count));
+  const maxCases = useMemo(() => {
+    if (cancerData.length === 0) return 1;
+    return Math.max(...cancerData.map(d => d.count));
+  }, [cancerData]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(zones));
@@ -319,7 +352,63 @@ export default function CarteSIG() {
                 </div>
               </div>
 
-              {/* Selection tool */}
+              {/* Panneau de Diagnostic Clinique */}
+              <div className="sig-section clinical-panel" style={{ 
+                background: 'linear-gradient(135deg, rgba(59,130,246,0.08) 0%, rgba(37,99,235,0.05) 100%)', 
+                border: '1px solid rgba(59,130,246,0.2)', 
+                borderRadius: 20, 
+                padding: '20px',
+                boxShadow: '0 4px 15px rgba(59,130,246,0.05)'
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 15 }}>
+                   <div style={{ background: '#2563eb', padding: 6, borderRadius: 8 }}>
+                      <Beaker size={16} color="white" />
+                   </div>
+                   <span style={{ fontSize: 13, fontWeight: 800, color: '#1e293b', letterSpacing: 0.3 }}>Filtres Épidémiologiques</span>
+                </div>
+                
+                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                  <div className="form-group">
+                    <label style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Type de Pathologie</label>
+                    <select 
+                      className="form-control" 
+                      value={clinicalFilters.type} 
+                      onChange={e => { const f = {...clinicalFilters, type: e.target.value}; setClinicalFilters(f); refreshCancerData(f); }}
+                      style={{ fontSize: 13, background: 'white', borderRadius: 10, height: 42 }}
+                    >
+                      <option value="">Tous les cancers</option>
+                      <option value="Solide">Tumeurs Solides</option>
+                      <option value="Liquide">Hémopathies Malignes</option>
+                    </select>
+                  </div>
+
+                  <div className="form-group">
+                    <label style={{ fontSize: 10, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', marginBottom: 6, display: 'block' }}>Topographie (Code C)</label>
+                    <div style={{ position: 'relative' }}>
+                      <input 
+                        className="form-control" 
+                        placeholder="Ex: C61.9 (Prostate)..." 
+                        value={clinicalFilters.topography} 
+                        onChange={e => setClinicalFilters({...clinicalFilters, topography: e.target.value})}
+                        onBlur={() => refreshCancerData()}
+                        style={{ fontSize: 13, background: 'white', borderRadius: 10, height: 42, paddingLeft: 35 }}
+                      />
+                      <MapPin size={14} style={{ position: 'absolute', left: 12, top: 14, color: '#94a3b8' }} />
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 5 }}>
+                    <button className="btn btn-primary" style={{ flex: 2, fontSize: 12, height: 38, borderRadius: 8 }} onClick={() => refreshCancerData()}>
+                      Calculer l'impact
+                    </button>
+                    <button className="btn btn-outline" style={{ flex: 1, fontSize: 12, height: 38, borderRadius: 8, padding: 0 }} onClick={() => { setClinicalFilters({type:'',topography:'',morphology:''}); refreshCancerData({type:'',topography:'',morphology:''}) }}>
+                      Reset
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Selection tool tool */}
               <div className="sig-section">
                 <button 
                   className={`btn btn-outline ${interactMode === 'select' ? 'active' : ''}`} 
@@ -508,25 +597,32 @@ export default function CarteSIG() {
                 )}
 
                 {/* CANCER LAYER */}
-                {(viewMode === 'cancer' || viewMode === 'fusion') && CANCER_DATA.map((c, idx) => {
+                {(viewMode === 'cancer' || viewMode === 'fusion') && cancerData.map((c, idx) => {
                   const score = viewMode === 'fusion' ? calculateFusionScore(c) : null;
-                  const radius = 20000 + (c.count / maxCases) * 60000;
-                  const color = c.count / maxCases > 0.7 ? '#ef4444' : c.count / maxCases > 0.4 ? '#f97316' : '#10b981';
+                  const radius = 25000 + (c.count / maxCases) * 80000;
+                  const color = c.count / maxCases > 0.7 ? '#ef4444' : c.count / maxCases > 0.4 ? '#f97316' : '#3b82f6';
                   
                   return (
                     <Circle 
                       key={`c-${idx}`}
                       center={[c.lat, c.lng]}
                       radius={radius}
-                      pathOptions={{ fillColor: color, fillOpacity: viewMode === 'fusion' ? 0.3 : 0.15, color: color, weight: 1 }}
+                      pathOptions={{ fillColor: color, fillOpacity: viewMode === 'fusion' ? 0.35 : 0.2, color: color, weight: 1.5, className: 'interactive-circle' }}
+                      eventHandlers={{
+                        click: (e) => {
+                          L.DomEvent.stopPropagation(e);
+                          fetchLocalizedStats(c.nom);
+                        }
+                      }}
                     >
                       <Popup>
                         <div className="custom-popup-body">
                           <div className="custom-popup-header">{c.nom}</div>
-                          <div style={{ fontSize: 13, color: '#64748b' }}>{c.count} cas récents</div>
+                          <div style={{ fontSize: 13, color: '#0f172a', fontWeight: 800 }}>{c.count} cas détectés</div>
+                          <div style={{ fontSize: 11, color: '#64748b' }}>Cliquez pour voir les statistiques détaillées</div>
                           {score && (
-                            <div style={{ marginTop: 10, padding: '6px 10px', background: '#fef3c7', borderRadius: 8, color: '#92400e', fontSize: 12, fontWeight: 700 }}>
-                              Score de corrélation: {score}
+                            <div style={{ marginTop: 10, padding: '6px 10px', background: 'rgba(37,99,235,0.1)', borderRadius: 8, color: '#2563eb', fontSize: 11, fontWeight: 700 }}>
+                              Indice d'exposition: {score}
                             </div>
                           )}
                         </div>
@@ -631,6 +727,64 @@ export default function CarteSIG() {
           </div>
 
         </div>
+
+        {/* MODAL ANALYSES LOCALISÉES */}
+        {statsModalOpen && localizedStats && (
+          <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(15,23,42,0.6)', backdropFilter: 'blur(8px)', zIndex: 99999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+             <div style={{ width: '900px', maxWidth: '100%', background: 'white', borderRadius: 32, boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', overflow: 'hidden', display: 'flex', flexDirection: 'column', maxHeight: '90vh', border: '1px solid rgba(255,255,255,0.2)' }}>
+                <div style={{ padding: '30px 40px', background: '#0f172a', color: 'white', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                   <div>
+                      <h2 style={{ margin: 0, fontSize: 24, fontWeight: 900 }}>Analyses de Zone : {selectedWilaya}</h2>
+                      <p style={{ margin: 0, opacity: 0.7, fontSize: 13 }}>Rapport épidémiologique localisé — {localizedStats.total} cas analysés</p>
+                   </div>
+                   <button onClick={() => setStatsModalOpen(false)} style={{ background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white', width: 44, height: 44, borderRadius: '50%', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      <X size={24} />
+                   </button>
+                </div>
+                
+                <div style={{ padding: 40, overflowY: 'auto', flex: 1, background: '#f8fafc' }}>
+                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 20, marginBottom: 30 }}>
+                      <KPICard label="Total Cas (Local)" value={localizedStats.total} trend="Fréquence locale" />
+                      <KPICard label="Stade IV / Critique" value={localizedStats.stadeIV} trend="Gravité moyenne" />
+                      <KPICard label="Ratio Masculinité" value={localizedStats.parSexe.find(s=>s.name==='Hommes')?.value || 0} trend="Données brutes" />
+                   </div>
+
+                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 30 }}>
+                      <div className="card" style={{ padding: 25, borderRadius: 20, background: 'white', border: '1px solid #e2e8f0' }}>
+                         <h4 style={{ fontSize: 13, fontWeight: 800, marginBottom: 20, color: '#475569' }}>Répartition par Stade Clinique</h4>
+                         <div style={{ height: 300 }}>
+                            <ChartEngine config={{ type: 'donut', data: localizedStats.parStade, color: '#3b82f6', showLegend: true }} />
+                         </div>
+                      </div>
+                      <div className="card" style={{ padding: 25, borderRadius: 20, background: 'white', border: '1px solid #e2e8f0' }}>
+                         <h4 style={{ fontSize: 13, fontWeight: 800, marginBottom: 20, color: '#475569' }}>Pyramide des Âges Locale</h4>
+                         <div style={{ height: 300 }}>
+                            <ChartEngine config={{ type: 'bar-v', data: localizedStats.parAge, color: '#10b981', showLegend: false }} />
+                         </div>
+                      </div>
+                      
+                      {/* NEW CHARTS */}
+                      <div className="card" style={{ padding: 25, borderRadius: 20, background: 'white', border: '1px solid #e2e8f0' }}>
+                         <h4 style={{ fontSize: 13, fontWeight: 800, marginBottom: 20, color: '#475569' }}>Topographies (ICD-O-3)</h4>
+                         <div style={{ height: 300 }}>
+                            <ChartEngine config={{ type: 'bar-v', data: localizedStats.parTopographie, color: '#8b5cf6', showLegend: false }} />
+                         </div>
+                      </div>
+                      <div className="card" style={{ padding: 25, borderRadius: 20, background: 'white', border: '1px solid #e2e8f0' }}>
+                         <h4 style={{ fontSize: 13, fontWeight: 800, marginBottom: 20, color: '#475569' }}>Morphologies (ICD-O-3)</h4>
+                         <div style={{ height: 300 }}>
+                            <ChartEngine config={{ type: 'bar-v', data: localizedStats.parMorphologie, color: '#f59e0b', showLegend: false }} />
+                         </div>
+                      </div>
+                   </div>
+                </div>
+
+                <div style={{ padding: '20px 40px', background: 'white', borderTop: '1px solid #e2e8f0', textAlign: 'right' }}>
+                   <button className="btn btn-primary" onClick={() => window.print()} style={{ borderRadius: 12 }}>Imprimer le Rapport Local</button>
+                </div>
+             </div>
+          </div>
+        )}
 
       </div>
     </Layout>
