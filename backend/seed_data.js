@@ -11,9 +11,13 @@ const pool = mysql.createPool({
 });
 
 const NOMS = ["Hadj-Ali", "Benbouali", "Mansouri", "Belkacem", "Meziane", "Brahimi", "Ait-Ahmed", "Ziane", "Merbah", "Hamdad", "Oussalah", "Ferhat", "Guermazi", "Boudiaf", "Krim", "Abane", "Ben M'hidi", "Lotfi", "Amrouche", "Feraoun"];
+
 const PRENOMS_H = ["Mohamed", "Amine", "Mustapha", "Lyes", "Sami", "Karim", "Yacine", "Nabil", "Redouane", "Walid", "Fayçal", "Abdelkrim"];
+
 const PRENOMS_F = ["Nadia", "Sonia", "Lynda", "Meriem", "Yasmine", "Imane", "Leila", "Kahina", "Assia", "Amel", "Zohra", "Fatma-Zohra"];
+
 const WILAYAS = ["16 Alger", "31 Oran", "25 Constantine", "09 Blida", "23 Annaba", "19 Sétif", "13 Tlemcen", "35 Boumerdès", "06 Béjaïa", "15 Tizi Ouzou"];
+
 const CANCERS = ["Sein", "Poumon", "Colorectal", "Prostate", "Estomac", "Vessie"];
 
 async function seed() {
@@ -25,38 +29,45 @@ async function seed() {
     const adminId = users[0]?.id;
 
     if (!adminId) {
-       console.error("❌ Aucun utilisateur trouvé. Veuillez d'abord créer un compte admin.");
-       return;
+      console.error("❌ Aucun utilisateur trouvé. Crée un admin d'abord.");
+      return;
     }
 
-    // Supprimer les anciennes données de test
+    // 🔥 Disable foreign keys
     await conn.execute('SET FOREIGN_KEY_CHECKS = 0');
-    await conn.execute('TRUNCATE TABLE bilans_anapath');
-    await conn.execute('TRUNCATE TABLE seances_traitement');
-    await conn.execute('TRUNCATE TABLE decisions_rcp');
-    await conn.execute('TRUNCATE TABLE bilans_biologiques');
-    await conn.execute('TRUNCATE TABLE bilans_imagerie');
-    await conn.execute('TRUNCATE TABLE rendez_vous');
-    await conn.execute('TRUNCATE TABLE styles_vie_valeurs');
+
+    // 🧹 ONLY EXISTING TABLES IN YOUR DB
+    await conn.execute('TRUNCATE TABLE anapath');
     await conn.execute('TRUNCATE TABLE cancer_cases');
     await conn.execute('TRUNCATE TABLE patients');
+
     await conn.execute('SET FOREIGN_KEY_CHECKS = 1');
 
+    // 👨‍⚕️ Insert fake data
     for (let i = 0; i < 50; i++) {
       const pId = uuidv4();
       const sexe = Math.random() > 0.5 ? 'M' : 'F';
-      const nom = NOMS[Math.floor(Math.random() * NOMS.length)];
-      const prenom = sexe === 'M' ? PRENOMS_H[Math.floor(Math.random() * PRENOMS_H.length)] : PRENOMS_F[Math.floor(Math.random() * PRENOMS_F.length)];
-      const wilaya = WILAYAS[Math.floor(Math.random() * WILAYAS.length)];
-      const dateNais = `${1950 + Math.floor(Math.random() * 40)}-${String(1 + Math.floor(Math.random() * 11)).padStart(2, '0')}-${String(1 + Math.floor(Math.random() * 27)).padStart(2, '0')}`;
 
-      // Insert Patient
+      const nom = NOMS[Math.floor(Math.random() * NOMS.length)];
+      const prenom = sexe === 'M'
+        ? PRENOMS_H[Math.floor(Math.random() * PRENOMS_H.length)]
+        : PRENOMS_F[Math.floor(Math.random() * PRENOMS_F.length)];
+
+      const wilaya = WILAYAS[Math.floor(Math.random() * WILAYAS.length)];
+
+      const dateNais =
+        `${1950 + Math.floor(Math.random() * 40)}-${String(1 + Math.floor(Math.random() * 11)).padStart(2, '0')
+        }-${String(1 + Math.floor(Math.random() * 27)).padStart(2, '0')
+        }`;
+
+      // Patient
       await conn.execute(
-        'INSERT INTO patients (id, nom, prenom, date_naissance, sexe, wilaya, adresse, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-        [pId, nom, prenom, dateNais, sexe, wilaya, `Adresse ${i+1}, ${wilaya}`, adminId]
+        `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, wilaya, adresse, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [pId, nom, prenom, dateNais, sexe, wilaya, `Adresse ${i + 1}`, adminId]
       );
 
-      // Insert Cancer Case
+      // Cancer case
       const cId = uuidv4();
       const typeC = Math.random() > 0.2 ? 'Solide' : 'Liquide';
       const sousType = CANCERS[Math.floor(Math.random() * CANCERS.length)];
@@ -65,14 +76,15 @@ async function seed() {
       const dateDiag = `202${Math.floor(Math.random() * 5)}-${String(1 + Math.floor(Math.random() * 11)).padStart(2, '0')}-01`;
 
       await conn.execute(
-        'INSERT INTO cancer_cases (id, patient_id, type_cancer, sous_type, stade, statut_patient, date_diagnostic, created_by) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+        `INSERT INTO cancer_cases (id, patient_id, type_cancer, sous_type, stade, statut_patient, date_diagnostic, created_by)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
         [cId, pId, typeC, sousType, stade, statut, dateDiag, adminId]
       );
     }
 
-    console.log("✅ 30 dossiers patients injectés avec succès !");
+    console.log("✅ 50 dossiers patients injectés avec succès !");
   } catch (err) {
-    console.error("❌ Erreur lors de l'injection :", err);
+    console.error("❌ Erreur :", err.message);
   } finally {
     conn.release();
     process.exit();

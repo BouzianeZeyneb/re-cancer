@@ -5,7 +5,10 @@ const authMiddleware = async (req, res, next) => {
   try {
     const authHeader = req.headers.authorization || req.headers.Authorization;
     const token = authHeader?.split(' ')[1];
-    if (!token) return res.status(401).json({ message: 'Token manquant' });
+    
+    if (!token) {
+      return res.status(401).json({ message: 'Token manquant' });
+    }
 
     const decoded = jwt.verify(token, process.env.JWT_SECRET || 'cancer_registry_secret_2024');
     const [users] = await pool.execute('SELECT id, nom, prenom, email, role, actif FROM users WHERE id = ?', [decoded.id]);
@@ -22,8 +25,8 @@ const authMiddleware = async (req, res, next) => {
 };
 
 const requireRole = (...roles) => (req, res, next) => {
-  if (!roles.includes(req.user.role)) {
-    return res.status(403).json({ message: 'Accès refusé' });
+  if (!req.user || !roles.includes(req.user.role)) {
+    return res.status(403).json({ message: 'Accès refusé : rôle insuffisant' });
   }
   next();
 };

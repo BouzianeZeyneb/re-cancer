@@ -131,6 +131,9 @@ export default function Layout({ children, title }) {
           <div className="nav-section-title">MODULES</div>
           <NavItem to="/analyses-biologie" label="Analyses Biologie" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8"/><polyline points="8 3 8 8 3 8"/><line x1="12" y1="11" x2="12" y2="17"/><line x1="9" y1="14" x2="15" y2="14"/></svg>} />
           <NavItem to="/laboratoire" label="Laboratoire" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10 2v7.51"/><path d="M14 2v7.51"/><path d="M2 22h20"/><path d="M9 13.51h6"/><path d="M4.53 13.51a3 3 0 0 0-2.53 3.53C2.26 19.34 3.73 21 5.61 21h12.78c1.88 0 3.35-1.66 3.61-3.96a3 3 0 0 0-2.53-3.53l-1.47-.2v-3.71A2.5 2.5 0 0 0 15.5 7H14V2H10v5H8.5a2.5 2.5 0 0 0-2.5 2.5v3.71l-1.47.2z"/></svg>} />
+          {(isAdmin || user?.role === 'pharmacien') && (
+            <NavItem to="/pharmacie" label="Pharmacie & Stocks" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z"/><path d="m8.5 8.5 7 7"/></svg>} />
+          )}
 
           {(isAdmin || user?.role === 'medecin') && (
             <>

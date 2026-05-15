@@ -191,6 +191,10 @@ router.post('/chimio-seances', authMiddleware, createChimioSeance);
 router.get('/documents/patient/:patientId', authMiddleware, getDocumentsByPatient);
 router.post('/documents', authMiddleware, createDocument);
 
+// Pharmacy routes
+const pharmacieRoutes = require('./pharmacieRoutes');
+router.use('/pharmacie', authMiddleware, pharmacieRoutes);
+
 // Lab requests
 const { createRequest, getRequestsByCase, getRequestsForLabo, uploadPdf, getLabRequestsByPatient } = require('../controllers/labRequestsController');
 const uploadLab = require('../middleware/upload');
