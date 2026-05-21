@@ -66,4 +66,14 @@ export const getLabRequestsForLabo = () => api.get('/lab-requests/labo');
 export const createLabRequest = (data) => api.post('/lab-requests', data);
 export const uploadLabPdf = (id, data) => api.put(`/lab-requests/${id}/upload`, data, { headers: { 'Content-Type': 'multipart/form-data' } });
 
+// Pharmacy
+export const getPharmacyStocks = (params) => api.get('/pharmacie/stock', { params });
+export const getPharmacyStats = () => api.get('/pharmacie/stats');
+export const createPharmacyDrug = (data) => api.post('/pharmacie/stock', data);
+export const updatePharmacyDrug = (id, data) => api.put(`/pharmacie/stock/${id}`, data);
+export const deletePharmacyDrug = (id) => api.delete(`/pharmacie/stock/${id}`);
+export const getPharmacyAlternatives = (drugId) => api.get(`/pharmacie/alternatives/${drugId}`);
+export const getPendingValidations = () => api.get('/pharmacie/prescriptions');
+export const updatePharmacyValidation = (id, data) => api.put(`/pharmacie/valider/${id}`, data);
+
 export default api;

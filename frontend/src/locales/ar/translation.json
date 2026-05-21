@@ -1,0 +1,42 @@
+{
+  "sidebar": {
+    "dashboard": "لوحة القيادة",
+    "patients": "المرضى",
+    "statistics": "الإحصائيات",
+    "settings": "الإعدادات",
+    "logout": "تسجيل الخروج"
+  },
+  "patient_detail": {
+    "title": "ملف المريض",
+    "subtitle": "قسم الأورام · مستشفى سطيف",
+    "back": "رجوع",
+    "active": "نشط",
+    "update": "تحديث",
+    "edit": "تعديل",
+    "schedule": "حجز موعد",
+    "gender_age": "الجنس / العمر",
+    "cancer_type": "نوع السرطان",
+    "phone": "رقم الهاتف",
+    "admission": "القبول",
+    "male": "ذكر",
+    "female": "أنثى",
+    "years": "سنوات",
+    "vitals": {
+      "pulse": "النبض",
+      "bp": "ضغط الدم",
+      "temp": "الحرارة",
+      "spo2": "الأكسجين"
+    },
+    "tabs": {
+      "summary": "ملخص",
+      "diagnosis": "التشخيص",
+      "pathology": "علم الأمراض",
+      "biology": "البيولوجيا",
+      "imaging": "التصوير",
+      "treatment": "العلاج",
+      "consultations": "الاستشارات",
+      "side_effects": "الآثار الجانبية",
+      "documents": "المستندات"
+    }
+  }
+}

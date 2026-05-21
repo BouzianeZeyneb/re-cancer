@@ -95,8 +95,8 @@ router.put('/notifications/:id/read', authMiddleware, markAsRead);
 router.put('/notifications/read-all', authMiddleware, markAllAsRead);
 
 // RCP routes
-const { 
-  getAllRCP, getRCPById, createRCP, updateRCP, deleteRCP, 
+const {
+  getAllRCP, getRCPById, createRCP, updateRCP, deleteRCP,
   addCaseToRCP, updateRCPCaseDecision, removeCaseFromRCP,
   getRCPMessages, saveRCPMessage, updateRCPDecisionFinale,
   joinRCPByCode, inviteDoctorToRCP
@@ -128,8 +128,8 @@ const {
 
 // Unified Dynamic Fields Endpoints
 router.get('/champs-dynamiques', authMiddleware, getChampsDynamiques);
-router.post('/champs-dynamiques', authMiddleware, requireRole('admin','medecin'), createChampDynamique);
-router.put('/champs-dynamiques/:id', authMiddleware, requireRole('admin','medecin'), updateChampDynamique);
+router.post('/champs-dynamiques', authMiddleware, requireRole('admin', 'medecin'), createChampDynamique);
+router.put('/champs-dynamiques/:id', authMiddleware, requireRole('admin', 'medecin'), updateChampDynamique);
 router.delete('/champs-dynamiques/:id', authMiddleware, requireRole('admin'), deleteChampDynamique);
 
 // Unified Dynamic Values Endpoints
@@ -191,13 +191,17 @@ router.post('/chimio-seances', authMiddleware, createChimioSeance);
 router.get('/documents/patient/:patientId', authMiddleware, getDocumentsByPatient);
 router.post('/documents', authMiddleware, createDocument);
 
+// Pharmacy routes
+const pharmacieRoutes = require('./pharmacieRoutes');
+router.use('/pharmacie', authMiddleware, pharmacieRoutes);
+
 // Lab requests
 const { createRequest, getRequestsByCase, getRequestsForLabo, uploadPdf, getLabRequestsByPatient } = require('../controllers/labRequestsController');
 const uploadLab = require('../middleware/upload');
-router.post('/lab-requests', authMiddleware, requireRole('admin', 'medecin'), createRequest);
+router.post('/lab-requests', authMiddleware, requireRole('admin', 'medecin', 'laboratoire'), createRequest);
 router.get('/lab-requests/case/:caseId', authMiddleware, getRequestsByCase);
 router.get('/lab-requests/patient/:patientId', authMiddleware, getLabRequestsByPatient);
-router.get('/lab-requests/labo', authMiddleware, requireRole('laboratoire'), getRequestsForLabo);
+router.get('/lab-requests/labo', authMiddleware, requireRole('laboratoire', 'admin', 'medecin'), getRequestsForLabo);
 router.put('/lab-requests/:id/upload', authMiddleware, requireRole('laboratoire'), uploadLab.single('pdf'), uploadPdf);
 
 const { getAll, create, update, remove, getValues, saveValue } = require('../controllers/customFieldsController');
@@ -211,4 +215,6 @@ router.delete('/custom-fields/:id', authMiddleware, requireRole('admin'), remove
 // Endpoints for retrieving and saving field values (available to all authenticated users)
 router.get('/custom-fields/:id/value/:recordId', authMiddleware, getValues);
 router.post('/custom-fields/:id/value', authMiddleware, saveValue);
+
+module.exports = router;
 

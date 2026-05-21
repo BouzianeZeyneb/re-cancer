@@ -72,3 +72,42 @@ exports.remove = async (req, res) => {
     res.status(500).json({ message: 'Erreur serveur' });
   }
 };
+
+/**
+ * GET /custom-fields/:id/value/:recordId
+ * Retrieve stored value for a specific custom field and record
+ */
+exports.getValues = async (req, res) => {
+  try {
+    const { id, recordId } = req.params;
+    const [rows] = await pool.execute(
+      `SELECT valeur FROM valeurs_dynamiques WHERE champ_id = ? AND record_id = ?`,
+      [id, recordId]
+    );
+    res.json(rows.length ? rows[0] : { valeur: null });
+  } catch (err) {
+    console.error('Error fetching custom field value:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};
+
+/**
+ * POST /custom-fields/:id/value
+ * Save a value for a custom field (payload: { recordId, valeur })
+ */
+exports.saveValue = async (req, res) => {
+  try {
+    const { id } = req.params;
+    const { recordId, valeur } = req.body;
+    const uuid = uuidv4();
+    await pool.execute(
+      `INSERT INTO valeurs_dynamiques (id, champ_id, record_id, valeur, created_at) VALUES (?,?,?,?, CURRENT_TIMESTAMP)
+       ON DUPLICATE KEY UPDATE valeur = VALUES(valeur)`,
+      [uuid, id, recordId, valeur]
+    );
+    res.json({ message: 'Valeur enregistrée' });
+  } catch (err) {
+    console.error('Error saving custom field value:', err);
+    res.status(500).json({ message: 'Erreur serveur' });
+  }
+};

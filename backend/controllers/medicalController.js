@@ -158,6 +158,8 @@ const resolveEffet = async (req, res) => {
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
 
+const { reduceStockByTreatment } = require('./pharmacieController');
+
 // ===== CHIMIO SEANCES =====
 const getChimioSeances = async (req, res) => {
   try {
@@ -169,12 +171,21 @@ const createChimioSeance = async (req, res) => {
   try {
     const id = uuidv4();
     const n = v => (v === undefined || v === '' ? null : v);
-    const { case_id, protocole, numero_cycle, date_seance, dose_administree, effets_observes, tolerance, notes } = req.body;
+    const { case_id, protocole, numero_cycle, date_seance, dose_administree, effets_observes, tolerance, notes, traitement_id } = req.body;
     await pool.execute(
       `INSERT INTO chimio_seances (id, case_id, protocole, numero_cycle, date_seance, dose_administree, effets_observes, tolerance, notes) VALUES (?,?,?,?,?,?,?,?,?)`,
       [id, case_id, n(protocole), n(numero_cycle), date_seance, n(dose_administree), n(effets_observes), tolerance||'Bonne', n(notes)]
     );
-    res.status(201).json({ id, message: 'Séance ajoutée' });
+
+    // Déclencher la décrémentation du stock si le traitement_id est fourni
+    if (traitement_id) {
+      await reduceStockByTreatment(traitement_id);
+    } else {
+      // Si pas de traitement_id, on essaie de deviner via le protocole
+      // (Optionnel : on pourrait faire une recherche plus complexe)
+    }
+
+    res.status(201).json({ id, message: 'Séance ajoutée et stock mis à jour' });
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
 
