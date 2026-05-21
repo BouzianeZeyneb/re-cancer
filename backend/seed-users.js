@@ -6,16 +6,16 @@ const { v4: uuidv4 } = require('uuid');
 const seedUsers = async () => {
   const users = [
     { email: 'admin@registre-cancer.dz', pw: 'admin123', role: 'admin', nom: 'Admin', prenom: 'Système' },
-    { email: 'medecin@registre-cancer.dz', pw: 'medecin123', role: 'medecin', nom: 'Médecin', prenom: 'Test' },
-    { email: 'anapath@registre-cancer.dz', pw: 'anapath123', role: 'anapath', nom: 'Anapath', prenom: 'Test' },
-    { email: 'laboratoire@registre-cancer.dz', pw: 'labo123', role: 'laboratoire', nom: 'Labo', prenom: 'Test' },
+    { email: 'medecin@hospital.dz', pw: 'password123', role: 'medecin', nom: 'Médecin', prenom: 'Test' },
+    { email: 'anapath@hospital.dz', pw: 'password123', role: 'anapath', nom: 'Anapath', prenom: 'Test' },
+    { email: 'labo@hospital.dz', pw: 'password123', role: 'laboratoire', nom: 'Labo', prenom: 'Test' },
   ];
 
   try {
     for (const u of users) {
       const hashed = await bcrypt.hash(u.pw, 10);
       const [existing] = await pool.execute('SELECT id FROM users WHERE email = ?', [u.email]);
-      
+
       if (existing.length === 0) {
         await pool.execute(
           'INSERT INTO users (id, nom, prenom, email, password, role) VALUES (?, ?, ?, ?, ?, ?)',

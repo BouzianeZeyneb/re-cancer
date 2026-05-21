@@ -341,6 +341,14 @@ export default function CasForm() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.patient_id || !form.date_diagnostic) return setError('Champs obligatoires manquants');
+    
+    // Validation des champs dynamiques obligatoires
+    const missingChamps = champsDynamiques.filter(c => c.obligatoire && !valeursDynamiques[c.id]);
+    if (missingChamps.length > 0) {
+      setError(`Veuillez remplir les champs obligatoires : ${missingChamps.map(c => c.nom).join(', ')}`);
+      return;
+    }
+
     setLoading(true);
     try {
       const payload = { ...form, sous_type: showCustomType ? customType : form.sous_type };
@@ -360,332 +368,376 @@ export default function CasForm() {
 
 
   return (
-    <Layout title="Nouveau Diagnostic">
-      <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 24 }}>
-        <button className="btn btn-outline btn-sm" onClick={() => navigate(-1)}>←</button>
-        <div style={{ flex: 1 }}>
-          <h1 style={{ fontSize: 22, fontWeight: 800, margin: 0, fontFamily: 'Outfit' }}>Nouveau Diagnostic</h1>
-          <div style={{ fontSize: 13, color: 'var(--text-secondary)' }}>Complétion du dossier oncologique</div>
+    <Layout title="">
+      <div style={{ padding: '0 12px 40px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 32 }}>
+          <button onClick={() => navigate(-1)}
+            style={{ 
+              background: 'white', border: '1.5px solid #f1f5f9', cursor: 'pointer', 
+              width: 44, height: 44, color: '#64748b', 
+              borderRadius: 14, display: 'flex', alignItems: 'center', justifyContent: 'center',
+              boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)', transition: 'all 0.2s' 
+            }}>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+          </button>
+          <div style={{ flex: 1 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', margin: 0, fontFamily: 'Outfit' }}>Nouveau Dossier Cancer</h1>
+            <div style={{ fontSize: 14, color: '#64748b', fontWeight: 500, marginTop: 4 }}>Standardisation FIGO / TNM / ICD-O-3</div>
+          </div>
+          <div style={{ display: 'flex', gap: 12 }}>
+             <button type="button" 
+                onClick={() => { setVoiceMode(!voiceMode); if(!voiceMode) toast.success('Agent Vocal Activé'); }}
+                style={{ 
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 12,
+                    background: voiceMode ? '#fef2f2' : 'white', 
+                    border: `1.5px solid ${voiceMode ? '#fee2e2' : '#f1f5f9'}`,
+                    color: voiceMode ? '#ef4444' : '#64748b',
+                    fontWeight: 800, fontSize: 13, cursor: 'pointer'
+                }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                {voiceMode ? 'DICTÉE ACTIVE' : 'MODE VOCAL'}
+             </button>
+          </div>
         </div>
-      </div>
 
       {error && <div className="alert alert-error" style={{ marginBottom: 16 }}>{error}</div>}
 
       <form onSubmit={handleSubmit}>
-        {/* Section 1: Informations Cliniques */}
-        <div className="form-section-modern">
-          <div className="form-section-header">
-            <span style={{ fontSize: 20 }}>👤</span>
-            <h3>Informations Cliniques</h3>
-          </div>
-          <div className="form-section-body">
-            <div className="form-grid-modern">
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 32 }}>
+          {/* Section 1: Informations Cliniques */}
+          <div style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e69ff' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0 }}>Parcours Patient</h3>
+            </div>
+            
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
               <div className="form-group" style={{ position: 'relative' }}>
-                <label className="form-label">Patient *</label>
-                <div className="search-bar">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>Patient Référent *</label>
+                <div style={{ position: 'relative' }}>
                   <input 
-                    placeholder="Rechercher par nom..." 
+                    className="form-control"
+                    style={{ height: 50, paddingLeft: 44, borderRadius: 14, fontWeight: 700, fontSize: 15 }}
+                    placeholder="Chercher par nom ou carte..." 
                     value={patientSearch} 
                     onChange={e => {
                       setPatientSearch(e.target.value);
                       if (e.target.value === '') set('patient_id', '');
                     }} 
                   />
+                  <div style={{ position: 'absolute', left: 16, top: '50%', transform: 'translateY(-50%)', color: '#94a3b8' }}>
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+                  </div>
                 </div>
                 {patientSearch && !form.patient_id && (
-                  <div className="search-results">
+                  <div style={{ position: 'absolute', top: '100%', left: 0, right: 0, zIndex: 100, background: 'white', borderRadius: 16, border: '1.5px solid #f1f5f9', marginTop: 8, boxShadow: '0 20px 25px -5px rgba(0,0,0,0.1)', overflow: 'hidden' }}>
                     {filteredPatients.slice(0, 5).map(p => (
-                      <div key={p.id} className="search-result-item" onClick={() => {
-                        set('patient_id', p.id);
-                        setPatientSearch(`${p.prenom} ${p.nom}`);
-                      }}>
-                        <div className="search-result-name">{p.prenom} {p.nom}</div>
-                        <div className="search-result-meta">{p.num_carte_nationale || 'Sans ID'}</div>
+                      <div key={p.id} onClick={() => { set('patient_id', p.id); setPatientSearch(`${p.prenom} ${p.nom}`); }}
+                        style={{ padding: '12px 20px', cursor: 'pointer', borderBottom: '1px solid #f1f5f9', transition: 'all 0.1s' }}
+                        onMouseEnter={e => e.currentTarget.style.background = '#f8fafc'}
+                        onMouseLeave={e => e.currentTarget.style.background = 'white'}>
+                        <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{p.prenom} {p.nom}</div>
+                        <div style={{ fontSize: 11, color: '#64748b', fontWeight: 600 }}>ID: {p.num_carte_nationale || '—'}</div>
                       </div>
                     ))}
-                    {filteredPatients.length === 0 && <div className="search-result-item">Aucun patient trouvé</div>}
                   </div>
                 )}
-                {form.patient_id && <div style={{ fontSize: 11, color: 'var(--primary)', marginTop: 4, fontWeight: 600 }}>Patient sélectionné ✓</div>}
+                {form.patient_id && <div style={{ fontSize: 12, color: '#10b981', marginTop: 8, fontWeight: 800, display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><polyline points="20 6 9 17 4 12"/></svg>
+                    IDENTITÉ VÉRIFIÉE
+                </div>}
+              </div>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Date Diagnostic *</label>
+                  <input type="date" className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.date_diagnostic} onChange={e => set('date_diagnostic', e.target.value)} required />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Premiers Symptômes</label>
+                  <input type="date" className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.date_premiers_symptomes} onChange={e => set('date_premiers_symptomes', e.target.value)} />
+                </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Date du diagnostic *</label>
-                <input type="date" className="form-control" value={form.date_diagnostic} onChange={e => set('date_diagnostic', e.target.value)} required />
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Établissement Diagnostic</label>
+                <input className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} placeholder="Hôpital, Clinique..." value={form.etablissement_diagnostiqueur} onChange={e => set('etablissement_diagnostiqueur', e.target.value)} />
               </div>
 
               <div className="form-group">
-                <label className="form-label">Date 1ers symptômes</label>
-                <input type="date" className="form-control" value={form.date_premiers_symptomes} onChange={e => set('date_premiers_symptomes', e.target.value)} />
-              </div>
-
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Établissement diagnostiqueur</label>
-                <input className="form-control" placeholder="Lieu de diagnostic..." value={form.etablissement_diagnostiqueur} onChange={e => set('etablissement_diagnostiqueur', e.target.value)} />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Médecin diagnostiqueur</label>
-                <input className="form-control" placeholder="Dr. XYZ..." value={form.medecin_diagnostiqueur} onChange={e => set('medecin_diagnostiqueur', e.target.value)} />
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Médecin Traitant (Interne)</label>
-                <select className="form-control" value={form.medecin_traitant} onChange={e => set('medecin_traitant', e.target.value)}>
-                  <option value="">Non assigné</option>
-                  {medecins.map(m => <option key={m.id} value={m.id}>Dr. {m.prenom} {m.nom}</option>)}
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Médecin Référent</label>
+                <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.medecin_traitant} onChange={e => set('medecin_traitant', e.target.value)}>
+                  <option value="">Non sollicité</option>
+                  {medecins.map(m => <option key={m.id} value={m.id}>Dr. {m.nom} {m.prenom}</option>)}
                 </select>
               </div>
-
+              
               <div className="form-group">
-                <label className="form-label">Médecin Inapte (si applicable)</label>
-                <select className="form-control" value={form.medecin_inapte} onChange={e => set('medecin_inapte', e.target.value)}>
-                  <option value="">Aucun</option>
-                  {medecins.map(m => <option key={m.id} value={m.id}>Dr. {m.prenom} {m.nom}</option>)}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Base de diagnostic</label>
-                <select className="form-control" value={form.base_diagnostic} onChange={e => set('base_diagnostic', e.target.value)}>
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Base du diagnostic</label>
+                <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.base_diagnostic} onChange={e => set('base_diagnostic', e.target.value)}>
                   <option value="">Sélectionner</option>
                   {['Histologie','Cytologie','Imagerie','Clinique','Marqueurs tumoraux'].map(o => <option key={o} value={o}>{o}</option>)}
                 </select>
               </div>
             </div>
           </div>
-        </div>
 
-        {/* Section 2: 🧬 Tumeur & Histologie */}
-        <div className="form-section-modern">
-          <div className="form-section-header">
-            <span style={{ fontSize: 20 }}>🧬</span>
-            <h3>Tumeur & Histologie</h3>
-          </div>
-          <div className="form-section-body">
-            <div className="form-grid-modern">
-              <div className="form-group">
-                <label className="form-label">Type Majoritaire *</label>
-                <select className="form-control" value={form.type_cancer} onChange={e => set('type_cancer', e.target.value)} required>
-                  <option value="Solide">🧫 Solide</option>
-                  <option value="Liquide">🩸 Liquide (Hématologie)</option>
-                </select>
+          {/* Section 2: 🧬 Tumeur & Histologie */}
+          <div style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)' }}>
+             <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fef2f2', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ef4444' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0 }}>Histologie & Localisation</h3>
+            </div>
+
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Type Majeur *</label>
+                  <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800, color: '#ef4444' }} value={form.type_cancer} onChange={e => set('type_cancer', e.target.value)} required>
+                    <option value="Solide">🧫 Tumeur Solide</option>
+                    <option value="Liquide">🩸 Hémopathie</option>
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Organe / Siège *</label>
+                  <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800 }} value={showCustomType ? '__custom__' : form.sous_type} onChange={e => handleTypeChange(e.target.value)} required>
+                    <option value="">Sélectionner</option>
+                    {ALL_CANCER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
+                    <option value="__custom__">+ Autre siège...</option>
+                  </select>
+                </div>
               </div>
 
-              <div className="form-group">
-                <label className="form-label">Sous-type / Nom du cancer *</label>
-                <select className="form-control" value={showCustomType ? '__custom__' : form.sous_type} onChange={e => handleTypeChange(e.target.value)} required>
-                  <option value="">Sélectionner</option>
-                  {ALL_CANCER_TYPES.map(t => <option key={t} value={t}>{t}</option>)}
-                  <option value="__custom__">+ Autre nom personnalisé...</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Organe / Localisation</label>
-                <select className="form-control" value={form.localisation} onChange={e => set('localisation', e.target.value)}>
-                  <option value="">Sélectionner</option>
-                  {ALL_LOCALISATIONS.map(l => <option key={l}>{l}</option>)}
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Latéralité</label>
-                <select className="form-control" value={form.lateralite} onChange={e => set('lateralite', e.target.value)}>
-                  <option value="">N/A</option>
-                  <option value="Droit">Droit</option>
-                  <option value="Gauche">Gauche</option>
-                  <option value="Bilatéral">Bilatéral</option>
-                </select>
-              </div>
-
-              <div className="form-group">
-                <label className="form-label">Code CIM-10</label>
-                <input className="form-control" placeholder="Ex: C50..." value={form.code_cim10} onChange={e => set('code_cim10', e.target.value)} />
-              </div>
-
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">Type Histologique</label>
-                <input className="form-control" placeholder="Ex: Carcinome canalaire infiltrant..." value={form.type_histologique} onChange={e => set('type_histologique', e.target.value)} />
+              <div style={{ display: 'grid', gridTemplateColumns: '1.5fr 1fr', gap: 20 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Localisation Précise</label>
+                  <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.localisation} onChange={e => set('localisation', e.target.value)}>
+                    <option value="">Sélectionner</option>
+                    {ALL_LOCALISATIONS.map(l => <option key={l}>{l}</option>)}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Latéralité</label>
+                  <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.lateralite} onChange={e => set('lateralite', e.target.value)}>
+                    <option value="">N/A</option>
+                    <option value="Droit">Droit</option>
+                    <option value="Gauche">Gauche</option>
+                    <option value="Bilatéral">Bilatéral</option>
+                  </select>
+                </div>
               </div>
 
               <div className="form-group">
-                <label className="form-label">Grade</label>
-                <input className="form-control" placeholder="I, II, III..." value={form.grade_histologique} onChange={e => set('grade_histologique', e.target.value)} />
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Type Histologique (Libellé)</label>
+                <input className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} placeholder="Ex: Adénocarcinome..." value={form.type_histologique} onChange={e => set('type_histologique', e.target.value)} />
               </div>
 
-              <div className="form-group">
-                <label className="form-label">N° Bloc / CompteRendu</label>
-                <input className="form-control" placeholder="N°..." value={form.numero_bloc} onChange={e => set('numero_bloc', e.target.value)} />
-              </div>
-
-              <div style={sectionTitle}>Standard International (ICD-O-3)</div>
-              <div className="form-group">
-                <label className="form-label">Topographie (Code C...)</label>
-                <input className="form-control" placeholder="ex: C50.4" value={form.topographie_icdo3} onChange={e => set('topographie_icdo3', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Morphologie (Code M...)</label>
-                <input className="form-control" placeholder="ex: M8500/3" value={form.morphologie_icdo3} onChange={e => set('morphologie_icdo3', e.target.value)} />
-              </div>
-              <div className="form-group">
-                <label className="form-label">Code Comportement</label>
-                <select className="form-control" value={form.comportement_code} onChange={e => set('comportement_code', e.target.value)}>
-                  <option value="0">0: Bénin</option>
-                  <option value="1">1: Incertain / Borderline</option>
-                  <option value="2">2: In situ (Non envahissant)</option>
-                  <option value="3">3: Malignité primaire (Envahissant)</option>
-                  <option value="6">6: Malignité secondaire (Métastatique)</option>
-                </select>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Code Topographie (C...)</label>
+                  <input className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800, fontFamily: 'JetBrains Mono', color: '#6366f1' }} placeholder="C50.9" value={form.topographie_icdo3} onChange={e => set('topographie_icdo3', e.target.value)} />
+                </div>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Code Morphologie (M...)</label>
+                  <input className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800, fontFamily: 'JetBrains Mono', color: '#6366f1' }} placeholder="M8500/3" value={form.morphologie_icdo3} onChange={e => set('morphologie_icdo3', e.target.value)} />
+                </div>
               </div>
             </div>
           </div>
         </div>
 
         {/* Section 3: 📊 Stadification & Marqueurs */}
-        <div className="form-section-modern">
-          <div className="form-section-header">
-            <span style={{ fontSize: 20 }}>📊</span>
-            <h3>Stadification & Marqueurs</h3>
-          </div>
-          <div className="form-section-body">
-            <div className="form-grid-modern" style={{ gridTemplateColumns: 'repeat(12, 1fr)' }}>
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">TNM — T</label>
-                <select className="form-control" value={form.tnm_t} onChange={e => set('tnm_t', e.target.value)}>
-                   <option value=""></option>
+        <div style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, marginTop: 32, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: '#f0f9ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#0ea5e9' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 13.5-13.5z"/></svg>
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0 }}>Stadification TNM & Biomarqueurs</h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 20 }}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>T (Tumeur)</label>
+                <select className="form-control" style={{ height: 50, borderRadius: 14, fontWeight: 900, fontSize: 18, color: '#0f172a', border: '2px solid #f1f5f9' }} value={form.tnm_t} onChange={e => set('tnm_t', e.target.value)}>
+                   <option value="">—</option>
                    {(cancerInfo?.T || ['T1','T2','T3','T4']).map(t => <option key={t}>{t}</option>)}
                 </select>
               </div>
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">N</label>
-                <select className="form-control" value={form.tnm_n} onChange={e => set('tnm_n', e.target.value)}>
-                   <option value=""></option>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>N (Adénopathie)</label>
+                <select className="form-control" style={{ height: 50, borderRadius: 14, fontWeight: 900, fontSize: 18, color: '#0f172a', border: '2px solid #f1f5f9' }} value={form.tnm_n} onChange={e => set('tnm_n', e.target.value)}>
+                   <option value="">—</option>
                    {(cancerInfo?.N || ['N0','N1','N2','N3']).map(n => <option key={n}>{n}</option>)}
                 </select>
               </div>
-              <div className="form-group" style={{ gridColumn: 'span 2' }}>
-                <label className="form-label">M</label>
-                <select className="form-control" value={form.tnm_m} onChange={e => set('tnm_m', e.target.value)}>
-                   <option value=""></option>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>M (Métastase)</label>
+                <select className="form-control" style={{ height: 50, borderRadius: 14, fontWeight: 900, fontSize: 18, color: '#0f172a', border: '2px solid #f1f5f9' }} value={form.tnm_m} onChange={e => set('tnm_m', e.target.value)}>
+                   <option value="">—</option>
                    {(cancerInfo?.M || ['M0','M1']).map(m => <option key={m}>{m}</option>)}
                 </select>
               </div>
-              <div className="form-group" style={{ gridColumn: 'span 3' }}>
-                <label className="form-label">Stade Globl</label>
-                <select className="form-control" value={form.stade} onChange={e => set('stade', e.target.value)}>
-                   <option value=""></option>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>Stade Final</label>
+                <select className="form-control" style={{ height: 50, borderRadius: 14, fontWeight: 900, fontSize: 18, color: '#2563eb', border: '2px solid #dbeafe', background: '#f0f9ff' }} value={form.stade} onChange={e => set('stade', e.target.value)}>
+                   <option value="">—</option>
                    {(cancerInfo?.stades || ['I','II','III','IV']).map(s => <option key={s}>{s}</option>)}
                 </select>
               </div>
-              <div className="form-group" style={{ gridColumn: 'span 3' }}>
-                <label className="form-label">État</label>
-                <select className="form-control" value={form.etat} onChange={e => set('etat', e.target.value)}>
+              <div className="form-group">
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>État Extension</label>
+                <select className="form-control" style={{ height: 50, borderRadius: 14, fontWeight: 900, fontSize: 15 }} value={form.etat} onChange={e => set('etat', e.target.value)}>
                    <option value="Localisé">Localisé</option>
                    <option value="Métastase">Métastatique</option>
                 </select>
               </div>
+            </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 4' }}>
-                <label className="form-label">Taille (cm)</label>
-                <input type="number" step="0.1" className="form-control" placeholder="ex: 2.5" value={form.taille_cancer} onChange={e => set('taille_cancer', e.target.value)} />
-              </div>
-              <div className="form-group" style={{ gridColumn: 'span 4' }}>
-                <label className="form-label">Ganglions envahis</label>
-                <input type="number" className="form-control" placeholder="Nombre..." value={form.nb_ganglions_envahis} onChange={e => set('nb_ganglions_envahis', e.target.value)} />
-              </div>
-              <div className="form-group" style={{ gridColumn: 'span 4' }}>
-                <label className="form-label">Sites métastatiques</label>
-                <input className="form-control" placeholder="Os, Foie, Cerveau..." value={form.sites_metastatiques} onChange={e => set('sites_metastatiques', e.target.value)} />
-              </div>
+            <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 20 }}>
+                <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Taille Tumeur (cm)</label>
+                    <input type="number" step="0.1" className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} placeholder="0.0" value={form.taille_cancer} onChange={e => set('taille_cancer', e.target.value)} />
+                </div>
+                <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Récepteur Œstrogène (ER)</label>
+                    <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.recepteur_er} onChange={e => set('recepteur_er', e.target.value)}>
+                        <option value="Inconnu">Inconnu</option>
+                        <option value="Positif">Positif (+)</option>
+                        <option value="Négatif">Négatif (-)</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Récepteur Progestérone (PR)</label>
+                    <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.recepteur_pr} onChange={e => set('recepteur_pr', e.target.value)}>
+                        <option value="Inconnu">Inconnu</option>
+                        <option value="Positif">Positif (+)</option>
+                        <option value="Négatif">Négatif (-)</option>
+                    </select>
+                </div>
+                <div className="form-group">
+                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>HER2 (Statut IHC)</label>
+                    <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.her2} onChange={e => set('her2', e.target.value)}>
+                        <option value="Inconnu">Inconnu</option>
+                        <option value="Positif">Positif (+)</option>
+                        <option value="Négatif">Négatif (-)</option>
+                    </select>
+                </div>
+            </div>
+        </div>
 
-              <div className="form-group" style={{ gridColumn: 'span 4' }}>
-                <label className="form-label">Récepteur ER</label>
-                <select className="form-control" value={form.recepteur_er} onChange={e => set('recepteur_er', e.target.value)}>
-                   <option value="Inconnu">Inconnu / Non Testé</option>
-                   <option value="Positif">Positif (+)</option>
-                   <option value="Négatif">Négatif (-)</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ gridColumn: 'span 4' }}>
-                <label className="form-label">Récepteur PR</label>
-                <select className="form-control" value={form.recepteur_pr} onChange={e => set('recepteur_pr', e.target.value)}>
-                   <option value="Inconnu">Inconnu / Non Testé</option>
-                   <option value="Positif">Positif (+)</option>
-                   <option value="Négatif">Négatif (-)</option>
-                </select>
-              </div>
-              <div className="form-group" style={{ gridColumn: 'span 4' }}>
-                <label className="form-label">HER2</label>
-                <select className="form-control" value={form.her2} onChange={e => set('her2', e.target.value)}>
-                   <option value="Inconnu">Inconnu / Non Testé</option>
-                   <option value="Positif">Positif (+)</option>
-                   <option value="Négatif">Négatif (-)</option>
-                </select>
-              </div>
+        {/* Section 4: 📝 Champs Dynamiques */}
+        {champsDynamiques.length > 0 && (
+          <div style={{ background: '#f8fafc', borderRadius: 28, border: '1.5px dashed #cbd5e1', padding: 32, marginTop: 32 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b', border: '1.5px solid #e2e8f0' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 13.5-13.5z"/></svg>
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0 }}>Attributs Spécifiques (Générateur)</h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 24 }}>
+                {champsDynamiques.map(c => (
+                  <div className="form-group" key={c.id}>
+                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#64748b', marginBottom: 8, display: 'block' }}>{c.nom} {c.obligatoire ? '*' : ''}</label>
+                    {c.type_champ === 'liste' ? (
+                      <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700, background: 'white', border: '1.5px solid #e2e8f0' }}
+                        value={valeursDynamiques[c.id] || ''} 
+                        onChange={e => setValeursDynamiques({ ...valeursDynamiques, [c.id]: e.target.value })}
+                        required={c.obligatoire}>
+                        <option value="">Sélectionner</option>
+                        {c.options_liste?.split(',').map(o => <option key={o.trim()} value={o.trim()}>{o.trim()}</option>)}
+                      </select>
+                    ) : c.type_champ === 'booleen' ? (
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 10, height: 48 }}>
+                        <input type="checkbox" checked={valeursDynamiques[c.id] === 'true'} onChange={e => setValeursDynamiques({ ...valeursDynamiques, [c.id]: String(e.target.checked) })} style={{ width: 20, height: 20 }} />
+                        <span style={{ fontSize: 14, fontWeight: 600, color: '#475569' }}>Oui / Non</span>
+                      </div>
+                    ) : (
+                      <input 
+                        type={c.type_champ === 'nombre' ? 'number' : c.type_champ === 'date' ? 'date' : 'text'}
+                        className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700, background: 'white', border: '1.5px solid #e2e8f0' }}
+                        value={valeursDynamiques[c.id] || ''}
+                        onChange={e => setValeursDynamiques({ ...valeursDynamiques, [c.id]: e.target.value })}
+                        required={c.obligatoire}
+                        placeholder={c.nom}
+                      />
+                    )}
+                  </div>
+                ))}
             </div>
           </div>
-        </div>
+        )}
 
         {/* Section 5: 🏥 Suivi & État Vital */}
-        <div className="form-section-modern">
-          <div className="form-section-header">
-            <span style={{ fontSize: 20 }}>🏥</span>
-            <h3>Suivi & État Vital</h3>
-          </div>
-          <div className="form-section-body">
-            <div className="form-grid-modern">
+        <div style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, marginTop: 32, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 28 }}>
+                <div style={{ width: 40, height: 40, borderRadius: 12, background: '#f8fafc', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e293b' }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                </div>
+                <h3 style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', margin: 0 }}>Suivi Post-Thérapeutique</h3>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 20 }}>
               <div className="form-group">
-                <label className="form-label">Statut Vital</label>
-                <select className="form-control" value={form.statut_vital} onChange={e => set('statut_vital', e.target.value)}>
-                  <option value="Vivant">Vivant</option>
-                  <option value="Décédé">Décédé</option>
-                  <option value="Inconnu">Inconnu / Perdu de vue</option>
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>Statut Vital</label>
+                <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800, border: '1.5px solid #f1f5f9' }} value={form.statut_vital} onChange={e => set('statut_vital', e.target.value)}>
+                  <option value="Vivant">VIVANT</option>
+                  <option value="Décédé">DÉCÉDÉ</option>
+                  <option value="Inconnu">PERDU DE VUE</option>
                 </select>
               </div>
               <div className="form-group">
-                <label className="form-label">Dernières nouvelles</label>
-                <input type="date" className="form-control" value={form.date_dernieres_nouvelles} onChange={e => set('date_dernieres_nouvelles', e.target.value)} />
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>Dernier Contact Clinique</label>
+                <input type="date" className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800, border: '1.5px solid #f1f5f9' }} value={form.date_dernieres_nouvelles} onChange={e => set('date_dernieres_nouvelles', e.target.value)} />
               </div>
               {form.statut_vital === 'Décédé' && (
-                <>
-                  <div className="form-group">
-                    <label className="form-label">Date du décès</label>
-                    <input type="date" className="form-control" value={form.date_deces} onChange={e => set('date_deces', e.target.value)} />
-                  </div>
-                  <div className="form-group">
-                    <label className="form-label">Cause du décès</label>
-                    <select className="form-control" value={form.cause_deces} onChange={e => set('cause_deces', e.target.value)}>
-                      <option value="">Sélectionner...</option>
-                      <option value="Cancer">Liée au cancer</option>
-                      <option value="Traitement">Liée à la toxicité du traitement</option>
-                      <option value="Autre">Autre cause (non liée)</option>
-                      <option value="Inconnue">Inconnue</option>
-                    </select>
-                  </div>
-                </>
+                <div className="form-group">
+                  <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#ef4444', marginBottom: 8, display: 'block' }}>Date du Décès</label>
+                  <input type="date" className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800, border: '1.5px solid #fecaca', background: '#fef2f2' }} value={form.date_deces} onChange={e => set('date_deces', e.target.value)} />
+                </div>
               )}
             </div>
-          </div>
+            
+            {form.statut_vital === 'Décédé' && (
+              <div className="form-group" style={{ marginTop: 24 }}>
+                <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8', marginBottom: 8, display: 'block' }}>Cause Déterminante</label>
+                <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 800, border: '1.5px solid #f1f5f9' }} value={form.cause_deces} onChange={e => set('cause_deces', e.target.value)}>
+                  <option value="">Sélectionner...</option>
+                  <option value="Cancer">Liée au processus cancéreux</option>
+                  <option value="Traitement">Liée à la toxicité thérapeutique (iaterogène)</option>
+                  <option value="Autre">Comorbidité ou cause externe</option>
+                  <option value="Inconnue">Non documentée</option>
+                </select>
+              </div>
+            )}
         </div>
 
-        <style>{`
-          .form-section-modern { background: white; border-radius: 16px; border: 1px solid #e2e8f0; margin-bottom: 24px; overflow: hidden; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05); }
-          .form-section-header { padding: 16px 24px; background: #f8fafc; border-bottom: 1px solid #f1f5f9; display: flex; alignItems: center; gap: 12px; }
-          .form-section-header h3 { margin: 0; font-size: 16px; font-weight: 700; color: #1e293b; }
-          .form-section-body { padding: 24px; }
-          .form-grid-modern { display: grid; grid-template-columns: repeat(2, 1fr); gap: 20px; }
-          .section-title-clinical { grid-column: span 2; font-size: 14px; font-weight: 800; color: #3b82f6; border-bottom: 2px solid #3b82f6; padding-bottom: 8px; margin-top: 10px; margin-bottom: 5px; text-transform: uppercase; }
-        `}</style>
+        {isListening && (
+           <div style={{ position: 'fixed', bottom: 40, left: '50%', transform: 'translateX(-50%)', zIndex: 1000, background: 'rgba(15,23,42,0.95)', backdropFilter: 'blur(10px)', padding: '16px 32px', borderRadius: 100, border: '2px solid #ef4444', display: 'flex', alignItems: 'center', gap: 20, boxShadow: '0 20px 50px rgba(0,0,0,0.3)', minWidth: 400 }}>
+                <div style={{ width: 14, height: 14, borderRadius: '50%', background: '#ef4444', animation: 'voice-pulse 1.2s infinite' }} />
+                <div style={{ flex: 1 }}>
+                    <div style={{ fontSize: 10, fontWeight: 900, color: '#ef4444', textTransform: 'uppercase', letterSpacing: 1 }}>Agent AI en écoute</div>
+                    <div style={{ fontSize: 14, color: 'white', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{voiceTranscript || 'Dites un champ (ex: "Stade", "Tumeur")...'}</div>
+                </div>
+                <button type="button" onClick={stopVoice} style={{ background: '#ef4444', border: 'none', color: 'white', padding: '8px 16px', borderRadius: 50, fontWeight: 800, cursor: 'pointer', fontSize: 12 }}>ARRÊTER</button>
+           </div>
+        )}
 
-        <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end', marginTop: 8 }}>
-          <button type="button" className="btn btn-outline" onClick={() => navigate(-1)}>Annuler</button>
-          <button type="submit" className="btn btn-primary" disabled={loading}>
-            {loading ? '⏳ Enregistrement...' : '💾 Créer le diagnostic'}
+        <div style={{ display: 'flex', gap: 20, justifyContent: 'flex-end', marginTop: 40, borderTop: '1.5px solid #f1f5f9', paddingTop: 40 }}>
+          <button type="button" onClick={() => navigate(-1)} style={{ padding: '0 32px', height: 50, borderRadius: 16, border: '1.5px solid #f1f5f9', background: 'white', color: '#475569', fontWeight: 700, cursor: 'pointer' }}>Annuler</button>
+          <button type="submit" disabled={loading} style={{ padding: '0 48px', height: 50, borderRadius: 16, background: '#0f172a', border: 'none', color: 'white', fontWeight: 900, fontSize: 15, cursor: 'pointer', boxShadow: '0 10px 30px rgba(15,23,42,0.3)' }}>
+            {loading ? 'ENREGISTREMENT...' : 'CONFIRMER & CRÉER DOSSIER'}
           </button>
         </div>
       </form>
+      </div>
+      <style>{`
+        @keyframes voice-pulse { 0% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(1.4); } 100% { opacity: 1; transform: scale(1); } }
+      `}</style>
     </Layout>
   );
 }

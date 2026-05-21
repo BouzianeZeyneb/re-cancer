@@ -22,7 +22,7 @@ const initDatabase = async () => {
         prenom VARCHAR(100) NOT NULL,
         email VARCHAR(150) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role ENUM('admin','medecin','laboratoire','anapath') NOT NULL DEFAULT 'medecin',
+        role ENUM('admin','medecin','laboratoire','anapath','pharmacien') NOT NULL DEFAULT 'medecin',
         actif BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -255,6 +255,20 @@ const initDynamicTables = async () => {
 
     try { await conn.execute(`ALTER TABLE parametres_globaux ADD COLUMN obligatoire BOOLEAN DEFAULT false`); } catch (e) { }
 
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS custom_fields (
+        id VARCHAR(36) PRIMARY KEY,
+        target_page ENUM('patient','diagnostic','traitement','consultation','laboratoire') NOT NULL,
+        position VARCHAR(200) NOT NULL,
+        field_name VARCHAR(100) NOT NULL,
+        field_type ENUM('text','textarea','number','date','dropdown','checkbox','file') NOT NULL,
+        required BOOLEAN DEFAULT false,
+        options TEXT,
+        created_by VARCHAR(36),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
     console.log('✅ Dynamic tables initialized');
   } catch (e) {
     console.error('Dynamic tables error:', e.message);
@@ -313,6 +327,7 @@ const initMedicalTables = async () => {
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS profession VARCHAR(200)`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_tabac VARCHAR(100) DEFAULT 'Inconnu'`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_alcool VARCHAR(100) DEFAULT 'Inconnu'`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT false`);
 
     // Anapath table
     await conn.execute(`
@@ -567,7 +582,60 @@ const initMedicalTables = async () => {
       )
     `);
 
-    console.log('✅ Medical modules tables initialized');
+    // ===== PHARMACY MODULE TABLES =====
+
+    // Medicaments Stock
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS medicaments_stock (
+        id VARCHAR(36) PRIMARY KEY,
+        nom_dci VARCHAR(200) UNIQUE NOT NULL,
+        dosage VARCHAR(50),
+        forme VARCHAR(100),
+        stock_actuel INT DEFAULT 0,
+        seuil_alerte INT DEFAULT 10,
+        seuil_rupture INT DEFAULT 0,
+        prix DECIMAL(10,2) DEFAULT 0.00,
+        date_expiration DATE,
+        categorie ENUM('Chimio', 'Therapie Ciblee', 'Support', 'Adjuvant') DEFAULT 'Chimio',
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+      )
+    `);
+
+    // Migrations for existing table
+    try { await conn.execute(`ALTER TABLE medicaments_stock ADD COLUMN seuil_rupture INT DEFAULT 0`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE medicaments_stock ADD COLUMN prix DECIMAL(10,2) DEFAULT 0.00`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE medicaments_stock ADD COLUMN date_expiration DATE`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE medicaments_stock ADD UNIQUE INDEX idx_nom_dci (nom_dci)`); } catch (e) { }
+
+    // Fixed Alternatives Table
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS alternatives_medicaments (
+        id VARCHAR(36) PRIMARY KEY,
+        drug_id VARCHAR(36) NOT NULL,
+        alternative_nom VARCHAR(200) NOT NULL,
+        justification TEXT,
+        FOREIGN KEY (drug_id) REFERENCES medicaments_stock(id) ON DELETE CASCADE
+      )
+    `);
+
+    // Pharmacy Prescription Validations
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS prescriptions_validations (
+        id VARCHAR(36) PRIMARY KEY,
+        traitement_id VARCHAR(36) NOT NULL,
+        pharmacien_id VARCHAR(36),
+        statut ENUM('En attente', 'Validé', 'Refusé', 'Ajusté') DEFAULT 'En attente',
+        commentaire TEXT,
+        bsa_calculee DECIMAL(5,2),
+        dose_ajustee VARCHAR(100),
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        FOREIGN KEY (traitement_id) REFERENCES traitements(id) ON DELETE CASCADE,
+        FOREIGN KEY (pharmacien_id) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
+    console.log('✅ Medical and Pharmacy modules tables initialized');
   } catch (e) {
     console.error('Medical tables error:', e.message);
   } finally {

@@ -2,25 +2,45 @@ const { pool } = require('../config/database');
 
 const getDashboardStats = async (req, res) => {
   try {
-    const { year, month } = req.query;
+    const { year, month, type_cancer, sexe, age_min, age_max } = req.query;
     let filterCondition = '';
     const params = [];
     
     if (year) {
-      filterCondition += ' AND YEAR(date_diagnostic) = ?';
+      filterCondition += ' AND YEAR(cc.date_diagnostic) = ?';
       params.push(year);
     }
     if (month) {
-      filterCondition += ' AND MONTH(date_diagnostic) = ?';
+      filterCondition += ' AND MONTH(cc.date_diagnostic) = ?';
       params.push(month);
+    }
+    if (type_cancer) {
+      filterCondition += ' AND cc.type_cancer = ?';
+      params.push(type_cancer);
+    }
+    if (sexe) {
+      filterCondition += ' AND p.sexe = ?';
+      params.push(sexe);
+    }
+    if (age_min !== undefined && age_min !== '') {
+      filterCondition += ' AND TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) >= ?';
+      params.push(age_min);
+    }
+    if (age_max !== undefined && age_max !== '') {
+      filterCondition += ' AND TIMESTAMPDIFF(YEAR, p.date_naissance, CURDATE()) <= ?';
+      params.push(age_max);
     }
 
     const whereClauseTemplate = filterCondition ? filterCondition : '';
 
     const [totalPatients] = await pool.execute(`
-      SELECT COUNT(DISTINCT p.id) as total FROM patients p LEFT JOIN cancer_cases c ON p.id = c.patient_id WHERE 1=1 ${whereClauseTemplate}
+      SELECT COUNT(DISTINCT p.id) as total 
+      FROM patients p 
+      LEFT JOIN cancer_cases cc ON p.id = cc.patient_id 
+      WHERE 1=1 ${whereClauseTemplate}
     `, params);
     
+<<<<<<< HEAD
     const [totalCases] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE 1=1 ${whereClauseTemplate}`, params);
     const [enTraitement] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE statut_patient = 'En traitement' ${whereClauseTemplate}`, params);
     const [nouveauxMois] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE MONTH(created_at) = MONTH(CURRENT_DATE) AND YEAR(created_at) = YEAR(CURRENT_DATE)`);
@@ -30,17 +50,51 @@ const getDashboardStats = async (req, res) => {
     const [totalLabos] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'laboratoire' AND actif = true");
     const [totalAnapath] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'anapath' AND actif = true");
     const [totalMedecins] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'medecin' AND actif = true");
+=======
+    const [totalCases] = await pool.execute(`
+      SELECT COUNT(*) as total 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE 1=1 ${whereClauseTemplate}
+    `, params);
+
+    const [enTraitement] = await pool.execute(`
+      SELECT COUNT(*) as total 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE cc.statut_patient = 'En traitement' ${whereClauseTemplate}
+    `, params);
+
+    const [nouveauxMois] = await pool.execute(`
+      SELECT COUNT(*) as total 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE MONTH(cc.created_at) = MONTH(CURRENT_DATE) 
+      AND YEAR(cc.created_at) = YEAR(CURRENT_DATE) ${whereClauseTemplate}
+    `, params);
+
+    const [stadeIV] = await pool.execute(`
+      SELECT COUNT(*) as total 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE cc.stade = 'Stade IV' ${whereClauseTemplate}
+    `, params);
+>>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
 
     const [parType] = await pool.execute(`
-      SELECT type_cancer, COUNT(*) as count FROM cancer_cases WHERE 1=1 ${whereClauseTemplate} GROUP BY type_cancer
+      SELECT cc.type_cancer, COUNT(*) as count 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE 1=1 ${whereClauseTemplate} 
+      GROUP BY cc.type_cancer
     `, params);
 
     const [parSexe] = await pool.execute(`
-      SELECT sexe, COUNT(*) as count 
+      SELECT p.sexe, COUNT(*) as count 
       FROM patients p 
       JOIN cancer_cases cc ON p.id = cc.patient_id 
-      WHERE 1=1 ${whereClauseTemplate.replace(/date_diagnostic/g, 'cc.date_diagnostic')}
-      GROUP BY sexe
+      WHERE 1=1 ${whereClauseTemplate}
+      GROUP BY p.sexe
     `, params);
 
     const [parAge] = await pool.execute(`
@@ -56,7 +110,7 @@ const getDashboardStats = async (req, res) => {
         COUNT(*) as value
       FROM patients p
       JOIN cancer_cases cc ON p.id = cc.patient_id
-      WHERE 1=1 ${whereClauseTemplate.replace(/date_diagnostic/g, 'cc.date_diagnostic')}
+      WHERE 1=1 ${whereClauseTemplate}
       GROUP BY name
       ORDER BY FIELD(name, '0-14', '15-29', '30-44', '45-59', '60-74', '75+')
     `, params);
@@ -65,32 +119,40 @@ const getDashboardStats = async (req, res) => {
       SELECT p.wilaya as name, COUNT(*) as value 
       FROM patients p 
       JOIN cancer_cases cc ON p.id = cc.patient_id 
-      WHERE 1=1 ${whereClauseTemplate.replace(/date_diagnostic/g, 'cc.date_diagnostic')}
+      WHERE 1=1 ${whereClauseTemplate}
       GROUP BY p.wilaya ORDER BY value DESC LIMIT 10
     `, params);
 
     const [parTopographie] = await pool.execute(`
-      SELECT topographie_icdo3 as name, COUNT(*) as value 
-      FROM cancer_cases WHERE topographie_icdo3 IS NOT NULL ${whereClauseTemplate}
-      GROUP BY topographie_icdo3 ORDER BY value DESC LIMIT 8
+      SELECT cc.topographie_icdo3 as name, COUNT(*) as value 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE cc.topographie_icdo3 IS NOT NULL ${whereClauseTemplate}
+      GROUP BY cc.topographie_icdo3 ORDER BY value DESC LIMIT 8
     `, params);
 
     const [parMorphologie] = await pool.execute(`
-      SELECT morphologie_icdo3 as name, COUNT(*) as value 
-      FROM cancer_cases WHERE morphologie_icdo3 IS NOT NULL ${whereClauseTemplate}
-      GROUP BY morphologie_icdo3 ORDER BY value DESC LIMIT 8
+      SELECT cc.morphologie_icdo3 as name, COUNT(*) as value 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE cc.morphologie_icdo3 IS NOT NULL ${whereClauseTemplate}
+      GROUP BY cc.morphologie_icdo3 ORDER BY value DESC LIMIT 8
     `, params);
 
     const [parStade] = await pool.execute(`
-      SELECT stade as name, COUNT(*) as value 
-      FROM cancer_cases WHERE stade IS NOT NULL ${whereClauseTemplate}
-      GROUP BY stade ORDER BY value DESC
+      SELECT cc.stade as name, COUNT(*) as value 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE cc.stade IS NOT NULL ${whereClauseTemplate}
+      GROUP BY cc.stade ORDER BY value DESC
     `, params);
 
     const [parGrade] = await pool.execute(`
-      SELECT grade_histologique as name, COUNT(*) as value 
-      FROM cancer_cases WHERE grade_histologique IS NOT NULL ${whereClauseTemplate}
-      GROUP BY grade_histologique ORDER BY value DESC
+      SELECT cc.grade_histologique as name, COUNT(*) as value 
+      FROM cancer_cases cc 
+      JOIN patients p ON cc.patient_id = p.id 
+      WHERE cc.grade_histologique IS NOT NULL ${whereClauseTemplate}
+      GROUP BY cc.grade_histologique ORDER BY value DESC
     `, params);
 
     const [parTabac] = await pool.execute(`
@@ -98,7 +160,7 @@ const getDashboardStats = async (req, res) => {
              SUM(CASE WHEN p.fumeur = 1 THEN 1 ELSE 0 END) as value
       FROM cancer_cases cc
       JOIN patients p ON cc.patient_id = p.id
-      WHERE 1=1 ${whereClauseTemplate.replace(/date_diagnostic/g, 'cc.date_diagnostic')}
+      WHERE 1=1 ${whereClauseTemplate}
       GROUP BY cc.sous_type ORDER BY value DESC LIMIT 5
     `, params);
 

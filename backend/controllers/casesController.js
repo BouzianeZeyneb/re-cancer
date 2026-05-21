@@ -136,6 +136,16 @@ const addTraitement = async (req, res) => {
         n(radio_dose_totale), n(radio_fractionnement), n(radio_nb_seances)
       ]
     );
+
+    // PHARMACY TRIGGER: Create validation request for chemo/targeted therapy
+    const pharmaTypes = ['Chimiothérapie', 'Thérapie ciblée'];
+    if (pharmaTypes.includes(type_traitement)) {
+      await pool.execute(
+        'INSERT INTO prescriptions_validations (id, traitement_id, statut) VALUES (?, ?, ?)',
+        [uuidv4(), id, 'En attente']
+      );
+    }
+
     await auditLog(req.user.id, 'ADD_TRAITEMENT', 'traitements', id, { case_id, type_traitement }, req.ip);
     res.status(201).json({ message: 'Traitement ajouté', id });
   } catch (error) {
