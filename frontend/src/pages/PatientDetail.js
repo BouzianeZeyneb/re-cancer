@@ -170,6 +170,7 @@ export default function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const isLaboratoire = user?.role === 'laboratoire';
   const { t } = useTranslation();
 
   const [patient,  setPatient]  = useState(null);
@@ -786,11 +787,13 @@ export default function PatientDetail() {
       {tab === 'biologie' && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
           <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 12 }}>
-            <button onClick={() => setShowRequestForm(true)}
-              style={{ padding: '10px 20px', fontSize: 13, fontWeight: 700, borderRadius: 10,
-                background: '#f8fafc', color: '#0f172a', border: '1px solid #e2e8f0', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
-              Demander une analyse
-            </button>
+            {!isLaboratoire && (
+              <button onClick={() => setShowRequestForm(true)}
+                style={{ padding: '10px 20px', fontSize: 13, fontWeight: 700, borderRadius: 10,
+                  background: '#f8fafc', color: '#0f172a', border: '1px solid #e2e8f0', cursor: 'pointer', boxShadow: '0 2px 4px rgba(0,0,0,0.05)' }}>
+                Demander une analyse
+              </button>
+            )}
             <button onClick={() => setShowBiologieModal(true)}
               style={{ padding: '10px 20px', fontSize: 13, fontWeight: 700, borderRadius: 10,
                 background: 'linear-gradient(135deg,#3b82f6,#2563eb)', color: 'white', border: 'none', cursor: 'pointer', boxShadow: '0 4px 12px rgba(37,99,235,0.2)' }}>

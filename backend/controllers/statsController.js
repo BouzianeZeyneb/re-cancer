@@ -132,17 +132,13 @@ const getDashboardStats = async (req, res) => {
        parSexe,
        parAge,
        parWilaya,
-<<<<<<< HEAD
        recentDossiers: recent,
-       recentPatients: recentPatients
-=======
+       recentPatients: recentPatients,
        parTopographie,
        parMorphologie,
        parStade,
        parGrade,
-       parTabac,
-       recentDossiers: recent
->>>>>>> cee577fafe0bf2f69dff7159aa27efcc98666eca
+       parTabac
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

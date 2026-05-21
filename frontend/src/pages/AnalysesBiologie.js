@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -22,6 +23,8 @@ const ANALYSES_CATEGORIES = {
 
 export default function AnalysesBiologie() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isLaboratoire = user?.role === 'laboratoire';
 
   // Patient list state
   const [patients, setPatients] = useState([]);
@@ -169,7 +172,9 @@ export default function AnalysesBiologie() {
             <div className="card" style={{ border: '2px solid #bae6fd' }}>
               <div className="card-header" style={{ background: '#f0f9ff' }}>
                 <h2>📋 Demandes d'Analyses au Laboratoire ({labRequests.length})</h2>
-                <button className="btn btn-primary btn-sm" onClick={() => setShowRequestForm(!showRequestForm)}>+ Demander des analyses</button>
+                {!isLaboratoire && (
+                  <button className="btn btn-primary btn-sm" onClick={() => setShowRequestForm(!showRequestForm)}>+ Demander des analyses</button>
+                )}
               </div>
               {showRequestForm && (
                 <div style={{ padding: '24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
