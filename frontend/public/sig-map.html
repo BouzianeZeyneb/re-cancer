@@ -13,17 +13,20 @@
     <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
     <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
     
+    <!-- Leaflet.draw -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.css"/>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet.draw/1.0.4/leaflet.draw.js"></script>
+    
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     
     <style>
         :root {
-            --navy: #0d1b2a;
-            --panel: #1b2838;
-            --card: #1e3045;
+            --primary-navy: #0f172a;
+            --muted-slate: #64748b;
+            --border-light: #e2e8f0;
+            --bg-light: #f8fafc;
             --accent-blue: #3b82f6;
-            --accent-teal: #0ea5e9;
-            --border: rgba(255,255,255,0.07);
             
             --risk-low: #22c55e;
             --risk-med: #f59e0b;
@@ -39,8 +42,8 @@
         }
 
         body {
-            background-color: var(--navy);
-            color: #f8fafc;
+            background-color: var(--bg-light);
+            color: var(--primary-navy);
             height: 100vh;
             overflow: hidden;
             display: flex;
@@ -48,50 +51,41 @@
 
         /* SIDEBAR */
         .sidebar {
-            width: 340px;
-            background-color: var(--panel);
+            width: 380px;
+            background-color: #ffffff;
             height: 100%;
             display: flex;
             flex-direction: column;
-            border-right: 1px solid var(--border);
+            border-right: 1px solid var(--border-light);
             z-index: 1000;
+            box-shadow: 4px 0 15px rgba(0,0,0,0.02);
         }
         
         .sidebar-header {
-            padding: 20px;
-            border-bottom: 1px solid var(--border);
+            padding: 24px;
+            border-bottom: 1px solid var(--border-light);
             display: flex;
             align-items: center;
-            gap: 12px;
-            font-size: 1.25rem;
-            font-weight: 600;
+            justify-content: space-between;
+            font-size: 1.2rem;
+            font-weight: 800;
+            color: var(--primary-navy);
+            font-family: 'Outfit', sans-serif;
         }
 
         .scroll-area {
             flex: 1;
             overflow-y: auto;
-            padding: 16px;
+            padding: 20px;
         }
 
-        /* Scrollbar */
-        .scroll-area::-webkit-scrollbar {
-            width: 6px;
-        }
-        .scroll-area::-webkit-scrollbar-track {
-            background: rgba(0,0,0,0.1);
-        }
-        .scroll-area::-webkit-scrollbar-thumb {
-            background: rgba(255,255,255,0.2);
-            border-radius: 4px;
-        }
-
+        /* Sections */
         .section {
-            background-color: var(--card);
-            border-radius: 8px;
-            border: 1px solid var(--border);
-            margin-bottom: 16px;
+            background-color: #ffffff;
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            margin-bottom: 20px;
             overflow: hidden;
-            transition: all 0.2s ease;
         }
 
         .section-header {
@@ -101,11 +95,19 @@
             align-items: center;
             cursor: pointer;
             user-select: none;
-            background: rgba(255,255,255,0.02);
-            font-weight: 600;
+            background: #fcfcfd;
+            font-weight: 700;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted-slate);
+            border-bottom: 1px solid var(--border-light);
         }
         .section-header:hover {
-            background: rgba(255,255,255,0.05);
+            background: #f8fafc;
+        }
+        .section-header.active {
+            color: var(--primary-navy);
         }
         .section-header.active .chevron {
             transform: rotate(180deg);
@@ -117,129 +119,129 @@
         }
         .chevron {
             transition: transform 0.2s ease;
+            width: 14px;
+            height: 14px;
         }
 
         .section-content {
             padding: 16px;
-            border-top: 1px solid var(--border);
             display: none;
         }
         .section-content.open {
             display: block;
         }
 
-        /* Buttons */
-        .btn {
-            display: flex;
-            align-items: center;
-            justify-content: center;
+        /* Drawing Mode Grid */
+        .draw-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
             gap: 10px;
-            width: 100%;
-            padding: 10px 14px;
-            border-radius: 8px;
-            border: 1px solid rgba(255,255,255,0.1);
-            background: var(--card);
-            color: white;
+            margin-bottom: 16px;
+        }
+        .btn-draw {
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            padding: 12px;
+            border-radius: 10px;
+            color: var(--muted-slate);
             cursor: pointer;
-            font-size: 0.9rem;
-            font-weight: 500;
-            transition: all 0.2s ease;
-            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            transition: all 0.2s;
         }
-        .btn:last-child {
-            margin-bottom: 0;
-        }
-        .btn:hover {
-            background: rgba(255,255,255,0.05);
-        }
-        
-        .btn-layer.active {
-            background: rgba(59, 130, 246, 0.2);
+        .btn-draw:hover {
             border-color: var(--accent-blue);
             color: var(--accent-blue);
+            background: #f0f7ff;
         }
-        .btn-fusion.active {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
-            border-color: transparent;
+        .btn-draw.active {
+            background: var(--accent-blue);
             color: white;
-        }
-        
-        .btn-select.active {
             border-color: var(--accent-blue);
-            box-shadow: 0 0 10px rgba(59, 130, 246, 0.3);
-            background: rgba(59, 130, 246, 0.1);
+            box-shadow: 0 4px 12px rgba(59, 130, 246, 0.3);
         }
 
+        /* Buttons */
+        .btn {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            padding: 10px 20px;
+            border-radius: 8px;
+            font-size: 14px;
+            fontWeight: 600;
+            cursor: pointer;
+            transition: all 0.2s;
+            border: 1px solid var(--border-light);
+            background: white;
+            color: var(--primary-navy);
+        }
+        .btn:hover {
+            background: #f8fafc;
+        }
+        
         .btn-primary {
-            background: linear-gradient(135deg, var(--accent-blue), var(--accent-teal));
+            background: var(--accent-blue);
+            color: white;
             border: none;
         }
         .btn-primary:hover {
-            opacity: 0.9;
+            background: #2563eb;
             transform: translateY(-1px);
         }
         
-        .btn-text {
-            background: transparent;
+        .btn-secondary {
+            background: #f1f5f9;
+            color: #475569;
             border: none;
-            padding: 6px;
-            width: auto;
-            color: #94a3b8;
         }
-        .btn-text:hover {
-            color: white;
-            background: rgba(255,255,255,0.1);
+        .btn-secondary:hover {
+            background: #e2e8f0;
+        }
+
+        .btn-layer {
+            width: 100%;
+            margin-bottom: 8px;
+            justify-content: flex-start;
+        }
+        .btn-layer.active {
+            background: #eff6ff;
+            border-color: var(--accent-blue);
+            color: var(--accent-blue);
         }
 
         /* Forms */
         .form-group {
-            margin-bottom: 12px;
+            margin-bottom: 16px;
         }
         .form-label {
             display: block;
-            font-size: 0.8rem;
-            color: #94a3b8;
-            margin-bottom: 6px;
+            font-size: 11px;
+            color: var(--muted-slate);
+            margin-bottom: 8px;
+            font-weight: 700;
+            text-transform: uppercase;
         }
         .form-control {
             width: 100%;
-            background: var(--navy);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
+            background: #ffffff;
+            border: 1px solid var(--border-light);
+            color: var(--primary-navy);
             border-radius: 8px;
-            padding: 9px 12px;
-            font-size: 0.9rem;
+            padding: 10px 12px;
+            font-size: 14px;
             outline: none;
-            transition: all 0.2s;
+            transition: border-color 0.2s;
         }
         .form-control:focus {
             border-color: var(--accent-blue);
-            box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.2);
-        }
-        .form-control[readonly] {
-            opacity: 0.7;
-            cursor: not-allowed;
-        }
-        .form-row {
-            display: flex;
-            gap: 12px;
-        }
-        .form-row > * {
-            flex: 1;
         }
         
-        .hint-text {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            font-size: 0.8rem;
-            color: var(--accent-blue);
-            margin-bottom: 12px;
-            background: rgba(59, 130, 246, 0.1);
-            padding: 8px;
-            border-radius: 6px;
-        }
-
         /* Map */
         #map-container {
             flex: 1;
@@ -248,37 +250,33 @@
         #map {
             width: 100%;
             height: 100%;
-            background-color: #0f172a;
+            background-color: #f1f5f9;
         }
 
         /* Floating UI Elements */
-        .floating-bar {
+        .floating-pill {
             position: absolute;
-            top: 20px;
+            top: 24px;
             left: 50%;
             transform: translateX(-50%);
             z-index: 1000;
-            background: rgba(30, 48, 69, 0.9);
-            backdrop-filter: blur(10px);
-            border: 1px solid rgba(255, 255, 255, 0.1);
-            padding: 10px 20px;
-            border-radius: 30px;
+            background: var(--accent-blue);
+            color: white;
+            padding: 12px 28px;
+            border-radius: 50px;
+            font-size: 14px;
+            font-weight: 700;
+            box-shadow: 0 10px 25px rgba(59, 130, 246, 0.3);
             display: flex;
             align-items: center;
-            gap: 10px;
-            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
-            pointer-events: auto;
-            cursor: pointer;
-            transition: all 0.2s;
+            gap: 12px;
             opacity: 0;
             visibility: hidden;
+            transition: all 0.3s;
         }
-        .floating-bar.visible {
+        .floating-pill.visible {
             opacity: 1;
             visibility: visible;
-        }
-        .floating-bar:hover {
-            background: rgba(40, 60, 85, 0.95);
         }
 
         .info-panel {
@@ -286,184 +284,176 @@
             bottom: 30px;
             right: 30px;
             z-index: 1000;
-            background: rgba(30, 48, 69, 0.8);
-            backdrop-filter: blur(10px);
-            border: 1px solid var(--border);
-            border-radius: 12px;
-            width: 320px;
-            padding: 20px;
-            box-shadow: 0 10px 25px rgba(0, 0, 0, 0.5);
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(8px);
+            border: 1px solid var(--border-light);
+            border-radius: 16px;
+            width: 340px;
+            padding: 24px;
+            box-shadow: 0 15px 35px rgba(0,0,0,0.1);
             transform: translateY(20px);
             opacity: 0;
             visibility: hidden;
-            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+            transition: all 0.3s;
         }
         .info-panel.visible {
             transform: translateY(0);
             opacity: 1;
             visibility: visible;
         }
-        .info-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            margin-bottom: 15px;
+
+        /* Summary Card */
+        .summary-card {
+            position: absolute;
+            top: 24px;
+            right: 24px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
+            border-radius: 12px;
+            border: 1px solid var(--border-light);
+            padding: 16px;
+            width: 260px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
         }
-        .info-title {
-            font-size: 1.1rem;
-            font-weight: 600;
+        .summary-title {
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--muted-slate);
+            margin-bottom: 12px;
+            font-weight: 800;
+        }
+        .summary-stat {
+            display: flex;
+            align-items: baseline;
+            gap: 8px;
             margin-bottom: 4px;
         }
-        .info-subtitle {
-            font-size: 0.85rem;
-            color: #94a3b8;
+        .stat-value {
+            font-size: 24px;
+            font-weight: 800;
+            color: var(--primary-navy);
         }
-        .info-close {
-            cursor: pointer;
-            color: #94a3b8;
-        }
-        .info-close:hover {
-            color: white;
-        }
-        .info-stats {
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            margin-bottom: 20px;
-        }
-        .info-stat {
-            display: flex;
-            justify-content: space-between;
-            font-size: 0.9rem;
-            padding-bottom: 8px;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-        }
-        .info-stat:last-child {
-            border-bottom: none;
-        }
-        .info-stat span:first-child {
-            color: #94a3b8;
+        .stat-label {
+            font-size: 13px;
+            color: var(--muted-slate);
         }
 
-        /* Risk Badges & Markers */
-        .badge {
-            padding: 4px 10px;
+        /* Legend Panel */
+        .legend-card {
+            position: absolute;
+            bottom: 30px;
+            left: 30px;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(8px);
             border-radius: 12px;
-            font-size: 0.75rem;
+            border: 1px solid var(--border-light);
+            padding: 14px;
+            width: 220px;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+            display: none;
+        }
+        .legend-item {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            font-size: 12px;
             font-weight: 600;
-            display: inline-flex;
-            align-items: center;
+            color: var(--primary-navy);
         }
-        .badge-low { background: rgba(34, 197, 94, 0.15); color: var(--risk-low); border: 1px solid rgba(34, 197, 94, 0.3); }
-        .badge-med { background: rgba(245, 158, 11, 0.15); color: var(--risk-med); border: 1px solid rgba(245, 158, 11, 0.3); }
-        .badge-high { background: rgba(249, 115, 22, 0.15); color: var(--risk-high); border: 1px solid rgba(249, 115, 22, 0.3); }
-        .badge-crit { background: rgba(239, 68, 68, 0.15); color: var(--risk-crit); border: 1px solid rgba(239, 68, 68, 0.3); }
-
-        /* Map Markers */
-        .custom-marker {
-            background: #1b2838;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            border: 2px solid white;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.5);
-            transition: all 0.2s;
-        }
-        .custom-marker svg {
-            width: 18px;
-            height: 18px;
-            color: white;
-            stroke-width: 1.5;
-        }
-        .custom-marker.selected {
-            width: 44px !important;
-            height: 44px !important;
-            margin-left: -22px !important;
-            margin-top: -22px !important;
-            box-shadow: 0 0 15px rgba(255,255,255,0.4);
-            z-index: 1000 !important;
-            border-color: #fff !important; /* Brighter border when selected */
-        }
-        
-        .marker-low { border-color: var(--risk-low); }
-        .marker-med { border-color: var(--risk-med); }
-        .marker-high { border-color: var(--risk-high); }
-        .marker-crit { border-color: var(--risk-crit); }
-
-        /* Zone List Cards */
-        .zone-card {
-            background: rgba(0,0,0,0.2);
-            border-radius: 8px;
-            padding: 12px;
-            margin-bottom: 10px;
-            border: 1px solid transparent;
-            cursor: pointer;
-            transition: all 0.2s;
-            display: flex;
-            align-items: stretch;
-            gap: 12px;
-        }
-        .zone-card:hover {
-            background: rgba(255,255,255,0.05);
-            border-color: rgba(255,255,255,0.1);
-        }
-        .zone-card.active {
-            border-color: var(--accent-blue);
-            background: rgba(59, 130, 246, 0.1);
-        }
-        .zone-dot {
+        .legend-color {
             width: 10px;
             height: 10px;
             border-radius: 50%;
-            margin-top: 6px;
-            flex-shrink: 0;
-        }
-        .zone-content {
-            flex: 1;
-        }
-        .zone-title {
-            font-weight: 600;
-            font-size: 0.9rem;
-            margin-bottom: 4px;
-        }
-        .zone-loc {
-            font-size: 0.75rem;
-            color: #94a3b8;
-            margin-bottom: 8px;
-            font-weight: normal;
-        }
-        .zone-actions {
-            display: flex;
-            flex-direction: column;
-            justify-content: flex-start;
-            gap: 4px;
         }
 
-        /* Leaflet Popups override */
-        .leaflet-popup-content-wrapper {
-            background: rgba(30, 48, 69, 0.95);
-            backdrop-filter: blur(10px);
-            color: white;
-            border: 1px solid var(--border);
+        /* Risk Badges */
+        .badge {
+            padding: 4px 10px;
             border-radius: 8px;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.5);
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
         }
-        .leaflet-popup-tip {
-            background: rgba(30, 48, 69, 0.95);
+        .badge-low { background: #dcfce7; color: #166534; }
+        .badge-med { background: #fef3c7; color: #92400e; }
+        .badge-high { background: #ffedd5; color: #9a3412; }
+        .badge-crit { background: #fee2e2; color: #991b1b; }
+
+        /* Zone List Cards */
+        .zone-card {
+            padding: 12px;
+            margin-bottom: 8px;
+            border-radius: 10px;
+            border: 1px solid var(--border-light);
+            cursor: pointer;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            gap: 12px;
         }
-        .leaflet-popup-content {
-            margin: 14px;
+        .zone-card:hover {
+            background: #f8fafc;
+            border-color: var(--accent-blue);
         }
-        .custom-tooltip {
-            background: var(--card);
-            border: 1px solid rgba(255,255,255,0.1);
-            color: white;
-            border-radius: 6px;
+        .zone-card.active {
+            background: #eff6ff;
+            border-color: var(--accent-blue);
+        }
+        .zone-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+        }
+        .zone-title {
+            font-weight: 700;
+            font-size: 13px;
+            color: var(--primary-navy);
+        }
+        .zone-loc {
+            font-size: 11px;
+            color: var(--muted-slate);
+        }
+
+        /* Prof Correlation */
+        .prof-item {
+            background: #f8fafc;
+            border-radius: 8px;
+            padding: 10px 14px;
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 600;
+            border: 1px solid var(--border-light);
+        }
+        .prof-score {
+            color: var(--accent-blue);
+            font-weight: 800;
+        }
+
+        /* Multi-select styling */
+        .multi-select-container {
+            max-height: 120px;
+            overflow-y: auto;
+            border: 1px solid var(--border-light);
+            border-radius: 8px;
             padding: 8px;
         }
-        .leaflet-tooltip-top:before {
-            border-top-color: var(--card);
+        .multi-select-item {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 4px 0;
+            font-size: 12px;
+            cursor: pointer;
+        }
+        .multi-select-item input {
+            cursor: pointer;
         }
 
     </style>
@@ -472,257 +462,307 @@
 
     <aside class="sidebar">
         <div class="sidebar-header">
-            <i data-lucide="layers"></i>
-            SIG OncoTrack
+            <span>OncoTrack SIG</span>
+            <i data-lucide="map"></i>
         </div>
         
         <div class="scroll-area">
-            
-            <!-- Section 1: Couches -->
+            <!-- Layers Toggle -->
             <div class="section">
                 <div class="section-header active" onclick="toggleSection(this)">
-                    <div class="section-title"><i data-lucide="layers"></i> Contrôle des Couches</div>
-                    <i data-lucide="chevron-down" class="chevron"></i>
-                </div>
-                <div class="section-content open" id="layer-controls">
-                    <button class="btn btn-layer" onclick="setLayer('cancer')" id="btn-cancer">
-                        <i data-lucide="activity"></i> Cancer Uniquement
-                    </button>
-                    <button class="btn btn-layer" onclick="setLayer('risk')" id="btn-risk">
-                        <i data-lucide="shield-alert"></i> Risques Uniquement
-                    </button>
-                    <button class="btn btn-layer btn-fusion active" onclick="setLayer('fusion')" id="btn-fusion">
-                        <i data-lucide="layers"></i> Fusion (Corrélations)
-                    </button>
-                </div>
-            </div>
-
-            <!-- Section 2: Sélection -->
-            <div class="section">
-                <div class="section-content open" style="border-top: none; padding-top: 5px;">
-                    <button class="btn" id="btn-select-mode" onclick="toggleSelectMode()">
-                        <i data-lucide="mouse-pointer-2"></i> Sélectionner une zone
-                    </button>
-                </div>
-            </div>
-
-            <!-- Section 3: Add Zone -->
-            <div class="section">
-                <div class="section-header active" onclick="toggleSection(this)">
-                    <div class="section-title"><i data-lucide="map-pin"></i> Ajouter une Zone</div>
+                    <div class="section-title"><i data-lucide="layers"></i> Couches de données</div>
                     <i data-lucide="chevron-down" class="chevron"></i>
                 </div>
                 <div class="section-content open">
-                    <div class="hint-text" id="add-hint">
-                        <i data-lucide="info" style="width: 14px; height: 14px;"></i> 
-                        Cliquez sur la carte pour auto-remplir
-                    </div>
-                    
-                    <form id="add-zone-form" onsubmit="handleFormSubmit(event)">
-                        <input type="hidden" id="edit-id">
-                        
-                        <div class="form-group">
-                            <label class="form-label">Nom de la zone</label>
-                            <input type="text" id="z-name" class="form-control" required placeholder="Ex: Usine Arzew">
-                        </div>
-                        
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Wilaya</label>
-                                <select id="z-wilaya" class="form-control" required>
-                                    <option value="">Choisir...</option>
-                                    <option value="16">16 - Alger</option>
-                                    <option value="23">23 - Annaba</option>
-                                    <option value="31">31 - Oran</option>
-                                    <option value="29">29 - Mascara</option>
-                                    <option value="11">11 - Tamanrasset</option>
-                                    <option value="06">06 - Bejaia</option>
-                                    <option value="19">19 - Sétif</option>
-                                    <option value="13">13 - Tlemcen</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Ville / Commune</label>
-                                <input type="text" id="z-city" class="form-control" required>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Latitude</label>
-                                <input type="text" id="z-lat" class="form-control" readonly placeholder="Auto">
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Longitude</label>
-                                <input type="text" id="z-lng" class="form-control" readonly placeholder="Auto">
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label class="form-label">Type de Risque</label>
-                                <select id="z-type" class="form-control" required>
-                                    <option value="factory">Zone industrielle</option>
-                                    <option value="droplets">Eau de mer / eau polluée</option>
-                                    <option value="radiation">Zone nucléaire</option>
-                                    <option value="sun">Exposition solaire</option>
-                                    <option value="flame">Aliments fumés/salés</option>
-                                    <option value="scissors">Abattoir / Hépatite</option>
-                                    <option value="leaf">Pesticides</option>
-                                    <option value="flask-conical">Usine chimique</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Niveau</label>
-                                <select id="z-level" class="form-control" required>
-                                    <option value="low">Faible</option>
-                                    <option value="med">Moyen</option>
-                                    <option value="high">Élevé</option>
-                                    <option value="crit">Critique</option>
-                                </select>
-                            </div>
-                        </div>
-                        
-                        <div class="form-group">
-                            <label class="form-label">Notes (Optionnel)</label>
-                            <input type="text" id="z-notes" class="form-control" placeholder="Détails additionnels...">
-                        </div>
-
-                        <button type="submit" class="btn btn-primary" id="btn-submit">
-                            <i data-lucide="plus-circle"></i> Ajouter la Zone
-                        </button>
-                        <button type="button" class="btn" style="display: none; margin-top: 8px;" id="btn-cancel" onclick="resetForm()">
-                            Annuler
-                        </button>
-                    </form>
+                    <button class="btn btn-layer active" id="layer-cancer" onclick="toggleLayer('cancer')">
+                        <i data-lucide="circle-dot"></i> Cas de Cancer
+                    </button>
+                    <button class="btn btn-layer active" id="layer-risk" onclick="toggleLayer('risk')">
+                        <i data-lucide="alert-triangle"></i> Zones à Risque
+                    </button>
+                    <button class="btn btn-layer" id="layer-profession" onclick="toggleLayer('profession')">
+                        <i data-lucide="users"></i> Professions (Dots)
+                    </button>
+                    <button class="btn btn-layer" id="layer-fusion" onclick="toggleLayer('fusion')">
+                        <i data-lucide="zap"></i> Mode Fusion
+                    </button>
                 </div>
             </div>
 
-            <!-- Section 4: Liste -->
+            <!-- Drawing -->
+            <div class="section">
+                <div class="section-header active" onclick="toggleSection(this)">
+                    <div class="section-title"><i data-lucide="edit-3"></i> Dessiner une Zone</div>
+                    <i data-lucide="chevron-down" class="chevron"></i>
+                </div>
+                <div class="section-content open">
+                    <div class="draw-grid">
+                        <button class="btn-draw" id="draw-polygon" onclick="setDrawMode('polygon')">
+                            <i data-lucide="pentagon"></i>
+                            <span>Polygone</span>
+                        </button>
+                        <button class="btn-draw" id="draw-rectangle" onclick="setDrawMode('rectangle')">
+                            <i data-lucide="square"></i>
+                            <span>Rectangle</span>
+                        </button>
+                        <button class="btn-draw" id="draw-circle" onclick="setDrawMode('circle')">
+                            <i data-lucide="circle"></i>
+                            <span>Cercle</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="section">
+                <div class="section-header active" onclick="toggleSection(this)">
+                    <div class="section-title"><i data-lucide="filter"></i> Filtres Épidémio</div>
+                    <i data-lucide="chevron-down" class="chevron"></i>
+                </div>
+                <div class="section-content open">
+                    <div class="form-group">
+                        <label class="form-label">Type de Cancer</label>
+                        <select class="form-control" id="f-type" onchange="applyFilters()">
+                            <option value="all">Tous les cancers</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Profession (Filtrage Patient)</label>
+                        <select class="form-control" id="f-profession" onchange="onProfessionFilterChange()">
+                            <option value="all">Toutes les professions</option>
+                        </select>
+                        <div id="selected-professions-pills" style="display: flex; flex-wrap: wrap; gap: 4px; margin-top: 8px;"></div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Registered Zones -->
             <div class="section">
                 <div class="section-header active" onclick="toggleSection(this)">
                     <div class="section-title"><i data-lucide="list"></i> Zones Enregistrées</div>
                     <i data-lucide="chevron-down" class="chevron"></i>
                 </div>
-                <div class="section-content open" id="zone-list-container">
-                    <!-- Zones injected here -->
-                </div>
+                <div class="section-content open" id="zone-list-container"></div>
             </div>
 
-            <!-- Section 5: Export/Import -->
-            <div class="section">
-                <div class="section-header" onclick="toggleSection(this)">
-                    <div class="section-title"><i data-lucide="download"></i> Exportation</div>
-                    <i data-lucide="chevron-down" class="chevron"></i>
-                </div>
-                <div class="section-content">
-                    <button class="btn" onclick="exportData('geojson')"><i data-lucide="download"></i> Exporter GeoJSON</button>
-                    <button class="btn" onclick="exportData('csv')"><i data-lucide="download"></i> Exporter CSV</button>
-                    <button class="btn"><i data-lucide="upload"></i> Importer fichier</button>
-                </div>
+            <div style="display: flex; gap: 10px;">
+                <button class="btn btn-secondary" style="flex: 1;" onclick="exportData('geojson')">
+                    <i data-lucide="download"></i> Export
+                </button>
+                <button class="btn btn-secondary" style="flex: 1;" onclick="location.reload()">
+                    <i data-lucide="refresh-cw"></i> Actualiser
+                </button>
             </div>
-
         </div>
     </aside>
 
     <main id="map-container">
+        <div id="map"></div>
         
-        <!-- Top Pills -->
-        <div class="floating-bar" id="pill-pick" onclick="cancelPickMode()">
-            <i data-lucide="map-pin"></i> Mode placement actif — Cliquez pour annuler
-        </div>
-        <div class="floating-bar" id="pill-select" onclick="toggleSelectMode()">
-            <i data-lucide="mouse-pointer-2"></i> Mode sélection actif — Cliquez pour annuler
+        <!-- Summary Card -->
+        <div class="summary-card" id="summary-card">
+            <div class="summary-title">Analyse Filtrée</div>
+            <div class="summary-stat">
+                <span class="stat-value" id="count-cases">0</span>
+                <span class="stat-label">cas</span>
+            </div>
+            <div class="summary-stat">
+                <span class="stat-value" id="count-zones">0</span>
+                <span class="stat-label">zones à risque</span>
+            </div>
         </div>
 
-        <div id="map"></div>
+        <!-- Legend Panel -->
+        <div class="legend-card" id="legend-card">
+            <div class="summary-title">Professions affichées</div>
+            <div id="legend-items"></div>
+            <button class="btn btn-secondary" style="width: 100%; margin-top: 10px; font-size: 11px;" onclick="hideProfessions()">Masquer les points</button>
+        </div>
+
+        <!-- Drawing Pill (Feature 1) -->
+        <div class="floating-pill" id="drawing-pill">
+            <i data-lucide="pen-tool"></i>
+            <span>Mode dessin actif — Double-clic pour terminer</span>
+        </div>
 
         <!-- Info Panel -->
         <div class="info-panel" id="info-panel">
-            <div class="info-header">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
                 <div>
-                    <div class="info-title" id="ip-title">Zone Industrielle</div>
-                    <div class="info-subtitle" id="ip-loc">Oran, Arzew</div>
+                    <div class="info-title" id="ip-title">Zone d'exposition</div>
+                    <div class="info-subtitle" id="ip-loc">Wilaya 16, Alger</div>
                 </div>
-                <i data-lucide="x" class="info-close" onclick="closeInfoPanel()"></i>
+                <div id="ip-badge"></div>
             </div>
             
-            <div class="info-stats">
-                <div class="info-stat">
-                    <span>Niveau de Risque</span>
-                    <span id="ip-badge" class="badge">Élevé</span>
+            <div style="background: rgba(255,255,255,0.03); padding: 12px; border-radius: 8px; margin-bottom: 16px;">
+                <div style="font-size: 0.7rem; text-transform: uppercase; color: #64748b; margin-bottom: 8px; font-weight: 700;">Corrélations Professionnelles</div>
+                <div id="profession-correlations" class="profession-list">
+                    <!-- Dynamic -->
                 </div>
-                <div class="info-stat">
-                    <span>Type principal</span>
-                    <span id="ip-type">Usine Chimique</span>
-                </div>
-                <div class="info-stat">
-                    <span>Corrélations Cancer</span>
-                    <span style="color: #fca5a5;">Forte (Poumon)</span>
-                </div>
-                <div class="info-stat" style="display: block; padding-top: 10px; color: #cbd5e1; font-size: 0.85rem;" id="ip-notes">
-                    Notes additionnelles ici.
-                </div>
+            </div>
+
+            <div style="font-size: 0.85rem; color: #94a3b8; line-height: 1.5; margin-bottom: 20px;" id="ip-notes">
+                Notes de la zone...
             </div>
 
             <div style="display: flex; gap: 8px;">
-                <button class="btn" style="flex: 1;" onclick="editSelectedZone()">
-                    <i data-lucide="pencil"></i> Modifier
-                </button>
-                <button class="btn" style="flex: 1; border-color: rgba(239, 68, 68, 0.3); color: #ef4444;" onclick="deleteSelectedZone()">
-                    <i data-lucide="trash-2"></i> Supprimer
-                </button>
+                <button class="btn btn-primary" style="flex: 1; margin-bottom: 0;" onclick="editSelectedZone()">Modifier</button>
+                <button class="btn" style="width: 50px; margin-bottom: 0; color: #ef4444;" onclick="deleteSelectedZone()"><i data-lucide="trash-2"></i></button>
             </div>
         </div>
-
     </main>
 
+    <!-- Modal Form -->
+    <div id="zone-modal" style="position: fixed; inset: 0; background: rgba(15, 23, 42, 0.4); z-index: 2000; display: none; align-items: center; justify-content: center; backdrop-filter: blur(4px);">
+        <div style="background: #ffffff; width: 450px; padding: 32px; border-radius: 16px; border: 1px solid var(--border-light); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.15);">
+            <h3 style="margin-bottom: 24px; font-weight: 800; display: flex; align-items: center; gap: 12px; color: var(--primary-navy);">
+                <i data-lucide="plus-circle" style="color: var(--accent-blue);"></i> Détails de la Zone
+            </h3>
+            <form id="zone-details-form" onsubmit="handleZoneFormSubmit(event)">
+                <input type="hidden" id="edit-id">
+                <div class="form-group">
+                    <label class="form-label">Nom de la Zone</label>
+                    <input type="text" id="z-name" class="form-control" required placeholder="Ex: Zone Industrielle Skikda">
+                </div>
+                
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Wilaya</label>
+                        <select id="z-wilaya" class="form-control" required onchange="onWilayaChange(this.value)"></select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Ville / Commune</label>
+                        <select id="z-city" class="form-control" required>
+                            <option value="">Choisir wilaya d'abord</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px;">
+                    <div class="form-group">
+                        <label class="form-label">Type de Zone</label>
+                        <select id="z-type" class="form-control">
+                            <option value="industrial">Zone industrielle</option>
+                            <option value="agricole">Zone agricole / pesticides</option>
+                            <option value="coastal">Zone côtière / eau de mer</option>
+                            <option value="solar">Exposition solaire</option>
+                            <option value="chemical">Zone chimique / pollution</option>
+                            <option value="radiation">Radiation / Nucléaire</option>
+                            <option value="food">Industrie alimentaire</option>
+                            <option value="autre">Autre</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Niveau de Risque</label>
+                        <select id="z-level" class="form-control">
+                            <option value="low">Faible</option>
+                            <option value="med">Moyen</option>
+                            <option value="high">Élevé</option>
+                            <option value="crit">Critique</option>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Profession Liée (Exposition)</label>
+                    <div class="multi-select-container" id="modal-prof-list">
+                        <!-- Dynamic -->
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Notes / Observations</label>
+                    <textarea id="z-notes" class="form-control" style="height: 60px; resize: none;"></textarea>
+                </div>
+
+                <div style="display: flex; gap: 12px; margin-top: 24px;">
+                    <button type="button" class="btn" style="flex: 1;" onclick="closeZoneModal()">Annuler</button>
+                    <button type="submit" class="btn btn-primary" style="flex: 2;">Enregistrer la Zone</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <script>
-        // Init Lucide
-        lucide.createIcons();
-
-        // State
-        let map;
-        let cancerLayerGroup;
-        let riskLayerGroup;
-        let currentLayer = 'fusion'; // cancer, risk, fusion
-        let appMode = 'view'; // view, select, pick
+        let map, cancerLayerGroup, riskLayerGroup, professionLayerGroup, correlationLayerGroup;
+        let appMode = 'view';
+        let drawControl, drawnItems;
+        let currentDrawMode = null;
+        let activeLayers = { cancer: true, risk: true, profession: false, fusion: false };
         
-        const riskColors = {
-            low: '#22c55e',
-            med: '#f59e0b',
-            high: '#f97316',
-            crit: '#ef4444'
-        };
-
-        const riskLabels = {
-            low: 'Faible',
-            med: 'Moyen',
-            high: 'Élevé',
-            crit: 'Critique'
-        };
-
-        const typeLabels = {
-            'factory': 'Zone industrielle',
-            'droplets': 'Eau de mer / eau polluée',
-            'radiation': 'Zone nucléaire',
-            'sun': 'Exposition solaire',
-            'flame': 'Aliments fumés/salés',
-            'scissors': 'Abattoir / Hépatite',
-            'leaf': 'Pesticides',
-            'flask-conical': 'Usine chimique'
-        };
-
+        let patients = [];
         let zones = [];
-        let markers = {}; // ID to map Marker
         let activeZoneId = null;
+        let markers = {};
+        let selectedProfessions = [];
 
-        // Leaflet setup
-        function initMap() {
-            map = L.map('map', {zoomControl: false}).setView([28.0339, 1.6596], 6);
+        const riskColors = { low: '#22c55e', med: '#f59e0b', high: '#f97316', crit: '#ef4444' };
+        const riskLabels = { low: 'Faible', med: 'Moyen', high: 'Élevé', crit: 'Critique' };
+        const typeLabels = {
+            'industrial': 'Zone industrielle',
+            'agricole': 'Zone agricole / pesticides',
+            'coastal': 'Zone côtière / eau de mer',
+            'solar': 'Exposition solaire',
+            'chemical': 'Zone chimique / pollution',
+            'radiation': 'Radiation / Nucléaire',
+            'food': 'Industrie alimentaire',
+            'autre': 'Autre'
+        };
+
+        const PROFESSION_COLORS = {
+            'Agriculteur / Ouvrier agricole': '#10b981',
+            'Ouvrier industriel / Usine':     '#f97316',
+            'Mineur / Extraction':            '#78716c',
+            'Pêcheur / Maritime':             '#0ea5e9',
+            'Enseignant / Éducation':         '#8b5cf6',
+            'Personnel de santé':             '#ec4899',
+            'Informatique / Bureautique':     '#6366f1',
+            'Commerce / Vente':               '#f59e0b',
+            'Artisan / Menuisier / Forgeron': '#a16207',
+            'Chauffeur / Transport':          '#14b8a6',
+            'Fonctionnaire / Administration': '#64748b',
+            'Militaire / Police':             '#1e40af',
+            'Retraité':                       '#9ca3af',
+            'Sans emploi / Chômeur':          '#d1d5db',
+        };
+
+        const WILAYA_COORDS = {
+            "Adrar": [27.87, 0.28], "Chlef": [36.16, 1.33], "Laghouat": [33.8, 2.87],
+            "Oum El Bouaghi": [35.87, 7.11], "Batna": [35.556, 6.174], "Béjaïa": [36.752, 5.056],
+            "Biskra": [34.85, 5.73], "Béchar": [31.62, -2.22], "Blida": [36.47, 2.83],
+            "Bouira": [36.37, 3.9], "Tamanrasset": [22.785, 5.523], "Tébessa": [35.4, 8.12],
+            "Tlemcen": [34.88, -1.316], "Tiaret": [35.37, 1.32], "Tizi Ouzou": [36.717, 4.05],
+            "Alger": [36.737, 3.086], "Djelfa": [34.67, 3.26], "Jijel": [36.82, 5.77],
+            "Sétif": [36.19, 5.41], "Saïda": [34.84, 0.15], "Skikda": [36.88, 6.9],
+            "Sidi Bel Abbès": [35.19, -0.63], "Annaba": [36.9, 7.767], "Guelma": [36.46, 7.43],
+            "Constantine": [36.365, 6.614], "Médéa": [36.26, 2.75], "Mostaganem": [35.93, 0.09],
+            "M'Sila": [35.7, 4.54], "Mascara": [35.4, 0.14], "Ouargla": [31.95, 5.33],
+            "Oran": [35.691, -0.641], "El Bayadh": [33.68, 1.02], "Illizi": [26.48, 8.47],
+            "Bordj Bou Arréridj": [36.07, 4.76], "Boumerdès": [36.76, 3.48], "El Tarf": [36.77, 8.31],
+            "Tindouf": [27.67, -8.14], "Tissemsilt": [35.6, 1.81], "El Oued": [33.36, 6.86],
+            "Khenchela": [35.43, 7.14], "Souk Ahras": [36.28, 7.95], "Tipaza": [36.59, 2.45],
+            "Mila": [36.45, 6.26], "Aïn Defla": [36.26, 1.97], "Naâma": [33.27, -0.31],
+            "Aïn Témouchent": [35.3, -1.14], "Ghardaïa": [32.49, 3.67], "Relizane": [35.74, 0.55],
+            "Timimoun": [29.26, 0.23], "Bordj Badji Mokhtar": [21.33, 0.95],
+            "Ouled Djellal": [34.42, 5.07], "Béni Abbès": [30.13, -2.17],
+            "In Salah": [27.19, 2.47], "In Guezzam": [19.57, 5.77],
+            "Touggourt": [33.1, 6.06], "Djanet": [24.55, 9.48],
+            "El M'Ghair": [33.95, 5.93], "El Meniaa": [30.58, 2.88]
+        };
+
+        const WILAYA_CITIES_FALLBACK = {
+            "Alger": ["Alger Centre", "Bab El Oued", "El Biar", "Hydra", "Kouba", "Zeralda", "Sidi Abdellah"],
+            "Oran": ["Oran", "Arzew", "Bir El Djir", "Es Senia", "Ain El Turk"],
+            "Constantine": ["Constantine", "El Khroub", "Hamma Bouziane", "Zighoud Youcef"],
+            "Tlemcen": ["Tlemcen", "Maghnia", "Mansourah", "Remchi", "Ghazaouet"]
+        };
+
+        async function initMap() {
+            map = L.map('map', {zoomControl: false, maxBounds: [[18, -10], [38, 15]]}).setView([36.0, 3.0], 7);
             L.control.zoom({ position: 'topright' }).addTo(map);
 
-            L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
                 attribution: '&copy; CartoDB',
                 subdomains: 'abcd',
                 maxZoom: 20
@@ -730,381 +770,472 @@
 
             cancerLayerGroup = L.layerGroup().addTo(map);
             riskLayerGroup = L.layerGroup().addTo(map);
+            professionLayerGroup = L.layerGroup().addTo(map);
+            correlationLayerGroup = L.layerGroup().addTo(map);
+            drawnItems = L.featureGroup().addTo(map);
 
-            map.on('click', function(e) {
-                if (appMode === 'view' || appMode === 'pick') {
-                    // Fill form coords
-                    document.getElementById('z-lat').value = e.latlng.lat.toFixed(6);
-                    document.getElementById('z-lng').value = e.latlng.lng.toFixed(6);
-                    
-                    // Auto-open add form
-                    const formSection = document.getElementById('add-zone-form').closest('.section-content');
-                    if (!formSection.classList.contains('open')) {
-                        formSection.previousElementSibling.click();
-                    }
-                    
-                    // Pulse animation
-                    const tempCircle = L.circleMarker(e.latlng, {
-                        radius: 8, color: '#3b82f6', fillColor: '#3b82f6', fillOpacity: 0.5
-                    }).addTo(map);
-                    setTimeout(() => map.removeLayer(tempCircle), 500);
-
-                } else if (appMode === 'select') {
-                    selectZone(null);
+            drawControl = new L.Control.Draw({
+                edit: { featureGroup: drawnItems, remove: false },
+                draw: { polyline: false, marker: false, circlemarker: false }
+            });
+            
+            map.on(L.Draw.Event.CREATED, async function (e) {
+                const layer = e.layer;
+                drawnItems.addLayer(layer);
+                
+                let shapeData = { type: e.layerType };
+                let center;
+                if (e.layerType === 'circle') {
+                    center = layer.getLatLng();
+                    shapeData.lat = center.lat;
+                    shapeData.lng = center.lng;
+                    shapeData.radius = layer.getRadius();
+                } else if (e.layerType === 'rectangle') {
+                    center = layer.getBounds().getCenter();
+                    shapeData.bounds = layer.getBounds();
+                } else {
+                    center = layer.getBounds().getCenter();
+                    shapeData.latlngs = layer.getLatLngs();
                 }
+                
+                // Detect wilaya from center
+                const wilaya = detectWilaya(center);
+                openZoneModal(shapeData, wilaya);
+                setDrawMode(null);
             });
 
-            loadData();
-            renderMapData();
+            await fetchData();
+            loadZones();
+            renderAll();
         }
 
-        // Data Management
-        function loadData() {
-            const stored = localStorage.getItem('sig_oncotrack_v1');
-            if (stored) {
-                zones = JSON.parse(stored);
-            } else {
-                // Populate sample Data exactly as requested
-                zones = [
-                    { id: '1', name: 'Annaba industrial', wilaya: '23', city: 'El Hadjar', lat: 36.8042, lng: 7.7214, type: 'factory', level: 'high', notes: 'Fumées lourdes' },
-                    { id: '2', name: 'Oran seawater', wilaya: '31', city: 'Oran', lat: 35.7056, lng: -0.6493, type: 'droplets', level: 'med', notes: 'Rejets urbains dans la mer' },
-                    { id: '3', name: 'Mascara pesticides', wilaya: '29', city: 'Ghriss', lat: 35.3411, lng: 0.0519, type: 'leaf', level: 'crit', notes: 'Usage intensif produits chimiques agricoles' },
-                    { id: '4', name: 'Tamanrasset sun', wilaya: '11', city: 'Tamanrasset', lat: 22.7850, lng: 5.5228, type: 'sun', level: 'high', notes: 'Forte exposition UV' }
-                ];
-                saveData();
-            }
-        }
-
-        function saveData() {
-            localStorage.setItem('sig_oncotrack_v1', JSON.stringify(zones));
-            renderSidebarList();
-            renderRiskLayers();
-        }
-
-        // Rendering Map Layers
-        function renderMapData() {
-            renderCancerLayers();
-            renderRiskLayers();
-            updateLayerVisibility();
-        }
-
-        function renderCancerLayers() {
-            cancerLayerGroup.clearLayers();
-            // 18 Cancer Data points for major Algerian wilayas
-            const cancerPoints = [
-                { lat: 36.7525, lng: 3.0419, cases: 1450, wilaya: 'Alger' },
-                { lat: 35.6911, lng: -0.6416, cases: 980, wilaya: 'Oran' },
-                { lat: 36.7538, lng: 5.0567, cases: 540, wilaya: 'Bejaia' },
-                { lat: 36.1898, lng: 5.4108, cases: 720, wilaya: 'Sétif' },
-                { lat: 36.8967, lng: 7.7562, cases: 880, wilaya: 'Annaba' },
-                { lat: 34.8767, lng: -1.3168, cases: 410, wilaya: 'Tlemcen' },
-                { lat: 36.2644, lng: 6.6147, cases: 650, wilaya: 'Constantine' },
-                { lat: 31.9493, lng: 5.3250, cases: 120, wilaya: 'Ouargla' },
-                { lat: 33.7915, lng: 2.8726, cases: 80, wilaya: 'Laghouat' },
-                { lat: 35.2078, lng: -0.6306, cases: 450, wilaya: 'Sidi Bel Abbès' },
-                { lat: 36.3650, lng: 6.2709, cases: 290, wilaya: 'Mila' },
-                { lat: 35.3468, lng: 1.3283, cases: 150, wilaya: 'Tiaret' },
-                { lat: 36.8188, lng: 4.8878, cases: 580, wilaya: 'Jijel' },
-                { lat: 36.4601, lng: 2.8335, cases: 920, wilaya: 'Blida' },
-                { lat: 34.6728, lng: 3.2505, cases: 210, wilaya: 'Djelfa' },
-                { lat: 36.2798, lng: 1.2584, cases: 380, wilaya: 'Chlef' },
-                { lat: 35.5397, lng: -0.0617, cases: 260, wilaya: 'Mascara' },
-                { lat: 34.8466, lng: 5.7262, cases: 340, wilaya: 'Biskra' }
-            ];
-
-            cancerPoints.forEach(pt => {
-                const radius = Math.max(10, Math.sqrt(pt.cases) * 0.8);
-                const circle = L.circleMarker([pt.lat, pt.lng], {
-                    radius: radius,
-                    color: '#ec4899',
-                    weight: 1,
-                    fillColor: '#ec4899',
-                    fillOpacity: 0.35
-                });
-                
-                const tooltipHtml = `
-                    <div style="text-align: center;">
-                        <div style="font-weight: 600;">Wilaya de ${pt.wilaya}</div>
-                        <div style="color: #fbcfe8; font-size: 0.9rem;">${pt.cases} cas enregistrés</div>
-                    </div>
-                `;
-                circle.bindTooltip(tooltipHtml, { className: 'custom-tooltip', direction: 'top' });
-                circle.addTo(cancerLayerGroup);
-            });
-        }
-
-        function renderRiskLayers() {
-            riskLayerGroup.clearLayers();
-            markers = {};
-
-            zones.forEach(zone => {
-                const color = riskColors[zone.level];
-                
-                // Construct Lucide icon dynamically
-                const iconHtml = `<i data-lucide="${zone.type}"></i>`;
-                
-                const divIcon = L.divIcon({
-                    className: '',
-                    html: `<div class="custom-marker marker-${zone.level}" id="marker-${zone.id}">
-                             ${iconHtml}
-                           </div>`,
-                    iconSize: [36, 36],
-                    iconAnchor: [18, 18]
-                });
-
-                const marker = L.marker([zone.lat, zone.lng], { icon: divIcon });
-                
-                marker.on('click', (e) => {
-                    L.DomEvent.stopPropagation(e);
-                    selectZone(zone.id);
-                });
-
-                marker.addTo(riskLayerGroup);
-                markers[zone.id] = marker;
-            });
-
-            setTimeout(() => {
-                lucide.createIcons({
-                    root: document.getElementById('map')
-                });
-            }, 100);
-        }
-
-        // UI Interactions
-        function toggleSection(el) {
-            el.classList.toggle('active');
-            const content = el.nextElementSibling;
-            content.classList.toggle('open');
-        }
-
-        function setLayer(layer) {
-            currentLayer = layer;
-            document.querySelectorAll('.btn-layer').forEach(b => b.classList.remove('active'));
-            document.getElementById('btn-' + layer).classList.add('active');
-            updateLayerVisibility();
-        }
-
-        function updateLayerVisibility() {
-            if (currentLayer === 'cancer') {
-                if(!map.hasLayer(cancerLayerGroup)) map.addLayer(cancerLayerGroup);
-                if(map.hasLayer(riskLayerGroup)) map.removeLayer(riskLayerGroup);
-            } else if (currentLayer === 'risk') {
-                if(!map.hasLayer(riskLayerGroup)) map.addLayer(riskLayerGroup);
-                if(map.hasLayer(cancerLayerGroup)) map.removeLayer(cancerLayerGroup);
-            } else {
-                if(!map.hasLayer(cancerLayerGroup)) map.addLayer(cancerLayerGroup);
-                if(!map.hasLayer(riskLayerGroup)) map.addLayer(riskLayerGroup);
-            }
-        }
-
-        function toggleSelectMode() {
-            const btn = document.getElementById('btn-select-mode');
-            if (appMode === 'select') {
-                appMode = 'view';
-                btn.classList.remove('active');
-                document.getElementById('pill-select').classList.remove('visible');
-            } else {
-                appMode = 'select';
-                btn.classList.add('active');
-                document.getElementById('pill-select').classList.add('visible');
-                document.getElementById('pill-pick').classList.remove('visible');
-            }
-        }
-
-        function cancelPickMode() {
-            appMode = 'view';
-            document.getElementById('pill-pick').classList.remove('visible');
-        }
-
-        function selectZone(id) {
-            activeZoneId = id;
-            
-            // Reset styles
-            document.querySelectorAll('.custom-marker').forEach(el => el.classList.remove('selected'));
-            document.querySelectorAll('.zone-card').forEach(el => el.classList.remove('active'));
-            
-            if (!id) {
-                closeInfoPanel();
+        async function fetchData() {
+            const token = localStorage.getItem('token');
+            if (!token) {
+                alert("Session expirée. Veuillez vous reconnecter.");
+                window.location.href = "/login";
                 return;
             }
 
-            // Map Marker
-            const markerEl = document.getElementById('marker-' + id);
-            if (markerEl) markerEl.classList.add('selected');
+            try {
+                const res = await fetch('/api/patients?limit=10000', {
+                    headers: { 'Authorization': `Bearer ${token}` }
+                });
+                
+                if (res.status === 401) {
+                    alert("Session expirée. Veuillez vous reconnecter.");
+                    window.location.href = "/login";
+                    return;
+                }
 
-            // Sidebar Card
-            const cardEl = document.getElementById('card-' + id);
-            if (cardEl) {
-                cardEl.classList.add('active');
-                cardEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                const data = await res.json();
+                patients = data.patients || [];
+                
+                // Populate Filters
+                const profs = [...new Set(patients.map(p => p.profession).filter(Boolean))].sort();
+                const types = [...new Set(patients.map(p => p.cancer_type).filter(Boolean))].sort();
+                
+                const fProf = document.getElementById('f-profession');
+                profs.forEach(p => fProf.add(new Option(p, p)));
+
+                const fType = document.getElementById('f-type');
+                types.forEach(t => fType.add(new Option(t, t)));
+                
+                // Profession multi-select in modal
+                const modalProfContainer = document.getElementById('modal-prof-list');
+                modalProfContainer.innerHTML = '';
+                profs.forEach(p => {
+                    const div = document.createElement('div');
+                    div.className = 'multi-select-item';
+                    div.innerHTML = `<input type="checkbox" name="linked_profs" value="${p}"> <span>${p}</span>`;
+                    modalProfContainer.appendChild(div);
+                });
+
+            } catch (e) { console.error("Fetch Error:", e); }
+        }
+
+        function detectWilaya(latlng) {
+            let nearest = "Alger";
+            let minDist = Infinity;
+            for (const [w, coords] of Object.entries(WILAYA_COORDS)) {
+                const d = Math.sqrt(Math.pow(latlng.lat - coords[0], 2) + Math.pow(latlng.lng - coords[1], 2));
+                if (d < minDist) { minDist = d; nearest = w; }
+            }
+            return nearest;
+        }
+
+        function renderAll() {
+            renderCancerPoints();
+            renderRiskZones();
+            renderProfessionDots();
+            renderCorrelations();
+            updateSummary();
+        }
+
+        function renderCancerPoints() {
+            cancerLayerGroup.clearLayers();
+            if (!activeLayers.cancer) return;
+
+            const selectedType = document.getElementById('f-type').value;
+            
+            // Group by Wilaya
+            const wilayaStats = {};
+            patients.forEach(p => {
+                if (selectedType !== 'all' && p.cancer_type !== selectedType) return;
+                if (!p.wilaya) return;
+                if (!wilayaStats[p.wilaya]) wilayaStats[p.wilaya] = 0;
+                wilayaStats[p.wilaya]++;
+            });
+
+            for (const [w, count] of Object.entries(wilayaStats)) {
+                const coords = WILAYA_COORDS[w];
+                if (!coords) continue;
+                
+                const radius = 8 + Math.sqrt(count) * 2;
+                const circle = L.circleMarker(coords, {
+                    radius: radius,
+                    fillColor: '#ec4899',
+                    color: '#fff',
+                    weight: 2,
+                    fillOpacity: 0.6
+                });
+                
+                circle.bindTooltip(`<strong>Wilaya: ${w}</strong><br>${count} patients`, { direction: 'top' });
+                circle.addTo(cancerLayerGroup);
+            }
+        }
+
+        function renderProfessionDots() {
+            professionLayerGroup.clearLayers();
+            if (!activeLayers.profession || selectedProfessions.length === 0) {
+                document.getElementById('legend-card').style.display = 'none';
+                return;
             }
 
-            // Fly to
-            const zone = zones.find(z => z.id === id);
-            if (zone) {
-                map.flyTo([zone.lat, zone.lng], 10, { duration: 0.8 });
-                showInfoPanel(zone);
+            document.getElementById('legend-card').style.display = 'block';
+            const legendItems = document.getElementById('legend-items');
+            legendItems.innerHTML = '';
+            
+            selectedProfessions.forEach(prof => {
+                const color = PROFESSION_COLORS[prof] || '#64748b';
+                legendItems.innerHTML += `<div class="legend-item"><div class="legend-color" style="background:${color}"></div> ${prof}</div>`;
+
+                // Calculate stats per wilaya
+                const stats = {};
+                patients.forEach(p => {
+                    if (p.profession !== prof || !p.wilaya) return;
+                    if (!stats[p.wilaya]) stats[p.wilaya] = { count: 0, ages: [], sex: {M:0, F:0}, cancers: {} };
+                    const s = stats[p.wilaya];
+                    s.count++;
+                    if (p.age) s.ages.push(p.age);
+                    if (p.sexe) s.sex[p.sexe]++;
+                    if (p.cancer_type) s.cancers[p.cancer_type] = (s.cancers[p.cancer_type] || 0) + 1;
+                });
+
+                for (const [w, s] of Object.entries(stats)) {
+                    const coords = WILAYA_COORDS[w];
+                    if (!coords) continue;
+
+                    // Offset slightly if multiple professions
+                    const offset = selectedProfessions.indexOf(prof) * 0.05;
+                    const pos = [coords[0] + offset, coords[1] + offset];
+
+                    const icon = L.divIcon({
+                        className: '',
+                        html: `<div style="width:30px; height:30px; background:${color}; border-radius:50%; border:2px solid white; display:flex; align-items:center; justify-content:center; color:white; font-weight:bold; font-size:10px; box-shadow:0 2px 8px rgba(0,0,0,0.2)">${s.count}</div>`,
+                        iconSize: [30, 30]
+                    });
+
+                    const marker = L.marker(pos, { icon: icon });
+                    
+                    const avgAge = s.ages.length ? Math.round(s.ages.reduce((a,b)=>a+b, 0) / s.ages.length) : '—';
+                    const mainCancer = Object.entries(s.cancers).sort((a,b)=>b[1]-a[1])[0]?.[0] || '—';
+
+                    marker.bindTooltip(`
+                        <div style="font-family:'Inter'">
+                            <strong style="color:${color}">${w} — ${prof}</strong><br>
+                            <div style="border-top:1px solid #eee; margin:5px 0; padding-top:5px">
+                                <strong>${s.count} patients</strong><br>
+                                ${s.sex.F} femmes · ${s.sex.M} hommes<br>
+                                Age moyen: ${avgAge} ans<br>
+                                Cancer dominant: ${mainCancer}
+                            </div>
+                        </div>
+                    `, { direction: 'top', className: 'light-tooltip' });
+                    
+                    marker.addTo(professionLayerGroup);
+                }
+            });
+        }
+
+        function renderRiskZones() {
+            drawnItems.clearLayers();
+            if (!activeLayers.risk) return;
+
+            zones.forEach(zone => {
+                let layer;
+                const style = { color: riskColors[zone.level], fillColor: riskColors[zone.level], fillOpacity: 0.3, weight: 2 };
+                if (zone.shape.type === 'circle') layer = L.circle([zone.shape.lat, zone.shape.lng], { radius: zone.shape.radius, ...style });
+                else if (zone.shape.type === 'rectangle') layer = L.rectangle(zone.shape.bounds, style);
+                else layer = L.polygon(zone.shape.latlngs, style);
+                
+                layer.on('click', (e) => { L.DomEvent.stopPropagation(e); selectZone(zone.id); });
+                layer.addTo(drawnItems);
+                markers[zone.id] = layer;
+            });
+        }
+
+        function renderCorrelations() {
+            correlationLayerGroup.clearLayers();
+            if (!activeLayers.fusion || !activeLayers.profession || selectedProfessions.length === 0) return;
+
+            zones.forEach(zone => {
+                const zonePos = zone.shape.type === 'circle' ? [zone.shape.lat, zone.shape.lng] : markers[zone.id].getBounds().getCenter();
+                const linkedProfs = zone.linked_profs || [];
+
+                selectedProfessions.forEach(prof => {
+                    if (!linkedProfs.includes(prof)) return;
+
+                    // Find clusters near this zone
+                    for (const [w, coords] of Object.entries(WILAYA_COORDS)) {
+                        const dist = map.distance(zonePos, coords) / 1000; // km
+                        if (dist < 80) {
+                            // Check if wilaya has patients with this profession
+                            const count = patients.filter(p => p.wilaya === w && p.profession === prof).length;
+                            if (count > 0) {
+                                const color = PROFESSION_COLORS[prof] || '#64748b';
+                                L.polyline([zonePos, coords], { color: color, weight: 2, dashArray: '5, 10', opacity: 0.6 }).addTo(correlationLayerGroup);
+                            }
+                        }
+                    }
+                });
+            });
+        }
+
+        function onProfessionFilterChange() {
+            const val = document.getElementById('f-profession').value;
+            if (val === 'all') {
+                selectedProfessions = [];
+            } else if (!selectedProfessions.includes(val)) {
+                selectedProfessions.push(val);
+                activeLayers.profession = true;
+                document.getElementById('layer-profession').classList.add('active');
+            }
+            renderProfessionPills();
+            renderAll();
+        }
+
+        function renderProfessionPills() {
+            const container = document.getElementById('selected-professions-pills');
+            container.innerHTML = '';
+            selectedProfessions.forEach(p => {
+                const pill = document.createElement('div');
+                pill.style = `background:#f1f5f9; border:1px solid #e2e8f0; padding:4px 10px; border-radius:14px; font-size:11px; font-weight:700; color:#475569; display:flex; align-items:center; gap:6px;`;
+                pill.innerHTML = `${p} <i data-lucide="x" style="width:12px; height:12px; cursor:pointer" onclick="removeProfession('${p}')"></i>`;
+                container.appendChild(pill);
+            });
+            lucide.createIcons();
+        }
+
+        function removeProfession(p) {
+            selectedProfessions = selectedProfessions.filter(item => item !== p);
+            renderProfessionPills();
+            renderAll();
+        }
+
+        function toggleLayer(layer) {
+            activeLayers[layer] = !activeLayers[layer];
+            document.getElementById('layer-' + layer).classList.toggle('active');
+            if (layer === 'fusion' && activeLayers.fusion) {
+                activeLayers.profession = true;
+                activeLayers.risk = true;
+                document.getElementById('layer-profession').classList.add('active');
+                document.getElementById('layer-risk').classList.add('active');
+            }
+            renderAll();
+        }
+
+        function setDrawMode(mode) {
+            if (currentDrawMode === mode) mode = null;
+            currentDrawMode = mode;
+            document.querySelectorAll('.btn-draw').forEach(b => b.classList.remove('active'));
+            if (mode) {
+                document.getElementById('draw-' + mode).classList.add('active');
+                document.getElementById('drawing-pill').classList.add('visible');
+                let handler;
+                if (mode === 'polygon') handler = new L.Draw.Polygon(map, drawControl.options.draw.polygon);
+                else if (mode === 'rectangle') handler = new L.Draw.Rectangle(map, drawControl.options.draw.rectangle);
+                else handler = new L.Draw.Circle(map, drawControl.options.draw.circle);
+                handler.enable();
+            } else {
+                document.getElementById('drawing-pill').classList.remove('visible');
             }
         }
 
-        // Info Panel
-        function showInfoPanel(zone) {
-            const panel = document.getElementById('info-panel');
-            document.getElementById('ip-title').textContent = zone.name;
-            document.getElementById('ip-loc').textContent = `Wilaya ${zone.wilaya}, ${zone.city}`;
+        function openZoneModal(shapeData, detectedWilaya) {
+            lastShapeData = shapeData;
+            document.getElementById('zone-modal').style.display = 'flex';
+            document.getElementById('zone-details-form').reset();
+            document.getElementById('edit-id').value = '';
             
-            const badge = document.getElementById('ip-badge');
-            badge.className = `badge badge-${zone.level}`;
-            badge.textContent = riskLabels[zone.level];
-
-            document.getElementById('ip-type').textContent = typeLabels[zone.type];
-            document.getElementById('ip-notes').textContent = zone.notes || 'Aucune note additionnelle.';
+            const wSelect = document.getElementById('z-wilaya');
+            wSelect.innerHTML = '<option value="">Sélectionner...</option>';
+            Object.keys(WILAYA_COORDS).sort().forEach(w => wSelect.add(new Option(w, w)));
             
-            panel.classList.add('visible');
+            if (detectedWilaya) {
+                wSelect.value = detectedWilaya;
+                onWilayaChange(detectedWilaya);
+            }
+            lucide.createIcons();
         }
 
-        function closeInfoPanel() {
-            document.getElementById('info-panel').classList.remove('visible');
+        async function onWilayaChange(wilaya) {
+            const citySelect = document.getElementById('z-city');
+            citySelect.innerHTML = '<option value="">Chargement...</option>';
+            
+            try {
+                // Get real cities from patients
+                const uniqueCities = [...new Set(patients.filter(p => p.wilaya === wilaya).map(p => p.commune || p.city).filter(Boolean))];
+                const fallbacks = WILAYA_CITIES_FALLBACK[wilaya] || [];
+                const finalCities = [...new Set([...uniqueCities, ...fallbacks])].sort();
+                
+                citySelect.innerHTML = '<option value="">Sélectionner Ville/Commune</option>';
+                finalCities.forEach(c => citySelect.add(new Option(c, c)));
+                citySelect.add(new Option("Autre (saisie libre)", "autre"));
+            } catch (e) { citySelect.innerHTML = '<option value="">Erreur</option>'; }
         }
 
-        // Form handling
-        function handleFormSubmit(e) {
+        function closeZoneModal() {
+            document.getElementById('zone-modal').style.display = 'none';
+            if (!document.getElementById('edit-id').value) {
+                drawnItems.clearLayers();
+                renderRiskZones();
+            }
+        }
+
+        function handleZoneFormSubmit(e) {
             e.preventDefault();
-            
             const isEdit = document.getElementById('edit-id').value;
+            const linkedProfs = Array.from(document.querySelectorAll('input[name="linked_profs"]:checked')).map(i => i.value);
+            
             const newZone = {
                 id: isEdit ? isEdit : Date.now().toString(),
                 name: document.getElementById('z-name').value,
                 wilaya: document.getElementById('z-wilaya').value,
                 city: document.getElementById('z-city').value,
-                lat: parseFloat(document.getElementById('z-lat').value) || 36.0,
-                lng: parseFloat(document.getElementById('z-lng').value) || 3.0,
                 type: document.getElementById('z-type').value,
                 level: document.getElementById('z-level').value,
                 notes: document.getElementById('z-notes').value,
+                linked_profs: linkedProfs,
+                shape: isEdit ? zones.find(z => z.id === isEdit).shape : lastShapeData
             };
 
-            if (isEdit) {
-                zones = zones.map(z => z.id === isEdit ? newZone : z);
-            } else {
-                zones.push(newZone);
-            }
+            if (isEdit) zones = zones.map(z => z.id === isEdit ? newZone : z);
+            else zones.push(newZone);
 
-            saveData();
-            resetForm();
-            selectZone(newZone.id);
-            
-            if (appMode === 'pick') cancelPickMode();
+            saveZones();
+            closeZoneModal();
+            renderAll();
+            renderSidebarList();
         }
 
-        function resetForm() {
-            document.getElementById('add-zone-form').reset();
-            document.getElementById('edit-id').value = '';
-            document.getElementById('btn-submit').innerHTML = '<i data-lucide="plus-circle"></i> Ajouter la Zone';
-            document.getElementById('btn-cancel').style.display = 'none';
-            lucide.createIcons();
+        function saveZones() { localStorage.setItem('sig_zones_v3', JSON.stringify(zones)); }
+        function loadZones() { 
+            const stored = localStorage.getItem('sig_zones_v3');
+            if (stored) zones = JSON.parse(stored);
         }
 
-        function editSelectedZone() {
-            if (!activeZoneId) return;
-            const zone = zones.find(z => z.id === activeZoneId);
-            if (!zone) return;
-
-            document.getElementById('edit-id').value = zone.id;
-            document.getElementById('z-name').value = zone.name;
-            document.getElementById('z-wilaya').value = zone.wilaya;
-            document.getElementById('z-city').value = zone.city;
-            document.getElementById('z-lat').value = zone.lat;
-            document.getElementById('z-lng').value = zone.lng;
-            document.getElementById('z-type').value = zone.type;
-            document.getElementById('z-level').value = zone.level;
-            document.getElementById('z-notes').value = zone.notes;
-
-            document.getElementById('btn-submit').innerHTML = '<i data-lucide="pencil"></i> Mettre à jour';
-            document.getElementById('btn-cancel').style.display = 'block';
-
-            // Open section 3
-            const addSection = document.getElementById('add-zone-form').closest('.section-content');
-            if(!addSection.classList.contains('open')) {
-                addSection.previousElementSibling.click();
-            }
-            addSection.scrollIntoView({ behavior: 'smooth' });
-            
-            lucide.createIcons();
-        }
-
-        function deleteSelectedZone() {
-            if (!activeZoneId) return;
-            if (confirm('Voulez-vous vraiment supprimer cette zone ?')) {
-                zones = zones.filter(z => z.id !== activeZoneId);
-                saveData();
-                selectZone(null);
-            }
+        function updateSummary() {
+            document.getElementById('count-cases').textContent = patients.length;
+            document.getElementById('count-zones').textContent = zones.length;
         }
 
         function renderSidebarList() {
             const container = document.getElementById('zone-list-container');
             container.innerHTML = '';
-
             zones.forEach(zone => {
                 const div = document.createElement('div');
                 div.className = `zone-card ${zone.id === activeZoneId ? 'active' : ''}`;
                 div.id = `card-${zone.id}`;
                 div.onclick = () => selectZone(zone.id);
-
                 div.innerHTML = `
                     <div class="zone-dot" style="background: ${riskColors[zone.level]}"></div>
                     <div class="zone-content">
                         <div class="zone-title">${zone.name}</div>
-                        <div class="zone-loc">${zone.city} (W.${zone.wilaya})</div>
-                    </div>
-                    <div class="zone-actions">
-                        <button class="btn-text" title="Modifier" onclick="event.stopPropagation(); activeZoneId='${zone.id}'; editSelectedZone();"><i data-lucide="pencil" style="width: 14px; height: 14px;"></i></button>
-                        <button class="btn-text" title="Supprimer" onclick="event.stopPropagation(); activeZoneId='${zone.id}'; deleteSelectedZone();"><i data-lucide="trash-2" style="width: 14px; height: 14px; color: #ef4444;"></i></button>
+                        <div class="zone-loc">${zone.city}, ${zone.wilaya}</div>
                     </div>
                 `;
                 container.appendChild(div);
             });
+        }
+
+        function selectZone(id) {
+            activeZoneId = id;
+            document.querySelectorAll('.zone-card').forEach(el => el.classList.remove('active'));
+            if (!id) { document.getElementById('info-panel').classList.remove('visible'); return; }
+            const card = document.getElementById('card-' + id);
+            if (card) { card.classList.add('active'); card.scrollIntoView({ behavior: 'smooth', block: 'nearest' }); }
+            const zone = zones.find(z => z.id === id);
+            if (zone) showInfoPanel(zone);
+        }
+
+        function showInfoPanel(zone) {
+            const panel = document.getElementById('info-panel');
+            document.getElementById('ip-title').textContent = zone.name;
+            document.getElementById('ip-loc').textContent = `${zone.city}, ${zone.wilaya}`;
+            document.getElementById('ip-badge').innerHTML = `<span class="badge badge-${zone.level}">${riskLabels[zone.level]}</span>`;
+            document.getElementById('ip-notes').textContent = zone.notes || 'Aucune note.';
             
-            lucide.createIcons({ root: container });
+            const corr = document.getElementById('profession-correlations');
+            corr.innerHTML = '';
+            const linked = zone.linked_profs || [];
+            linked.forEach(p => {
+                // Calculate real count in nearby wilayas
+                let count = patients.filter(pt => pt.wilaya === zone.wilaya && pt.profession === p).length;
+                corr.innerHTML += `<div class="prof-item"><span>${p}</span><span class="prof-score">${count} patients</span></div>`;
+            });
+
+            panel.classList.add('visible');
+            lucide.createIcons();
         }
 
-        function exportData(format) {
-            let dataStr = "";
-            let dataUri = "";
-            let exportFileDefaultName = "sig_zones";
-
-            if (format === 'geojson') {
-                const geojson = {
-                    type: "FeatureCollection",
-                    features: zones.map(z => ({
-                        type: "Feature",
-                        geometry: { type: "Point", coordinates: [z.lng, z.lat] },
-                        properties: { ...z }
-                    }))
-                };
-                dataStr = JSON.stringify(geojson, null, 2);
-                dataUri = 'data:application/json;charset=utf-8,'+ encodeURIComponent(dataStr);
-                exportFileDefaultName += ".geojson";
-            } else {
-                const header = "id,name,wilaya,city,lat,lng,type,level,notes\n";
-                const rows = zones.map(z => `${z.id},"${z.name}",${z.wilaya},"${z.city}",${z.lat},${z.lng},${z.type},${z.level},"${z.notes}"`).join("\n");
-                dataStr = header + rows;
-                dataUri = 'data:text/csv;charset=utf-8,'+ encodeURIComponent(dataStr);
-                exportFileDefaultName += ".csv";
+        function deleteSelectedZone() {
+            if (confirm('Supprimer cette zone ?')) {
+                zones = zones.filter(z => z.id !== activeZoneId);
+                saveZones();
+                renderAll();
+                renderSidebarList();
+                document.getElementById('info-panel').classList.remove('visible');
             }
-
-            let linkElement = document.createElement('a');
-            linkElement.setAttribute('href', dataUri);
-            linkElement.setAttribute('download', exportFileDefaultName);
-            document.body.appendChild(linkElement);
-            linkElement.click();
-            document.body.removeChild(linkElement);
         }
 
-        // Initialize when DOM ready
-        document.addEventListener('DOMContentLoaded', initMap);
+        async function editSelectedZone() {
+            const zone = zones.find(z => z.id === activeZoneId);
+            if (!zone) return;
+            
+            // Re-open modal with existing shape
+            openZoneModal(zone.shape, zone.wilaya);
+            
+            document.getElementById('edit-id').value = zone.id;
+            document.getElementById('z-name').value = zone.name;
+            document.getElementById('z-type').value = zone.type;
+            document.getElementById('z-level').value = zone.level;
+            document.getElementById('z-notes').value = zone.notes;
+            
+            // Wait for cities to load then set value
+            await onWilayaChange(zone.wilaya);
+            document.getElementById('z-city').value = zone.city;
+            
+            // Set checkboxes for linked profs
+            const checks = document.querySelectorAll('input[name="linked_profs"]');
+            checks.forEach(c => c.checked = (zone.linked_profs || []).includes(c.value));
+        }
 
+        function toggleSection(el) { el.classList.toggle('active'); el.nextElementSibling.classList.toggle('open'); }
+        function hideProfessions() { activeLayers.profession = false; document.getElementById('layer-profession').classList.remove('active'); renderAll(); }
+        function applyFilters() { renderAll(); }
+
+        document.addEventListener('DOMContentLoaded', () => { initMap(); lucide.createIcons(); });
     </script>
 </body>
 </html>
