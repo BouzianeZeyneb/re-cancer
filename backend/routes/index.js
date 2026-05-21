@@ -200,4 +200,15 @@ router.get('/lab-requests/patient/:patientId', authMiddleware, getLabRequestsByP
 router.get('/lab-requests/labo', authMiddleware, requireRole('laboratoire'), getRequestsForLabo);
 router.put('/lab-requests/:id/upload', authMiddleware, requireRole('laboratoire'), uploadLab.single('pdf'), uploadPdf);
 
-module.exports = router;
+const { getAll, create, update, remove, getValues, saveValue } = require('../controllers/customFieldsController');
+
+// Custom dynamic fields routes (admin only for CRUD)
+router.get('/custom-fields', authMiddleware, requireRole('admin'), getAll);
+router.post('/custom-fields', authMiddleware, requireRole('admin'), create);
+router.put('/custom-fields/:id', authMiddleware, requireRole('admin'), update);
+router.delete('/custom-fields/:id', authMiddleware, requireRole('admin'), remove);
+
+// Endpoints for retrieving and saving field values (available to all authenticated users)
+router.get('/custom-fields/:id/value/:recordId', authMiddleware, getValues);
+router.post('/custom-fields/:id/value', authMiddleware, saveValue);
+
