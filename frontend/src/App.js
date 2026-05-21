@@ -42,12 +42,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
   if (allowedRoles && !allowedRoles.includes(safeRole)) {
     const path = window.location.pathname;
     if (path === '/') {
-
       if (safeRole === 'laboratoire') return <Navigate to="/laboratoire" replace />;
-
-      if (safeRole === 'laboratoire') return <Navigate to="/demandes-labo" replace />;
       if (safeRole === 'pharmacien') return <Navigate to="/pharmacie" replace />;
-
       if (safeRole === 'medecin' || safeRole === 'anapath') return <Navigate to="/patients" replace />;
     }
 

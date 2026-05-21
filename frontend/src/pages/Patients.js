@@ -12,11 +12,13 @@ export default function Patients() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
   const [sexeFilter, setSexeFilter] = useState('');
-  useEffect(() => { setPage(1); }, [search, sexeFilter, typeFilter, stadeFilter]);
   const [typeFilter, setTypeFilter] = useState('');
+  const [stadeFilter, setStadeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-  const [stadeFilter, setStadeFilter] = useState('');
+
+  useEffect(() => { setPage(1); }, [search, sexeFilter, typeFilter, stadeFilter]);
+
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
   const [showDeleteModal, setShowDeleteModal] = useState(false);
