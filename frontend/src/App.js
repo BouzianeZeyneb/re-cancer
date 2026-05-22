@@ -43,7 +43,7 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     const path = window.location.pathname;
     if (path === '/') {
       if (safeRole === 'laboratoire') return <Navigate to="/laboratoire" replace />;
-      if (safeRole === 'pharmacien') return <Navigate to="/pharmacie" replace />;
+      if (safeRole === 'pharmacien' || safeRole === 'pharmacie') return <Navigate to="/pharmacie" replace />;
       if (safeRole === 'medecin' || safeRole === 'anapath') return <Navigate to="/patients" replace />;
     }
 
@@ -72,14 +72,14 @@ function AppRoutes() {
       <Route path="/patient-forms/:id" element={<PatientFormulairePublic />} />
       <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Dashboard /></ProtectedRoute>} />
 
-      {/* Patients: Admin, Medecin, Labo, Anapath */}
-      <Route path="/patients" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><Patients /></ProtectedRoute>} />
+      {/* Patients: Admin, Medecin, Labo, Anapath, Pharmacie */}
+      <Route path="/patients" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath', 'pharmacie', 'pharmacien']}><Patients /></ProtectedRoute>} />
       <Route path="/patients/nouveau" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><PatientForm /></ProtectedRoute>} />
-      <Route path="/patients/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><PatientDetail /></ProtectedRoute>} />
+      <Route path="/patients/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath', 'pharmacie', 'pharmacien']}><PatientDetail /></ProtectedRoute>} />
       <Route path="/patients/:id/modifier" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><PatientForm /></ProtectedRoute>} />
-      <Route path="/cas-cancer" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><CasCancer /></ProtectedRoute>} />
+      <Route path="/cas-cancer" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'anapath']}><CasCancer /></ProtectedRoute>} />
       <Route path="/cas-cancer/nouveau" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><CasForm /></ProtectedRoute>} />
-      <Route path="/cas-cancer/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><CasDetail /></ProtectedRoute>} />
+      <Route path="/cas-cancer/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'anapath']}><CasDetail /></ProtectedRoute>} />
       <Route path="/rcp" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><RCPList /></ProtectedRoute>} />
       <Route path="/rcp/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><RCPDetail /></ProtectedRoute>} />
 
@@ -87,7 +87,7 @@ function AppRoutes() {
       <Route path="/doublons" element={<ProtectedRoute allowedRoles={['admin']}><Doublons /></ProtectedRoute>} />
       <Route path="/carte-sig" element={<ProtectedRoute allowedRoles={['admin']}><CarteSIG /></ProtectedRoute>} />
       <Route path="/utilisateurs" element={<ProtectedRoute allowedRoles={['admin']}><Utilisateurs /></ProtectedRoute>} />
-      <Route path="/audit" element={<ProtectedRoute allowedRoles={['admin']}><AuditLogs /></ProtectedRoute>} />
+      <Route path="/audit" element={<ProtectedRoute allowedRoles={['admin', 'pharmacie']}><AuditLogs /></ProtectedRoute>} />
       <Route path="/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
 
       {/* Partagés */}
@@ -95,9 +95,7 @@ function AppRoutes() {
       <Route path="/laboratoire" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire']}><Laboratoire /></ProtectedRoute>} />
 
       <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><AnalysesBiologie /></ProtectedRoute>} />
-
-      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><AnalysesBiologie /></ProtectedRoute>} />
-      <Route path="/pharmacie" element={<ProtectedRoute allowedRoles={['admin', 'pharmacien']}><Pharmacie /></ProtectedRoute>} />
+      <Route path="/pharmacie" element={<ProtectedRoute allowedRoles={['admin', 'pharmacien', 'pharmacie']}><Pharmacie /></ProtectedRoute>} />
 
 
       <Route path="*" element={<Navigate to="/" replace />} />

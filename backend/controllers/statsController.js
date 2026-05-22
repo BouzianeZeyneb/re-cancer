@@ -40,17 +40,6 @@ const getDashboardStats = async (req, res) => {
       WHERE 1=1 ${whereClauseTemplate}
     `, params);
     
-<<<<<<< HEAD
-    const [totalCases] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE 1=1 ${whereClauseTemplate}`, params);
-    const [enTraitement] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE statut_patient = 'En traitement' ${whereClauseTemplate}`, params);
-    const [nouveauxMois] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE MONTH(created_at) = MONTH(CURRENT_DATE) AND YEAR(created_at) = YEAR(CURRENT_DATE)`);
-    const [stadeIV] = await pool.execute(`SELECT COUNT(*) as total FROM cancer_cases WHERE stade = 'Stade IV' ${whereClauseTemplate}`, params);
-    
-    // Admin only stats (always fetched, filtered on frontend)
-    const [totalLabos] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'laboratoire' AND actif = true");
-    const [totalAnapath] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'anapath' AND actif = true");
-    const [totalMedecins] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'medecin' AND actif = true");
-=======
     const [totalCases] = await pool.execute(`
       SELECT COUNT(*) as total 
       FROM cancer_cases cc 
@@ -79,7 +68,11 @@ const getDashboardStats = async (req, res) => {
       JOIN patients p ON cc.patient_id = p.id 
       WHERE cc.stade = 'Stade IV' ${whereClauseTemplate}
     `, params);
->>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
+    
+    // Admin only stats (always fetched, filtered on frontend)
+    const [totalLabos] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'laboratoire' AND actif = true");
+    const [totalAnapath] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'anapath' AND actif = true");
+    const [totalMedecins] = await pool.execute("SELECT COUNT(*) as total FROM users WHERE role = 'medecin' AND actif = true");
 
     const [parType] = await pool.execute(`
       SELECT cc.type_cancer, COUNT(*) as count 

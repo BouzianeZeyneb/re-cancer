@@ -22,7 +22,7 @@ const initDatabase = async () => {
         prenom VARCHAR(100) NOT NULL,
         email VARCHAR(150) UNIQUE NOT NULL,
         password VARCHAR(255) NOT NULL,
-        role ENUM('admin','medecin','laboratoire','anapath','pharmacien') NOT NULL DEFAULT 'medecin',
+        role ENUM('admin','medecin','laboratoire','anapath','pharmacien','pharmacie') NOT NULL DEFAULT 'medecin',
         actif BOOLEAN DEFAULT true,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
@@ -44,6 +44,7 @@ const initDatabase = async () => {
         commune VARCHAR(100),
         wilaya VARCHAR(100),
         patient_seq INT AUTO_INCREMENT UNIQUE,
+        matricule VARCHAR(20) UNIQUE,
         latitude DECIMAL(10,8),
         longitude DECIMAL(11,8),
         fumeur BOOLEAN DEFAULT false,
@@ -61,6 +62,29 @@ const initDatabase = async () => {
 
     // Migration: ensure deleted column exists for existing databases
     try { await conn.execute(`ALTER TABLE patients ADD COLUMN deleted BOOLEAN DEFAULT false`); } catch (e) { }
+
+    // Migration: ensure patient_seq column exists for existing databases
+    try { await conn.execute(`ALTER TABLE patients ADD COLUMN patient_seq INT AUTO_INCREMENT UNIQUE`); } catch (e) { }
+
+    // Migration: ensure matricule column exists for existing databases
+    try { await conn.execute(`ALTER TABLE patients ADD COLUMN matricule VARCHAR(20) UNIQUE`); } catch (e) { }
+
+    // Backfill matricule for existing patients that don't have one
+    try {
+      const [patientsWithoutMatricule] = await conn.execute(
+        `SELECT id, patient_seq, created_at FROM patients WHERE matricule IS NULL ORDER BY created_at ASC`
+      );
+      for (let i = 0; i < patientsWithoutMatricule.length; i++) {
+        const p = patientsWithoutMatricule[i];
+        const year = new Date(p.created_at || Date.now()).getFullYear();
+        const seq = String(p.patient_seq || (i + 1)).padStart(4, '0');
+        const mat = `PAT-${year}-${seq}`;
+        await conn.execute(`UPDATE patients SET matricule = ? WHERE id = ?`, [mat, p.id]);
+      }
+      if (patientsWithoutMatricule.length > 0) {
+        console.log(`✅ Backfilled matricule for ${patientsWithoutMatricule.length} existing patients`);
+      }
+    } catch (e) { console.warn('Matricule backfill warning:', e.message); }
 
     // Cancer cases table
     await conn.execute(`

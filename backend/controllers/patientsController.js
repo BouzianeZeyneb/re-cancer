@@ -4,21 +4,28 @@ const { auditLog } = require('../middleware/auth');
 
 const getAllPatients = async (req, res) => {
   try {
-    const { search, sexe, wilaya, page = 1, limit = 20 } = req.query;
+    const { search, sexe, wilaya, page = 1, limit = 20, prelevementOnly } = req.query;
     let query = `
       SELECT p.*, 
         (SELECT COUNT(*) FROM cancer_cases WHERE patient_id = p.id) as nb_cancers,
         (SELECT type_cancer FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as cancer_type,
         (SELECT stade FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as stade,
-        (SELECT statut_patient FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as derniere_statut
+        (SELECT statut_patient FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as derniere_statut,
+        (SELECT type_prelevement FROM anapath a JOIN cancer_cases cc ON a.case_id = cc.id WHERE cc.patient_id = p.id ORDER BY a.date_prelevement DESC LIMIT 1) as type_prelevement,
+        (SELECT date_prelevement FROM anapath a JOIN cancer_cases cc ON a.case_id = cc.id WHERE cc.patient_id = p.id ORDER BY a.date_prelevement DESC LIMIT 1) as date_prelevement,
+        (SELECT localisation FROM cancer_cases WHERE patient_id = p.id ORDER BY created_at DESC LIMIT 1) as localisation
       FROM patients p 
       WHERE p.deleted = false 
     `;
     const params = [];
 
+    if (prelevementOnly === 'true') {
+      query += ' AND EXISTS (SELECT 1 FROM anapath a JOIN cancer_cases cc ON a.case_id = cc.id WHERE cc.patient_id = p.id)';
+    }
+
     if (search) {
-      query += ' AND (p.nom LIKE ? OR p.prenom LIKE ? OR p.num_carte_nationale LIKE ? OR p.telephone LIKE ?)';
-      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
+      query += ' AND (p.nom LIKE ? OR p.prenom LIKE ? OR p.num_carte_nationale LIKE ? OR p.telephone LIKE ? OR p.matricule LIKE ?)';
+      params.push(`%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`, `%${search}%`);
     }
     if (sexe) { query += ' AND p.sexe = ?'; params.push(sexe); }
     if (wilaya) { query += ' AND p.wilaya LIKE ?'; params.push(`%${wilaya}%`); }
@@ -220,8 +227,20 @@ const createPatient = async (req, res) => {
       [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', req.user.id]
     );
 
-    await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom }, req.ip);
-    res.status(201).json({ message: 'Patient créé avec succès', id });
+    // Generate and store matricule using auto-incremented patient_seq
+    const [rows] = await pool.execute('SELECT patient_seq, created_at FROM patients WHERE id = ?', [id]);
+    const year = new Date(rows[0].created_at).getFullYear();
+    let seqNum = rows[0].patient_seq;
+    if (!seqNum) {
+      // Fallback: use count of existing patients as sequence
+      const [countRows] = await pool.execute('SELECT COUNT(*) as cnt FROM patients');
+      seqNum = countRows[0].cnt;
+    }
+    const matricule = `PAT-${year}-${String(seqNum).padStart(4, '0')}`;
+    await pool.execute('UPDATE patients SET matricule = ? WHERE id = ?', [matricule, id]);
+
+    await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom, matricule }, req.ip);
+    res.status(201).json({ message: 'Patient créé avec succès', id, matricule });
   } catch (error) {
     console.error('CREATE PATIENT ERROR:', error);
     res.status(500).json({ message: error.message });

@@ -23,13 +23,8 @@ const ANALYSES_CATEGORIES = {
 
 export default function AnalysesBiologie() {
   const navigate = useNavigate();
-<<<<<<< HEAD
   const { user } = useAuth();
   const isLaboratoire = user?.role === 'laboratoire';
-
-  // Patient list state
-=======
->>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
   const [patients, setPatients] = useState([]);
   const [patientStats, setPatientStats] = useState({});
   const [search, setSearch] = useState('');
@@ -129,36 +124,9 @@ export default function AnalysesBiologie() {
             </div>
           </div>
 
-<<<<<<< HEAD
         {loadingData ? (
-          <div className="loading-center"><div className="spinner" /></div>
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 100 }}><div className="spinner" /></div>
         ) : (
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-
-            {/* Lab requests */}
-            <div className="card" style={{ border: '2px solid #bae6fd' }}>
-              <div className="card-header" style={{ background: '#f0f9ff' }}>
-                <h2>📋 Demandes d'Analyses au Laboratoire ({labRequests.length})</h2>
-                {!isLaboratoire && (
-                  <button className="btn btn-primary btn-sm" onClick={() => setShowRequestForm(!showRequestForm)}>+ Demander des analyses</button>
-                )}
-              </div>
-              {showRequestForm && (
-                <div style={{ padding: '24px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 2fr', gap: 24 }}>
-                    <div>
-                      <div className="form-group is-required">
-                        <label className="form-label">Laborantin Destinataire</label>
-                        <select className="form-control" value={requestData.labo_id} onChange={e => setReq('labo_id', e.target.value)}>
-                          <option value="">-- Sélectionner --</option>
-                          {labos.map(l => <option key={l.id} value={l.id}>{l.prenom} {l.nom}</option>)}
-                        </select>
-                      </div>
-                      <div className="form-group">
-                        <label className="form-label">Notes particulières</label>
-                        <textarea className="form-control" rows={3} placeholder="Urgent, à jeun, etc..." value={requestData.notes_labo} onChange={e => setReq('notes_labo', e.target.value)} />
-                      </div>
-=======
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: 32 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                 {/* Trends */}
@@ -166,7 +134,6 @@ export default function AnalysesBiologie() {
                     <div style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', marginBottom: 24, display: 'flex', alignItems: 'center', gap: 10 }}>
                         <div style={{ width: 8, height: 24, background: '#3b82f6', borderRadius: 4 }} />
                         Analyse des Tendances
->>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
                     </div>
                     {biologie.length < 2 ? (
                         <div style={{ padding: '60px 0', textAlign: 'center', color: '#94a3b8', fontSize: 14 }}>Pas assez de données pour générer un graphique de tendance.</div>
@@ -226,6 +193,7 @@ export default function AnalysesBiologie() {
                 </div>
             </div>
           </div>
+        )}
         </div>
       </Layout>
     );

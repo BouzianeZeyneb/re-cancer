@@ -92,37 +92,6 @@ export default function Dashboard() {
     <Layout title="">
       <div style={{ padding: '0 12px 40px' }}>
         
-<<<<<<< HEAD
-        {/* KPI HEADERS */}
-        <div style={{ 
-          display: 'grid', 
-          gridTemplateColumns: isAdmin ? 'repeat(4, 1fr)' : 'repeat(5, 1fr)', 
-          gap: 16, 
-          marginBottom: 32 
-        }}>
-          <KPIMiniCard label="Total Patients" value={t.patients || 0} />
-          <KPIMiniCard label="Nouveaux ce mois" value={t.nouveauxMois || 0} />
-          <KPIMiniCard label="Sous chimiothérapie" value={t.enTraitement || 0} />
-          <KPIMiniCard label="Patients en suivi" value={t.suivi || 0} />
-          <KPIMiniCard label="Cas Stade IV" value={t.stadeIV || 0} />
-          
-          {isAdmin && (
-            <>
-              <KPIMiniCard label="Nombre de laboratoires" value={t.labos || 0} />
-              <KPIMiniCard label="Nombre d'Anapath" value={t.anapaths || 0} />
-              <KPIMiniCard label="Nombre de médecins" value={t.medecins || 0} />
-            </>
-          )}
-        </div>
-
-        <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 0.8fr', gap: 24, marginBottom: 32 }}>
-             {/* SITUATIONS CRITIQUES */}
-            <div className="card" style={{ padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9' }}>
-               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 18 }}>🚨</span>
-                    <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', margin: 0 }}>Situations Critiques</h3>
-=======
         {/* KPI HEADERS - New Premium Grid */}
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, marginBottom: 32 }}>
           <KPICard label="Cohorte Totale" value={t.patients || 0} trend="Patients enregistrés" />
@@ -143,89 +112,12 @@ export default function Dashboard() {
                         <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', margin: 0 }}>Vigilance Clinique</h3>
                         <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>{stats?.recentDossiers?.length || 0} alertes nécessitant une action</p>
                     </div>
->>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
                   </div>
                   <button className="btn-icon-subtle" title="Configuration alertes">
                     <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.72v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                   </button>
                </div>
                <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-<<<<<<< HEAD
-                 {(stats?.recentDossiers?.slice(0, 4) || []).map((d, idx) => {
-                   const alertText = idx % 2 === 0 ? `Alerte Globules : ${d.nom}` : `Retard Chimio : ${d.nom}`;
-                   const styles = getAlertStyles(alertText);
-                   return (
-                    <div key={idx} style={{ 
-                      display: 'flex', 
-                      justifyContent: 'space-between', 
-                      alignItems: 'center', 
-                      padding: '12px 16px', 
-                      borderRadius: 14, 
-                      background: styles.bg, 
-                      border: `1px solid ${styles.border}` 
-                    }}>
-                       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
-                         <div style={{ fontSize: 16, color: styles.icon }}>⚠️</div>
-                         <div>
-                            <div style={{ fontSize: 13, fontWeight: 800, color: styles.text }}>{alertText}</div>
-                            <div style={{ fontSize: 11, color: styles.text, opacity: 0.6 }}>Aujourd'hui</div>
-                         </div>
-                       </div>
-                       <button 
-                         onClick={() => navigate(`/cas-cancer/${d.caseId}`)} 
-                         style={{ 
-                            background: '#0f172a', 
-                            color: 'white', 
-                            border: 'none', 
-                            borderRadius: 8, 
-                            padding: '6px 14px', 
-                            fontSize: 11, 
-                            fontWeight: 700,
-                            cursor: 'pointer'
-                         }}
-                       >
-                         Voir le dossier
-                       </button>
-                    </div>
-                   );
-                 })}
-                 {!stats?.recentDossiers?.length && <div style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: 20 }}>Aucune alerte critique pour le moment.</div>}
-               </div>
-            </div>
-
-            {/* DERNIERS PATIENTS AJOUTÉS */}
-            <div className="card" style={{ padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9' }}>
-                <h3 style={{ fontSize: 16, fontWeight: 800, color: '#0f172a', marginBottom: 20 }}>Derniers patients ajoutés</h3>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {(stats?.recentPatients || []).map((p, idx) => (
-                    <div 
-                      key={p.id} 
-                      onClick={() => navigate(`/patients/${p.id}`)}
-                      style={{ 
-                        display: 'flex', 
-                        justifyContent: 'space-between', 
-                        alignItems: 'center', 
-                        padding: '12px 16px', 
-                        borderRadius: 14, 
-                        border: '1px solid #f1f5f9',
-                        cursor: 'pointer',
-                        transition: 'all 0.2s'
-                      }}
-                      onMouseOver={e => e.currentTarget.style.backgroundColor = '#f8fafc'}
-                      onMouseOut={e => e.currentTarget.style.backgroundColor = 'transparent'}
-                    >
-                      <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                        <div style={{ width: 32, height: 32, borderRadius: 8, background: '#f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 14 }}>👤</div>
-                        <div>
-                          <div style={{ fontSize: 13, fontWeight: 700, color: '#1e293b' }}>{p.nom} {p.prenom}</div>
-                          <div style={{ fontSize: 11, color: '#94a3b8' }}>Ajouté le {formatDateSimple(p.created_at)}</div>
-                        </div>
-                      </div>
-                      <div style={{ color: '#94a3b8', fontSize: 18 }}>›</div>
-                    </div>
-                  ))}
-                  {!stats?.recentPatients?.length && <div style={{ fontSize: 12, color: '#94a3b8', textAlign: 'center', padding: 20 }}>Aucun patient récent.</div>}
-=======
                  {(stats?.recentDossiers?.slice(0, 3) || []).map((d, idx) => (
                    <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderRadius: 16, background: idx === 0 ? '#fef2f2' : '#ffffff', border: idx === 0 ? '1.5px solid #fee2e2' : '1px solid #f1f5f9', transition: 'all 0.2s' }}>
                       <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
@@ -274,26 +166,10 @@ export default function Dashboard() {
                     <div style={{ marginTop: 20, width: '100%', height: 4, background: '#f1f5f9', borderRadius: 2, overflow: 'hidden' }}>
                         <div style={{ width: '100%', height: '100%', background: '#22c55e' }} />
                     </div>
->>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
                 </div>
             </div>
         </div>
 
-<<<<<<< HEAD
-        {/* FILTERS */}
-        <div style={{ background: 'white', padding: '24px', borderRadius: 20, border: '1px solid #f1f5f9', display: 'flex', flexWrap: 'wrap', gap: 16, marginBottom: 32, alignItems: 'flex-end', boxShadow: '0 4px 6px rgba(0,0,0,0.02)' }}>
-           <FilterSelect label="Wilaya" value={filterWilaya} options={WILAYAS} onChange={setFilterWilaya} placeholder="Toutes les Wilayas" />
-           <FilterSelect label="Type de Cancer" value={filterType} options={CANCER_TYPES} onChange={setFilterType} placeholder="Tous les Types" />
-           <FilterSelect label="Sexe" value={filterSexe} options={['M', 'F']} onChange={setFilterSexe} placeholder="Tous les Sexes" />
-           <div style={{ width: 100 }}>
-              <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>Année</label>
-              <select className="form-control" value={filterAnnee} onChange={e => setFilterAnnee(e.target.value)} style={{ borderRadius: 10, padding: '8px 40px 8px 16px', fontSize: 13, height: 'auto' }}>
-                <option value="">Toutes</option>
-                <option value="2026">2026</option>
-                <option value="2025">2025</option>
-                <option value="2024">2024</option>
-                <option value="2023">2023</option>
-=======
         {/* FILTERS - Bar styled */}
         <div style={{ background: 'white', padding: '16px 24px', borderRadius: 20, border: '1px solid #f1f5f9', display: 'flex', gap: 20, marginBottom: 32, alignItems: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.03)' }}>
            <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#64748b' }}>
@@ -310,7 +186,6 @@ export default function Dashboard() {
               <select className="form-control" value={filterAnnee} onChange={e => setFilterAnnee(e.target.value)} style={{ borderRadius: 10, height: 44, fontSize: 13, fontWeight: 600, border: '1px solid #f1f5f9', background: '#f8fafc' }}>
                 <option value="">Année</option>
                 {[2026, 2025, 2024, 2023].map(y => <option key={y} value={y}>{y}</option>)}
->>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
               </select>
            </div>
            <button onClick={handleReset} className="btn btn-outline" style={{ height: 44, borderRadius: 10, padding: '0 20px', fontWeight: 700, borderColor: '#e2e8f0' }}>Réinitialiser</button>
@@ -410,14 +285,8 @@ export default function Dashboard() {
 
 function FilterSelect({ label, value, options, onChange, placeholder }) {
   return (
-<<<<<<< HEAD
-    <div style={{ flex: 1, minWidth: 200 }}>
-       <label style={{ display: 'block', fontSize: 10, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>{label}</label>
-       <select className="form-control" value={value} onChange={e => onChange(e.target.value)} style={{ borderRadius: 10, padding: '8px 40px 8px 16px', fontSize: 13, width: '100%', height: 'auto' }}>
-=======
     <div style={{ flex: 1 }}>
        <select className="form-control" value={value} onChange={e => onChange(e.target.value)} style={{ borderRadius: 10, height: 44, fontSize: 13, fontWeight: 600, border: '1px solid #f1f5f9', background: '#f8fafc' }}>
->>>>>>> b9c7b1112611099ae653e5cb7addcc4f75576878
           <option value="">{placeholder}</option>
           {options.map(o => <option key={o} value={o}>{o === 'M' ? 'Masculin' : o === 'F' ? 'Féminin' : (o.length > 25 ? o.substring(0,25)+'...' : o)}</option>)}
        </select>
