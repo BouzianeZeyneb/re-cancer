@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
@@ -22,6 +23,8 @@ const ANALYSES_CATEGORIES = {
 
 export default function AnalysesBiologie() {
   const navigate = useNavigate();
+  const { user } = useAuth();
+  const isLaboratoire = user?.role === 'laboratoire';
   const [patients, setPatients] = useState([]);
   const [patientStats, setPatientStats] = useState({});
   const [search, setSearch] = useState('');
@@ -121,6 +124,9 @@ export default function AnalysesBiologie() {
             </div>
           </div>
 
+        {loadingData ? (
+          <div style={{ display: 'flex', justifyContent: 'center', padding: 100 }}><div className="spinner" /></div>
+        ) : (
           <div style={{ display: 'grid', gridTemplateColumns: 'minmax(0, 1fr) 380px', gap: 32 }}>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
                 {/* Trends */}
@@ -187,6 +193,7 @@ export default function AnalysesBiologie() {
                 </div>
             </div>
           </div>
+        )}
         </div>
       </Layout>
     );

@@ -52,7 +52,7 @@ router.get('/cases/patient/:patientId', authMiddleware, getCasesByPatient);
 router.get('/cases/:id', authMiddleware, getCaseById);
 router.post('/cases', authMiddleware, createCase);
 router.put('/cases/:id', authMiddleware, updateCase);
-router.post('/traitements', authMiddleware, addTraitement);
+router.post('/traitements', authMiddleware, requireRole('admin', 'medecin'), addTraitement);
 router.post('/rendez-vous', authMiddleware, addRendezVous);
 router.get('/rendez-vous', authMiddleware, async (req, res) => {
   try {
@@ -78,7 +78,7 @@ router.get('/stats/raw', authMiddleware, getRawStatsData);
 router.post('/stats/ia-analysis', authMiddleware, analyzeWilayaIA);
 router.post('/stats/analyze-patient', authMiddleware, analyzePatientIA);
 router.post('/chat-ia', authMiddleware, askGlobalIA);
-router.get('/stats/audit', authMiddleware, requireRole('admin'), getAuditLogs);
+router.get('/stats/audit', authMiddleware, requireRole('admin', 'pharmacie'), getAuditLogs);
 
 // Chat routes
 const { getConversations, getOrCreateConversation, getMessages, sendMessage, getUsers: getChatUsers } = require('../controllers/chatController');
@@ -173,17 +173,17 @@ router.get('/imagerie/:caseId', authMiddleware, getImagerie);
 router.post('/imagerie', authMiddleware, createImagerie);
 router.delete('/imagerie/:id', authMiddleware, deleteImagerie);
 
-router.get('/consultations/patient/:patientId', authMiddleware, getConsultationsByPatient);
-router.get('/consultations/:caseId', authMiddleware, getConsultations);
-router.post('/consultations', authMiddleware, createConsultation);
-router.delete('/consultations/:id', authMiddleware, deleteConsultation);
+router.get('/consultations/patient/:patientId', authMiddleware, requireRole('admin', 'medecin'), getConsultationsByPatient);
+router.get('/consultations/:caseId', authMiddleware, requireRole('admin', 'medecin'), getConsultations);
+router.post('/consultations', authMiddleware, requireRole('admin', 'medecin'), createConsultation);
+router.delete('/consultations/:id', authMiddleware, requireRole('admin', 'medecin'), deleteConsultation);
 
-router.get('/effets-secondaires/patient/:patientId', authMiddleware, getEffetsByPatient);
-router.get('/effets-secondaires/:caseId', authMiddleware, getEffetsSecondaires);
-router.post('/effets-secondaires', authMiddleware, createEffetSecondaire);
-router.put('/effets-secondaires/:id/resoudre', authMiddleware, resolveEffet);
+router.get('/effets-secondaires/patient/:patientId', authMiddleware, requireRole('admin', 'medecin'), getEffetsByPatient);
+router.get('/effets-secondaires/:caseId', authMiddleware, requireRole('admin', 'medecin'), getEffetsSecondaires);
+router.post('/effets-secondaires', authMiddleware, requireRole('admin', 'medecin'), createEffetSecondaire);
+router.put('/effets-secondaires/:id/resoudre', authMiddleware, requireRole('admin', 'medecin'), resolveEffet);
 
-router.get('/traitements/patient/:patientId', authMiddleware, getTraitementsByPatient);
+router.get('/traitements/patient/:patientId', authMiddleware, requireRole('admin', 'medecin', 'pharmacien', 'pharmacie'), getTraitementsByPatient);
 
 router.get('/chimio-seances/:caseId', authMiddleware, getChimioSeances);
 router.post('/chimio-seances', authMiddleware, createChimioSeance);

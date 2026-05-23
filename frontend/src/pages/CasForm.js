@@ -201,7 +201,10 @@ export default function CasForm() {
   const [voiceTranscript, setVoiceTranscript] = useState('');
   const [activeVoiceField, setActiveVoiceField] = useState(null);
   const [voiceMode, setVoiceMode] = useState(false);
+  const [customType, setCustomType] = useState('');
   const recognitionRef = useRef(null);
+  const voiceActiveRef = useRef(false);
+  const activeVoiceFieldRef = useRef(null);
 
   useEffect(() => {
     getPatients({ limit: 200 }).then(r => setPatients(r.data.patients || r.data));
@@ -210,7 +213,7 @@ export default function CasForm() {
     api.get('/champs-dynamiques?entite=cancer').then(r => setChampsDynamiques(r.data)).catch(()=>{});
   }, []);
 
-  const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
+  const set = (field, val) => setForm(prev => ({ ...prev, [field]: typeof val === 'function' ? val(prev[field]) : val }));
 
   const filteredPatients = patients.filter(p => {
     if (!patientSearch) return true;
@@ -234,17 +237,16 @@ export default function CasForm() {
 
   const startVoice = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast.error('Reconnaissance vocale non supportée'); return;
+      toast.error('Reconnaissance vocale non supportée par ce navigateur (utilisez Chrome)'); return;
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
     rec.lang = 'fr-FR';
     rec.continuous = true;
     rec.interimResults = true;
+    voiceActiveRef.current = true;
     
-    let currentActiveField = null;
-
-    rec.onstart = () => { setIsListening(true); setActiveVoiceField(null); toast.success("Écoute démarrée. Dites le nom d'un champ..."); };
+    rec.onstart = () => { setIsListening(true); toast.success("🎤 Écoute démarrée. Dites le nom d'un champ..."); };
     rec.onresult = (e) => {
       const interimTranscript = Array.from(e.results)
         .slice(e.resultIndex)
@@ -282,12 +284,12 @@ export default function CasForm() {
           const lowerToken = token.trim().toLowerCase();
           
           if (sortedKeywords.includes(lowerToken)) {
-            currentActiveField = keywordToField[lowerToken];
-            setActiveVoiceField(currentActiveField);
-            toast.success(`🎤 Champ: ${currentActiveField.toUpperCase()}`);
+            activeVoiceFieldRef.current = keywordToField[lowerToken];
+            setActiveVoiceField(activeVoiceFieldRef.current);
+            toast.success(`🎤 Champ: ${activeVoiceFieldRef.current.toUpperCase()}`);
           } else {
-            if (currentActiveField) {
-              handleVoiceValue(currentActiveField, lowerToken);
+            if (activeVoiceFieldRef.current) {
+              handleVoiceValue(activeVoiceFieldRef.current, lowerToken);
             }
           }
         }
@@ -295,15 +297,17 @@ export default function CasForm() {
     };
     rec.onerror = (e) => { 
       if (e.error === 'no-speech') return;
-      toast.error('Erreur microphone'); 
+      if (e.error === 'not-allowed') { toast.error('⛔ Accès microphone refusé. Vérifiez les permissions du navigateur.'); voiceActiveRef.current = false; setVoiceMode(false); }
+      else { toast.error('Erreur microphone: ' + e.error); }
       setIsListening(false); 
-      setActiveVoiceField(null);
     };
     rec.onend = () => { 
       setIsListening(false); 
       setVoiceTranscript(''); 
-      setActiveVoiceField(null);
-      currentActiveField = null;
+      // Auto-reprise : créer une NOUVELLE instance (rec.start() sur instance terminée échoue)
+      if (voiceActiveRef.current) {
+        setTimeout(() => { if (voiceActiveRef.current) startVoice(); }, 400);
+      }
     };
     rec.start();
     recognitionRef.current = rec;
@@ -336,7 +340,14 @@ export default function CasForm() {
     }
   };
 
-  const stopVoice = () => { recognitionRef.current?.stop(); setIsListening(false); };
+  const stopVoice = () => { 
+    voiceActiveRef.current = false; 
+    recognitionRef.current?.stop(); 
+    setIsListening(false); 
+    setVoiceMode(false); 
+    setActiveVoiceField(null);
+    activeVoiceFieldRef.current = null;
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -386,7 +397,7 @@ export default function CasForm() {
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
              <button type="button" 
-                onClick={() => { setVoiceMode(!voiceMode); if(!voiceMode) toast.success('Agent Vocal Activé'); }}
+                onClick={() => { if (!voiceMode) { setVoiceMode(true); startVoice(); } else { stopVoice(); } }}
                 style={{ 
                     display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 12,
                     background: voiceMode ? '#fef2f2' : 'white', 

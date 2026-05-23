@@ -5,6 +5,7 @@ import {
 import { useNavigate } from 'react-router-dom';
 import Layout from '../components/Layout';
 import { getDashboardStats } from '../utils/api';
+import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
 import { Heart, Activity, Users, AlertTriangle, Search, Filter, RefreshCw, Calendar, MapPin, ChevronRight, BarChart3, Globe } from 'lucide-react';
 
@@ -21,6 +22,7 @@ const CANCER_TYPES = ["Sein", "Poumon", "Colorectal", "Prostate", "Estomac", "Fo
 const COLORS_SEXE = ['#3b82f6', '#ec4899'];
 const COLORS_TYPE = ['#6366f1', '#10b981', '#f59e0b', '#ef4444', '#8b5cf6', '#0ea5e9'];
 
+<<<<<<< HEAD
 function PremiumKPICard({ icon: Icon, label, value, trend, color, bgGradient }) {
    return (
       <div style={{
@@ -35,6 +37,122 @@ function PremiumKPICard({ icon: Icon, label, value, trend, color, bgGradient }) 
          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
             <div style={{ width: 52, height: 52, borderRadius: 16, background: bgGradient, color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 8px 16px ${color}30` }}>
                <Icon size={24} strokeWidth={2.5} />
+=======
+const getAlertStyles = (text) => {
+  const t = text.toLowerCase();
+  if (t.includes('globules') || t.includes('plaquettes')) return { bg: '#fef2f2', border: '#fee2e2', text: '#991b1b', icon: '#dc2626' };
+  if (t.includes('chimio')) return { bg: '#fff7ed', border: '#ffedd5', text: '#9a3412', icon: '#ea580c' };
+  if (t.includes('anapath')) return { bg: '#f0f9ff', border: '#e0f2fe', text: '#075985', icon: '#0284c7' };
+  return { bg: '#f8fafc', border: '#f1f5f9', text: '#475569', icon: '#64748b' };
+};
+
+const formatDateSimple = (dateStr) => {
+  if (!dateStr) return 'Aujourd\'hui';
+  const d = new Date(dateStr);
+  return d.toLocaleDateString('fr-FR', { day: 'numeric', month: 'short' });
+};
+
+export default function Dashboard() {
+  const navigate = useNavigate();
+  const { isAdmin } = useAuth();
+  const [stats, setStats] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [searchQuery, setSearchQuery] = useState('');
+  
+  const [filterWilaya, setFilterWilaya] = useState('');
+  const [filterType, setFilterType] = useState('');
+  const [filterSexe, setFilterSexe] = useState('');
+  const [filterAnnee, setFilterAnnee] = useState('');
+
+  useEffect(() => {
+    loadStats();
+  }, [filterWilaya, filterType, filterSexe, filterAnnee]);
+
+  const loadStats = () => {
+    setLoading(true);
+    getDashboardStats({ year: filterAnnee, wilaya: filterWilaya, type: filterType, sexe: filterSexe })
+      .then(r => setStats(r.data))
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  };
+
+  const handleReset = () => {
+    setFilterWilaya('');
+    setFilterType('');
+    setFilterSexe('');
+    setFilterAnnee('');
+    toast.success('Filtres réinitialisés');
+  };
+
+  const handleQuickSearch = () => {
+    if(!searchQuery.trim()) return;
+    toast.loading("Recherche du dossier...", { id: 'search' });
+    const found = stats?.recentDossiers?.find(d => d.nom.toLowerCase().includes(searchQuery.toLowerCase()));
+    if(found) {
+       toast.success("Dossier trouvé", { id: 'search' });
+       navigate(`/cas-cancer/${found.caseId}`);
+    } else {
+       toast.error("Aucun dossier trouvé pour cette recherche", { id: 'search' });
+       navigate('/patients');
+    }
+  };
+
+  const t = stats?.totaux || {};
+  const sexeData = (stats?.parSexe || []).map(s => ({ name: s.sexe === 'M' ? 'Hommes' : 'Femmes', value: s.count }));
+  const typeData = (stats?.parType || []).slice(0, 6).map(t => ({ name: t.type_cancer, value: t.count }));
+  const ageData = stats?.parAge || [];
+  const wilayaData = (stats?.parWilaya || []).slice(0, 5);
+
+  return (
+    <Layout title="">
+      <div style={{ padding: '0 12px 40px' }}>
+        
+        {/* KPI HEADERS - New Premium Grid */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 24, marginBottom: 32 }}>
+          <KPICard label="Cohorte Totale" value={t.patients || 0} trend="Patients enregistrés" />
+          <KPICard label="Diagnostics du Mois" value={t.nouveauxMois || 0} trend="+12% vs mois dernier" />
+          <KPICard label="Actifs (Traitement)" value={t.enTraitement || 0} trend="Chimiothérapie / Radio" />
+          <KPICard label="Situations Avancées" value={t.stadeIV || 0} trend="Métastatique (Stade IV)" />
+        </div>
+
+        <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 0.6fr', gap: 32, marginBottom: 32 }}>
+            {/* SITUATIONS CRITIQUES */}
+            <div className="card" style={{ padding: '24px', borderRadius: 24, border: '1px solid #f1f5f9', background: 'white' }}>
+               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{ width: 40, height: 40, borderRadius: 12, background: '#fee2e2', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                    </div>
+                    <div>
+                        <h3 style={{ fontSize: 17, fontWeight: 800, color: '#0f172a', margin: 0 }}>Vigilance Clinique</h3>
+                        <p style={{ fontSize: 12, color: '#64748b', margin: 0 }}>{stats?.recentDossiers?.length || 0} alertes nécessitant une action</p>
+                    </div>
+                  </div>
+                  <button className="btn-icon-subtle" title="Configuration alertes">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.72v.18a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                  </button>
+               </div>
+               <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+                 {(stats?.recentDossiers?.slice(0, 3) || []).map((d, idx) => (
+                   <div key={idx} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderRadius: 16, background: idx === 0 ? '#fef2f2' : '#ffffff', border: idx === 0 ? '1.5px solid #fee2e2' : '1px solid #f1f5f9', transition: 'all 0.2s' }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+                        <div style={{ width: 44, height: 44, borderRadius: 22, background: idx === 0 ? '#ef4444' : '#64748b', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 800, fontSize: 13 }}>
+                            {d.nom?.[0]}{d.prenom?.[0]}
+                        </div>
+                        <div>
+                           <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{d.nom} {d.prenom}</div>
+                           <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginTop: 2 }}>
+                               <span style={{ fontSize: 11, background: '#fee2e2', color: '#b91c1c', padding: '2px 8px', borderRadius: 10, fontWeight: 700 }}>{idx === 0 ? 'BLOOD ALERT' : 'URGENT'}</span>
+                               <span style={{ fontSize: 12, color: '#64748b' }}>{d.diagnostic} — {d.stade}</span>
+                           </div>
+                        </div>
+                      </div>
+                      <button onClick={() => navigate(`/cas-cancer/${d.caseId}`)} className="btn btn-primary btn-sm" style={{ borderRadius: 10, padding: '0 16px', height: 40 }}>Ouvrir Dossier</button>
+                   </div>
+                 ))}
+                 {!stats?.recentDossiers?.length && <div style={{ fontSize: 13, color: '#94a3b8', fontStyle: 'italic', textAlign: 'center', padding: 30, background: '#f8fafc', borderRadius: 16, border: '1px dashed #e2e8f0' }}>Aucun patient en situation critique active.</div>}
+               </div>
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
             </div>
             <div style={{ fontSize: 11, fontWeight: 800, color: '#22c55e', background: '#f0fdf4', padding: '4px 10px', borderRadius: 8 }}>
                +12%
@@ -47,6 +165,7 @@ function PremiumKPICard({ icon: Icon, label, value, trend, color, bgGradient }) 
    );
 }
 
+<<<<<<< HEAD
 export default function Dashboard() {
    const navigate = useNavigate();
    const [stats, setStats] = useState(null);
@@ -283,4 +402,15 @@ function FilterSelect({ icon: Icon, value, options, onChange, placeholder }) {
          </select>
       </div>
    );
+=======
+function FilterSelect({ label, value, options, onChange, placeholder }) {
+  return (
+    <div style={{ flex: 1 }}>
+       <select className="form-control" value={value} onChange={e => onChange(e.target.value)} style={{ borderRadius: 10, height: 44, fontSize: 13, fontWeight: 600, border: '1px solid #f1f5f9', background: '#f8fafc' }}>
+          <option value="">{placeholder}</option>
+          {options.map(o => <option key={o} value={o}>{o === 'M' ? 'Masculin' : o === 'F' ? 'Féminin' : (o.length > 25 ? o.substring(0,25)+'...' : o)}</option>)}
+       </select>
+    </div>
+  );
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
 }

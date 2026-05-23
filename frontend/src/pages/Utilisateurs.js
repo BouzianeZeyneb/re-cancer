@@ -3,8 +3,22 @@ import Layout from '../components/Layout';
 import { getUsers, createUser, updateUser, deleteUser } from '../utils/api';
 import toast from 'react-hot-toast';
 
-const ROLES = { admin: '🔑 Administrateur', medecin: '👨‍⚕️ Médecin', laboratoire: '🔬 Laboratoire', anapath: '🔬 Anapath' };
-const roleClass = { admin: 'badge badge-red', medecin: 'badge badge-blue', laboratoire: 'badge badge-purple', anapath: 'badge badge-orange' };
+const ROLES = {
+  admin: '🔑 Administrateur',
+  medecin: '👨‍⚕️ Médecin',
+  laboratoire: '🔬 Laboratoire',
+  anapath: '🔬 Anapath',
+  pharmacien: '💊 Pharmacien (legacy)',
+  pharmacie: '💊 Pharmacie',
+};
+const roleClass = {
+  admin: 'badge badge-red',
+  medecin: 'badge badge-blue',
+  laboratoire: 'badge badge-purple',
+  anapath: 'badge badge-orange',
+  pharmacien: 'badge badge-green',
+  pharmacie: 'badge badge-green',
+};
 
 export default function Utilisateurs() {
   const [users, setUsers] = useState([]);

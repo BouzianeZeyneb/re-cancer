@@ -77,11 +77,9 @@ function SectionCard({ title, children, action, style = {} }) {
   return (
     <div style={{
       background: 'white',
-      borderRadius: 24,
-      border: '1px solid #f1f5f9',
-      boxShadow: '0 4px 24px -12px rgba(0,0,0,0.05)',
+      borderRadius: 16,
+      border: '1px solid #e2e8f0',
       overflow: 'hidden',
-      transition: 'transform 0.2s, box-shadow 0.2s',
       ...style
     }}>
       {(title || action) && (
@@ -101,6 +99,7 @@ function SectionCard({ title, children, action, style = {} }) {
 function VitalCard({ icon: Icon, iconColor, iconBg, title, value, unit, trend }) {
   return (
     <div style={{
+<<<<<<< HEAD
       background: 'white', borderRadius: 28, padding: 24, display: 'flex', flexDirection: 'column', flex: 1, minWidth: 160,
       border: '1.5px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)',
       transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default'
@@ -111,6 +110,14 @@ function VitalCard({ icon: Icon, iconColor, iconBg, title, value, unit, trend })
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
         <div style={{ width: 44, height: 44, borderRadius: 14, background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${iconColor}20` }}>
           <Icon size={22} strokeWidth={2.5} />
+=======
+      background: 'white', borderRadius: 16, padding: 24, display: 'flex', flexDirection: 'column', flex: 1, minWidth: 150,
+      border: '1px solid #e2e8f0'
+    }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
+        <div style={{ width: 40, height: 40, borderRadius: '50%', background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+          <Icon size={20} strokeWidth={2.5} />
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
         </div>
         {trend && (
           <div style={{ background: trend === 'up' ? '#fef2f2' : '#f0fdf4', color: trend === 'up' ? '#ef4444' : '#22c55e', padding: '4px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800 }}>
@@ -193,6 +200,7 @@ export default function PatientDetail() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user, isAdmin } = useAuth();
+  const isLaboratoire = user?.role === 'laboratoire';
   const { t } = useTranslation();
 
   const [patient, setPatient] = useState(null);
@@ -342,7 +350,7 @@ export default function PatientDetail() {
     : '—';
   const initials = `${(patient.prenom || ' ')[0]}${(patient.nom || ' ')[0]}`.toUpperCase();
   const mainCase = (patient.cancer_cases || cases)[0];
-  const dossierNum = `PAT-${new Date(patient.created_at || Date.now()).getFullYear()}-${String(patient.patient_seq || 0).padStart(4, '0')}`;
+  const dossierNum = patient.matricule || `PAT-${new Date(patient.created_at || Date.now()).getFullYear()}-${String(patient.patient_seq || 0).padStart(4, '0')}`;
 
   /* ── AI Chat ── */
   const handleAiSend = async (e, presetMsg) => {
@@ -478,16 +486,19 @@ export default function PatientDetail() {
     } catch (e) { toast.error(e.response?.data?.message || 'Erreur'); }
   };
 
+  const isAnapath = user?.role === 'anapath';
   const TABS = [
     { key: 'resume', label: t('patient_detail.tabs.summary') || 'Résumé' },
     { key: 'diagnostic', label: `${t('patient_detail.tabs.diagnosis') || 'Diagnostic'} (${(patient.cancer_cases || cases).length})` },
     { key: 'anapath', label: t('patient_detail.tabs.pathology') || 'Anapath' },
-    { key: 'biologie', label: `${t('patient_detail.tabs.biology') || 'Biologie'} (${biologie.length})` },
-    { key: 'imagerie', label: t('patient_detail.tabs.imaging') || 'Imagerie' },
-    { key: 'traitement', label: t('patient_detail.tabs.treatment') || 'Traitement' },
-    { key: 'consultations', label: t('patient_detail.tabs.consultations') || 'Consultations' },
-    { key: 'effets', label: t('patient_detail.tabs.side_effects') || 'Effets secondaires' },
-    { key: 'documents', label: `${t('patient_detail.tabs.documents') || 'Documents'} (${documents.length})` },
+    ...(!isAnapath ? [
+      { key: 'biologie', label: `${t('patient_detail.tabs.biology') || 'Biologie'} (${biologie.length})` },
+      { key: 'imagerie', label: t('patient_detail.tabs.imaging') || 'Imagerie' },
+      { key: 'traitement', label: t('patient_detail.tabs.treatment') || 'Traitement' },
+      { key: 'consultations', label: t('patient_detail.tabs.consultations') || 'Consultations' },
+      { key: 'effets', label: t('patient_detail.tabs.side_effects') || 'Effets secondaires' },
+      { key: 'documents', label: `${t('patient_detail.tabs.documents') || 'Documents'} (${documents.length})` },
+    ] : []),
     { key: 'ia', label: '🤖 Assistant IA' },
   ];
 
@@ -505,6 +516,7 @@ export default function PatientDetail() {
 
         {/* ── HERO CARD ── */}
         <div style={{
+<<<<<<< HEAD
           background: '#ffffff',
           borderRadius: 12, padding: '24px', marginBottom: 32,
           border: '1px solid #e2e8f0',
@@ -530,12 +542,35 @@ export default function PatientDetail() {
             }}>
               {initials}
             </div>
+=======
+          background: 'white',
+          borderRadius: 24, padding: '32px 40px', marginBottom: 32,
+          border: '1px solid #e2e8f0',
+          position: 'relative', overflow: 'hidden'
+        }}>
+          {/* Background Pattern */}
+          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.2, backgroundImage: 'radial-gradient(#e2e8f0 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
+
+          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 32 }}>
+            {/* Top section: Avatar + Info + Actions */}
+            <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
+              <div style={{ position: 'relative' }}>
+                <div style={{ width: 120, height: 120, borderRadius: 24, background: '#f1f5f9', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, fontWeight: 900, fontFamily: "'Outfit', sans-serif", letterSpacing: '-2px' }}>
+                  {initials}
+                </div>
+                <div style={{ position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '4px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6, border: '1px solid #e2e8f0' }}>
+                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }} />
+                  <span style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', letterSpacing: '0.5px' }}>{t('patient_detail.active')}</span>
+                </div>
+              </div>
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
 
             <div style={{ flex: 1 }}>
               <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
                 <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#0f172a' }}>
                   {patient.prenom} {patient.nom}
                 </h2>
+<<<<<<< HEAD
                 <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
                   VIVANT
                 </span>
@@ -551,6 +586,49 @@ export default function PatientDetail() {
             <div style={{ textAlign: 'right' }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>
                 Groupe Sanguin
+=======
+
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 16 }}>
+                  <span style={{ background: '#0f172a', color: 'white', padding: '6px 16px', borderRadius: 24, fontSize: 13, fontWeight: 800, letterSpacing: '0.5px' }}>
+                    {dossierNum}
+                  </span>
+                  <span style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(4px)', padding: '6px 16px', borderRadius: 24, fontSize: 13, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
+                    <CalendarIcon size={14} /> {t('patient_detail.update')} {patient.updated_at ? format(parseISO(patient.updated_at), 'dd/MM/yyyy · HH:mm') : '—'}
+                  </span>
+                  {mainCase?.stade && (
+                    <span style={{ background: '#ffedd5', color: '#c2410c', padding: '6px 16px', borderRadius: 24, fontSize: 13, fontWeight: 800, border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', gap: 6 }}>
+                      <Activity size={14} /> {mainCase.stade}
+                    </span>
+                  )}
+
+                </div>
+
+                <p style={{ margin: 0, fontSize: 15, color: '#475569', fontWeight: 500 }}>
+                  {mainCase?.sous_type || 'Type non spécifié'} — {mainCase?.statut_patient || 'En attente'}.
+                </p>
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, paddingTop: 12 }}>
+                <div style={{ display: 'flex', gap: 8, background: '#f8fafc', padding: 6, borderRadius: 12, border: '1px solid #e2e8f0' }}>
+                  <button onClick={() => window.print()} title="Imprimer le dossier" style={{ width: 40, height: 40, borderRadius: 8, background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}><Printer size={18} /></button>
+                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Lien copié dans le presse-papier'); }} title="Partager le dossier" style={{ width: 40, height: 40, borderRadius: 8, background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}><Share2 size={18} /></button>
+                  <button onClick={() => { const text = `DOSSIER PATIENT\n${dossierNum}\n\nNom: ${patient.prenom} ${patient.nom}\nSexe: ${patient.sexe === 'M' ? 'Homme' : 'Femme'} | Âge: ${age} ans\nDate naissance: ${patient.date_naissance}\nTéléphone: ${patient.telephone || '—'}\nWilaya: ${patient.wilaya || '—'}\nCarte Nationale: ${patient.num_carte_nationale || '—'}\n\nDIAGNOSTIC:\nType: ${mainCase?.type_cancer || '—'}\nSous-type: ${mainCase?.sous_type || '—'}\nStade: ${mainCase?.stade || '—'}\nÉtat: ${mainCase?.etat || '—'}\nStatut: ${mainCase?.statut_patient || '—'}\n\nAntécédents médicaux: ${patient.antecedents_medicaux || '—'}\nAntécédents familiaux: ${patient.antecedents_familiaux || '—'}\nTabac: ${patient.consommation_tabac || 'Inconnu'}\nAlcool: ${patient.consommation_alcool || 'Inconnu'}`; const blob = new Blob([text], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `dossier_${patient.nom}_${patient.prenom}.txt`; a.click(); URL.revokeObjectURL(url); toast.success('Dossier téléchargé'); }} title="Télécharger le dossier" style={{ width: 40, height: 40, borderRadius: 8, background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569' }}><FileDown size={18} /></button>
+                </div>
+                <button onClick={() => navigate(`/patients/${id}/modifier`)} style={{ padding: '0 24px', height: 52, borderRadius: 12, background: 'white', border: '1px solid #e2e8f0', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a', fontWeight: 700, fontSize: 14 }}>
+                  <Edit3 size={18} /> {t('patient_detail.edit')}
+                </button>
+                <button onClick={() => { setTab('consultations'); setShowConsultationModal(true); }} style={{ padding: '0 24px', height: 52, borderRadius: 12, background: '#0f172a', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: 'white', fontWeight: 700, fontSize: 14 }}>
+                  <CalendarIcon size={18} /> {t('patient_detail.schedule')}
+                </button>
+              </div>
+            </div>
+
+            {/* Bottom section: Quick Summary Strip */}
+            <div style={{ display: 'flex', background: '#f8fafc', borderRadius: 16, padding: '20px 32px', gap: 40, border: '1px solid #f1f5f9' }}>
+              <div style={{ flex: 1, borderRight: '1px solid rgba(0,0,0,0.05)' }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}><User size={14} /> {t('patient_detail.gender_age')}</div>
+                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{patient.sexe === 'M' ? t('patient_detail.male') : t('patient_detail.female')} · {age} {t('patient_detail.years')}</div>
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
               </div>
               <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444' }}>
                 {patient.groupe_sanguin || 'A-'}
@@ -561,6 +639,7 @@ export default function PatientDetail() {
 
         {/* ── TABS ── */}
         <div style={{
+<<<<<<< HEAD
           display: 'flex', gap: 24, padding: '0 8px', background: 'transparent',
           marginBottom: 32, borderBottom: '1px solid #e2e8f0', overflowX: 'auto',
           scrollbarWidth: 'none', msOverflowStyle: 'none'
@@ -584,6 +663,27 @@ export default function PatientDetail() {
               </button>
             );
           })}
+=======
+          display: 'flex', gap: 10, padding: '6px',
+          background: 'white',
+          borderRadius: 12, marginBottom: 30, overflowX: 'auto',
+          border: '1px solid #e2e8f0'
+        }}>
+          {TABS.map(t => (
+            <button key={t.key} onClick={() => setTab(t.key)}
+              style={{
+                background: tab === t.key ? '#f1f5f9' : 'transparent',
+                border: 'none', cursor: 'pointer',
+                padding: '10px 20px', fontSize: 13, fontWeight: tab === t.key ? 700 : 600,
+                color: tab === t.key ? '#0f172a' : '#64748b',
+                borderRadius: 8,
+                whiteSpace: 'nowrap', transition: 'all 0.2s',
+                fontFamily: "'Outfit', sans-serif"
+              }}>
+              {t.label}
+            </button>
+          ))}
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
         </div>
         {/* ════════════════════ TAB CONTENT ════════════════════ */}
 
@@ -592,6 +692,7 @@ export default function PatientDetail() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {/* Top 3 Cards Row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
+<<<<<<< HEAD
               {/* STADIFICATION TNM */}
               <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24 }}>
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Stadification TNM</div>
@@ -611,6 +712,47 @@ export default function PatientDetail() {
                 <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Code ICD-10</div>
                 <div style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{mainCase?.code_icd10 || 'C50.9'}</div>
                 <div style={{ fontSize: 13, color: '#3b82f6' }}>Diagnostic Princ.</div>
+=======
+              {/* Profil Oncologique */}
+              <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>Profil Oncologique</div>
+                <div style={{ fontSize: 32, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif", letterSpacing: '-1px', marginBottom: 8 }}>{mainCase?.stade || '—'}</div>
+                <div style={{ fontSize: 13, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 8 }}>
+                  TNM : {mainCase?.tnm || 'T? N? M?'}
+                </div>
+              </div>
+
+              {/* Standard ICD-O-3 */}
+              <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: 24, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>Standard ICD-O-3</div>
+                <div style={{ marginBottom: 12 }}>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{mainCase?.code_topographie || '—'}</span>
+                  <span style={{ fontSize: 13, color: '#64748b', marginLeft: 8 }}>Topographie</span>
+                </div>
+                <div>
+                  <span style={{ fontSize: 20, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{mainCase?.code_morphologie || '—'}</span>
+                  <span style={{ fontSize: 13, color: '#64748b', marginLeft: 8 }}>Morphologie</span>
+                </div>
+              </div>
+
+              {/* Facteurs de Risque */}
+              <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: 24, display: 'flex', flexDirection: 'column' }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>Facteurs de Risque</div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                  {patient.consommation_tabac && patient.consommation_tabac !== 'Non' && (
+                    <span style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Wind size={14} /> Tabac</span>
+                  )}
+                  {patient.consommation_alcool && patient.consommation_alcool !== 'Non' && (
+                    <span style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Activity size={14} /> Alcool</span>
+                  )}
+                  {!patient.activite_sportive && (
+                    <span style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><Activity size={14} /> Sédentaire</span>
+                  )}
+                  {(patient.consommation_tabac === 'Non' && patient.consommation_alcool === 'Non' && patient.activite_sportive) && (
+                    <span style={{ background: '#f1f5f9', color: '#334155', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6 }}><CheckCircle2 size={14} /> Aucun connu</span>
+                  )}
+                </div>
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
               </div>
             </div>
 
@@ -778,48 +920,47 @@ export default function PatientDetail() {
               </button>
             </div>
 
-            {anapath.length === 0 && !patient.cancer_cases?.some(c => c.anapath)
+            {anapath.length === 0
               ? <EmptyState icon="🧫" title="Aucun rapport anapath" message="L'analyse des tissus et les récepteurs hormonaux apparaîtront ici." />
-              : (patient.cancer_cases?.filter(c => c.anapath) || []).map(c => {
-                const a = c.anapath;
-                return (
-                  <div key={c.id} style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, marginBottom: 24 }}>
-                    <div style={{ display: 'flex', gap: 20, marginBottom: 28 }}>
-                      <div style={{ width: 44, height: 44, borderRadius: 12, background: '#fdf2f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#db2777' }}>
-                        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
-                      </div>
-                      <div>
-                        <h3 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>Rapport Histologique</h3>
-                        <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Prélèvement du {a.date_prelevement ? format(parseISO(a.date_prelevement), 'dd MMM yyyy') : '—'}</div>
-                      </div>
+              : anapath.map(a => (
+                <div key={a.id} style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, marginBottom: 24 }}>
+                  <div style={{ display: 'flex', gap: 20, marginBottom: 28 }}>
+                    <div style={{ width: 44, height: 44, borderRadius: 12, background: '#fdf2f8', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#db2777' }}>
+                      <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z" /><polyline points="3.27 6.96 12 12.01 20.73 6.96" /><line x1="12" y1="22.08" x2="12" y2="12" /></svg>
                     </div>
-                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
-                      <div>
-                        <ClinicalTableRow label="Type histologique" value={a.type_histologique} />
-                        <ClinicalTableRow label="Grade tumoral" value={a.grade_sbr ? `SBR ${a.grade_sbr}` : null} />
-                        <ClinicalTableRow label="Ki67" value={a.ki67} last />
-                      </div>
-                      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
-                        {['ER', 'PR', 'HER2', 'MMR_MSI'].map(k => (
-                          <div key={k} style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 12, border: '1.5px solid #f1f5f9' }}>
-                            <div style={{ fontSize: 9, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>{k}</div>
-                            <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{a[k.toLowerCase()] || '—'}</div>
-                          </div>
-                        ))}
-                      </div>
+                    <div>
+                      <h3 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>Rapport Histologique</h3>
+                      <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>Prélèvement du {a.date_prelevement ? format(parseISO(a.date_prelevement), 'dd MMM yyyy') : '—'}</div>
                     </div>
-                    {a.compte_rendu && (
-                      <div style={{ marginTop: 28, padding: 24, background: '#f8fafc', borderRadius: 20, borderLeft: '4px solid #db2777', color: '#475569', fontSize: 14, lineHeight: 1.6 }}>
-                        <strong style={{ color: '#0f172a', display: 'block', marginBottom: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Conclusion du Pathologiste</strong>
-                        {a.compte_rendu}
-                      </div>
-                    )}
                   </div>
-                );
-              })
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 40 }}>
+                    <div>
+                      <ClinicalTableRow label="Type de prélèvement" value={a.type_prelevement} />
+                      <ClinicalTableRow label="Type histologique" value={a.type_histologique} />
+                      <ClinicalTableRow label="Grade tumoral" value={a.grade_sbr ? `SBR ${a.grade_sbr}` : a.grade_tumoral} />
+                      <ClinicalTableRow label="Ki67" value={a.ki67} last />
+                    </div>
+                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                      {['ER', 'PR', 'HER2', 'MMR_MSI', 'PD_L1'].map(k => (
+                        <div key={k} style={{ background: '#f8fafc', padding: '12px 16px', borderRadius: 12, border: '1.5px solid #f1f5f9' }}>
+                          <div style={{ fontSize: 9, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>{k === 'MMR_MSI' ? 'MMR / MSI' : k === 'PD_L1' ? 'PD-L1' : k}</div>
+                          <div style={{ fontSize: 14, fontWeight: 800, color: '#0f172a' }}>{a[k.toLowerCase()] || '—'}</div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                  {a.compte_rendu && (
+                    <div style={{ marginTop: 28, padding: 24, background: '#f8fafc', borderRadius: 20, borderLeft: '4px solid #db2777', color: '#475569', fontSize: 14, lineHeight: 1.6 }}>
+                      <strong style={{ color: '#0f172a', display: 'block', marginBottom: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 0.5 }}>Conclusion du Pathologiste</strong>
+                      {a.compte_rendu}
+                    </div>
+                  )}
+                </div>
+              ))
             }
           </div>
         )}
+
 
         {/* ── BIOLOGIE ── */}
         {tab === 'biologie' && (

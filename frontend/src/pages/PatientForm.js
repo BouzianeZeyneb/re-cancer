@@ -88,6 +88,8 @@ export default function PatientForm() {
   const [activeVoiceField, setActiveVoiceField] = useState(null);
   const [voiceMode, setVoiceMode] = useState(false);
   const recognitionRef = useRef(null);
+  const voiceActiveRef = useRef(false);
+  const activeVoiceFieldRef = useRef(null);
   const [parametres, setParametres] = useState([]);
   const [networkInfo, setNetworkInfo] = useState({ ip: 'localhost', port: 5000, frontendPort: 3000 });
   const [interimTranscript, setInterimTranscript] = useState('');
@@ -104,6 +106,7 @@ export default function PatientForm() {
   // État pour la gestion des doublons
   const [duplicateInfo, setDuplicateInfo] = useState(null);
   const [mergeChoices, setMergeChoices] = useState({});
+  const [patientMatricule, setPatientMatricule] = useState('');
   const fileInputRef = useRef(null);
 
   // Sections repliables
@@ -219,6 +222,7 @@ export default function PatientForm() {
           activite_sportive: Boolean(p.activite_sportive),
           autres_medicaments: p.autres_medicaments || '', autres_facteurs_risque: p.autres_facteurs_risque || ''
         });
+        if (p.matricule) setPatientMatricule(p.matricule);
         api.get(`/valeurs-dynamiques/${id}`).then(r => {
           const vals = {};
           r.data.forEach(v => { vals[v.champ_id] = v.valeur; });
@@ -281,18 +285,23 @@ export default function PatientForm() {
     return () => clearTimeout(timer);
   }, [form.nom, form.prenom, form.date_naissance, form.num_carte_nationale, form.num_carte_chifa, isEdit, navigate]);
 
-  const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
+  const set = (field, val) => setForm(prev => ({ ...prev, [field]: typeof val === 'function' ? val(prev[field]) : val }));
 
   const startGlobalAssistant = () => {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
+<<<<<<< HEAD
       toast.error('Reconnaissance vocale non supportée. Utilisez Chrome.');
       return;
+=======
+      toast.error('Reconnaissance vocale non supportée par ce navigateur (utilisez Chrome)'); return;
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
     }
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
     rec.lang = 'fr-FR';
     rec.continuous = true;
     rec.interimResults = true;
+<<<<<<< HEAD
 
     rec.onstart = () => {
       setIsListening(true);
@@ -300,6 +309,11 @@ export default function PatientForm() {
       toast.success("Assistant Global Actif - Dites par ex: 'Nom Boucham, Prénom Fatima'", { icon: '🤖' });
     };
 
+=======
+    voiceActiveRef.current = true;
+
+    rec.onstart = () => { setIsListening(true); toast.success("🎤 Écoute démarrée. Dites le nom d'un champ..."); };
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
     rec.onresult = (e) => {
       const transcript = Array.from(e.results)
         .map(result => result[0].transcript)
@@ -314,7 +328,45 @@ export default function PatientForm() {
       setIsListening(false);
     };
 
+<<<<<<< HEAD
     rec.onend = () => { setIsListening(false); };
+=======
+        for (let i = 0; i < tokens.length; i++) {
+          const token = tokens[i];
+          if (!token || !token.trim()) continue;
+          
+          const lowerToken = token.trim().toLowerCase();
+          
+          if (sortedKeywords.includes(lowerToken)) {
+            activeVoiceFieldRef.current = keywordToField[lowerToken];
+            setActiveVoiceField(activeVoiceFieldRef.current);
+            toast.success(`🎤 Champ: ${activeVoiceFieldRef.current.toUpperCase()}`);
+          } else {
+            if (activeVoiceFieldRef.current) {
+              handleVoiceValue(activeVoiceFieldRef.current, lowerToken);
+            } else {
+              if (['masculin', 'homme', 'garçon'].includes(lowerToken)) { set('sexe', 'M'); toast.success('✅ Sexe: Masculin'); }
+              else if (['féminin', 'femme', 'fille'].includes(lowerToken)) { set('sexe', 'F'); toast.success('✅ Sexe: Féminin'); }
+            }
+          }
+        }
+      }
+    };
+    rec.onerror = (e) => { 
+      if (e.error === 'no-speech') return;
+      if (e.error === 'not-allowed') { toast.error('⛔ Accès microphone refusé. Vérifiez les permissions du navigateur.'); voiceActiveRef.current = false; setVoiceMode(false); }
+      else { toast.error('Erreur microphone: ' + e.error); }
+      setIsListening(false); 
+    };
+    rec.onend = () => { 
+      setIsListening(false); 
+      setVoiceTranscript(''); 
+      // Auto-reprise : créer une NOUVELLE instance (rec.start() sur instance terminée échoue)
+      if (voiceActiveRef.current) {
+        setTimeout(() => { if (voiceActiveRef.current) startVoice(); }, 400);
+      }
+    };
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
     rec.start();
     recognitionRef.current = rec;
   };
@@ -327,6 +379,7 @@ export default function PatientForm() {
     rec.interimResults = true;
     rec.continuous = false; // Important: stay on this field only
 
+<<<<<<< HEAD
     setActiveVoiceField(field);
     setIsListening(true);
     setInterimTranscript('');
@@ -360,8 +413,56 @@ export default function PatientForm() {
         if (cleaned) {
           set(field, cleaned);
           toast.success(`✓ ${field.toUpperCase()}: ${cleaned}`, { id: 'voice-toast' });
+=======
+    if (field === 'nom' || field === 'prenom') {
+      formattedText = text.split(' ').map(w => w.charAt(0).toUpperCase() + w.slice(1)).join(' ');
+      set(field, prev => prev ? prev + ' ' + formattedText : formattedText);
+      toast.success(`✅ ${field.toUpperCase()}: ${formattedText}`);
+    } else if (field === 'adresse' || field === 'commune') {
+      formattedText = text.charAt(0).toUpperCase() + text.slice(1);
+      set(field, prev => prev ? prev + ' ' + formattedText : formattedText);
+      toast.success(`✅ ${field.toUpperCase()}: ${formattedText}`);
+    } else if (field === 'telephone') {
+      formattedText = text.replace(/\s/g, '');
+      set(field, prev => prev ? prev + formattedText : formattedText);
+      toast.success(`✅ TÉLÉPHONE: ${formattedText}`);
+    } else if (field === 'sexe') {
+      if (['masculin', 'homme'].includes(text)) set('sexe', 'M');
+      else if (['féminin', 'femme'].includes(text)) set('sexe', 'F');
+      else return;
+      toast.success(`✅ SEXE mis à jour`);
+    } else if (field === 'fumeur') {
+      if (['oui', 'positif', 'vrai'].includes(text)) set('fumeur', true);
+      else if (['non', 'négatif', 'faux'].includes(text)) set('fumeur', false);
+      toast.success('✅ Fumeur mis à jour');
+    } else if (field === 'wilaya') {
+      const match = WILAYAS_ALGERIE.find(w => w.toLowerCase().includes(text));
+      if (match) { set('wilaya', match); toast.success(`✅ Wilaya: ${match}`); }
+    } else if (field === 'date_naissance') {
+      const nums = text.replace(/\//g, ' ').replace(/-/g, ' ').split(' ').filter(n => n.match(/^\d+$/));
+      if (nums.length === 3) {
+        const [d, m, y] = nums;
+        const dateStr = `${y.padStart(4,'20')}-${m.padStart(2,'0')}-${d.padStart(2,'0')}`;
+        set('date_naissance', dateStr);
+        toast.success(`✅ Date: ${d}/${m}/${y}`);
+      } else {
+        const moisMap = { janvier:1, février:2, mars:3, avril:4, mai:5, juin:6, juillet:7, août:8, septembre:9, octobre:10, novembre:11, décembre:12 };
+        let found = false;
+        for (const [moisNom, moisNum] of Object.entries(moisMap)) {
+          if (text.includes(moisNom)) {
+            const dayMatch = text.match(/(\d{1,2})/);
+            const yearMatch = text.match(/(\d{4})/);
+            if (dayMatch && yearMatch) {
+              const dateStr = `${yearMatch[1]}-${String(moisNum).padStart(2,'0')}-${dayMatch[1].padStart(2,'0')}`;
+              set('date_naissance', dateStr);
+              toast.success(`✅ Date: ${dayMatch[1]} ${moisNom} ${yearMatch[1]}`);
+              found = true; break;
+            }
+          }
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
         }
       }
+<<<<<<< HEAD
     };
 
     rec.onend = () => {
@@ -441,6 +542,24 @@ export default function PatientForm() {
       </div>
     </div>
   );
+=======
+    } else if (field === 'num_carte_nationale' || field === 'num_carte_chifa') {
+      formattedText = text.replace(/\s/g, '');
+      set(field, prev => prev ? prev + formattedText : formattedText);
+      const label = field === 'num_carte_nationale' ? 'CARTE NATIONALE' : 'CARTE CHIFA';
+      toast.success(`✅ ${label}: ${formattedText}`);
+    }
+  };
+
+  const stopVoice = () => { 
+    voiceActiveRef.current = false; 
+    recognitionRef.current?.stop(); 
+    setIsListening(false); 
+    setVoiceMode(false); 
+    setActiveVoiceField(null);
+    activeVoiceFieldRef.current = null;
+  };
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -500,6 +619,7 @@ export default function PatientForm() {
             <div style={{ fontSize: 13, color: '#64748b', fontWeight: 500, marginTop: 2 }}>Étape {step + 1} sur 6</div>
           </div>
           <div style={{ display: 'flex', gap: 12 }}>
+<<<<<<< HEAD
             <button type="button" onClick={() => fileInputRef.current.click()}
               style={{ padding: '0 16px', height: 44, borderRadius: 12, background: 'white', border: '1.5px solid #e2e8f0', color: '#64748b', fontWeight: 700, fontSize: 13, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8 }}>
               <Upload size={16} /> Import
@@ -520,6 +640,30 @@ export default function PatientForm() {
               <Mic size={18} />
               {voiceMode ? 'ARRÊTER' : 'MICRO'}
             </button>
+=======
+             <button type="button" onClick={() => fileInputRef.current.click()}
+                style={{ 
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 12,
+                    background: '#f0f9ff', border: '1.5px solid #e0f2fe', color: '#0369a1',
+                    fontWeight: 800, fontSize: 13, cursor: 'pointer'
+                }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                IMPORT EXCEL/CSV
+                <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.txt" onChange={handleImport} />
+             </button>
+             <button type="button" 
+                onClick={() => { if (!voiceMode) { setVoiceMode(true); startVoice(); } else { stopVoice(); } }}
+                style={{ 
+                    display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 12,
+                    background: voiceMode ? '#fef2f2' : 'white', 
+                    border: `1.5px solid ${voiceMode ? '#fee2e2' : '#f1f5f9'}`,
+                    color: voiceMode ? '#ef4444' : '#64748b',
+                    fontWeight: 800, fontSize: 13, cursor: 'pointer'
+                }}>
+                <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" y1="19" x2="12" y2="23"/><line x1="8" y1="23" x2="16" y2="23"/></svg>
+                {voiceMode ? 'DICTÉE ACTIVE' : 'MODE VOCAL'}
+             </button>
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
           </div>
         </div>
 
@@ -566,6 +710,7 @@ export default function PatientForm() {
         )}
 
         <form onSubmit={handleSubmit}>
+<<<<<<< HEAD
           {/* ═══ STEP 0: IDENTITÉ CIVILE ═══ */}
           {step === 0 && (
             <div style={{ background: 'white', borderRadius: 16, border: '1px solid #e2e8f0', padding: 32 }}>
@@ -574,6 +719,23 @@ export default function PatientForm() {
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
                 <VoiceInput label="Nom de Famille" field="nom" value={form.nom} required placeholder="Ex: BENALI" />
                 <VoiceInput label="Prénom(s)" field="prenom" value={form.prenom} required placeholder="Ex: Mohamed" />
+=======
+        <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 32, alignItems: 'start' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 32 }}>
+            {/* 1. Informations Civiles */}
+            <div style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, boxShadow: '0 10px 15px -3px rgba(0,0,0,0.02)' }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 32 }}>
+                <div style={{ width: 44, height: 44, borderRadius: 14, background: '#eff6ff', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#1e69ff' }}>
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                </div>
+                <h3 style={{ fontSize: 20, fontWeight: 900, color: '#0f172a', margin: 0 }}>Identité Civile</h3>
+                {isEdit && patientMatricule && (
+                  <span style={{ marginLeft: 'auto', background: '#0f172a', color: 'white', padding: '8px 20px', borderRadius: 12, fontSize: 14, fontWeight: 900, fontFamily: 'JetBrains Mono, monospace', letterSpacing: '1px', display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="4" width="18" height="16" rx="2"/><path d="M7 8h10"/><path d="M7 12h6"/></svg>
+                    {patientMatricule}
+                  </span>
+                )}
+>>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
               </div>
 
               <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, marginBottom: 24 }}>
