@@ -9,7 +9,6 @@ import { Search, Plus, Filter, Download, Trash2, ChevronRight, User, MapPin, Act
 import { format, parseISO } from 'date-fns';
 
 export default function Patients() {
-  const { user, isAdmin } = useAuth();
   const [patients, setPatients] = useState([]);
   const [total, setTotal] = useState(0);
   const [loading, setLoading] = useState(true);
@@ -19,21 +18,11 @@ export default function Patients() {
   const [stadeFilter, setStadeFilter] = useState('');
   const [page, setPage] = useState(1);
   const [limit] = useState(20);
-  const [prelevementOnly, setPrelevementOnly] = useState(false);
 
-  useEffect(() => {
-    if (user?.role === 'anapath') {
-      setPrelevementOnly(true);
-    }
-  }, [user]);
-
-  useEffect(() => { setPage(1); }, [search, sexeFilter, typeFilter, stadeFilter, prelevementOnly]);
+  useEffect(() => { setPage(1); }, [search, sexeFilter, typeFilter, stadeFilter]);
 
   const navigate = useNavigate();
-<<<<<<< HEAD
   const { isAdmin } = useAuth();
-=======
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [patientToDelete, setPatientToDelete] = useState(null);
 
@@ -47,13 +36,7 @@ export default function Patients() {
     if (sexeFilter) params.sexe = sexeFilter;
     if (typeFilter) params.type = typeFilter;
     if (stadeFilter) params.stade = stadeFilter;
-<<<<<<< HEAD
 
-=======
-    if (prelevementOnly) params.prelevementOnly = 'true';
-    params.page = page;
-    params.limit = limit;
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
     getPatients(params)
       .then(r => {
         setPatients(r.data.patients || r.data);
@@ -61,11 +44,7 @@ export default function Patients() {
       })
       .catch(console.error)
       .finally(() => setLoading(false));
-<<<<<<< HEAD
   }, [search, sexeFilter, typeFilter, stadeFilter, page, limit]);
-=======
-  }, [search, sexeFilter, typeFilter, stadeFilter, prelevementOnly, page, limit]);
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
 
   useEffect(() => { load(); }, [load]);
 
@@ -122,7 +101,6 @@ export default function Patients() {
     <Layout title="">
       <input type="file" ref={fileInputRef} style={{ display: 'none' }} onChange={handleImportFiles} />
 
-<<<<<<< HEAD
       <div style={{ padding: '0 20px 60px' }}>
 
         {/* ── HEADER ── */}
@@ -159,72 +137,6 @@ export default function Patients() {
         </div>
 
         {/* ── FILTERS BAR ── */}
-=======
-      <div style={{ padding: '0 12px 40px' }}>
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 32 }}>
-          <div>
-            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', margin: 0, fontFamily: 'Outfit' }}>Répertoire des Patients</h1>
-            <p style={{ color: '#64748b', fontSize: 14, marginTop: 4, fontWeight: 500 }}>{total} dossiers actifs enregistrés</p>
-          </div>
-          {user?.role !== 'anapath' && (
-            <div style={{ display: 'flex', gap: 12 }}>
-              <div style={{ position: 'relative' }}>
-                <button
-                  onClick={() => setShowImportOptions(!showImportOptions)}
-                  className="btn btn-secondary"
-                  style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 24px', borderRadius: 14 }}
-                >
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" /><polyline points="17 8 12 3 7 8" /><line x1="12" y1="3" x2="12" y2="15" /></svg>
-                  <span style={{ fontWeight: 700 }}>Importer</span>
-                </button>
-
-                {showImportOptions && (
-                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, background: 'white', borderRadius: 12, boxShadow: '0 10px 25px rgba(0,0,0,0.1)', border: '1px solid #f1f5f9', zIndex: 100, width: 200, padding: 8 }}>
-                    <button onClick={() => triggerFileInput('xlsx')} style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#334155' }}>Format Excel (.xlsx)</button>
-                    <button onClick={() => triggerFileInput('csv')} style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#334155' }}>Format CSV (.csv)</button>
-                    <button onClick={() => triggerFileInput('txt')} style={{ width: '100%', textAlign: 'left', padding: '10px 12px', borderRadius: 8, border: 'none', background: 'none', cursor: 'pointer', fontSize: 13, fontWeight: 600, color: '#334155' }}>Format Texte (.txt)</button>
-                  </div>
-                )}
-              </div>
-
-              <Link to="/patients/nouveau" className="btn btn-primary" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: '14px 28px', borderRadius: 14, boxShadow: '0 10px 15px -3px rgba(15, 23, 42, 0.15)' }}>
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3"><line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" /></svg>
-                <span style={{ fontWeight: 800 }}>Nouveau Patient</span>
-              </Link>
-            </div>
-          )}
-        </div>
-
-        {/* ANAPATH SPECIAL TABS */}
-        {user?.role === 'anapath' && (
-          <div style={{ display: 'flex', gap: 12, marginBottom: 24 }}>
-            <button
-              onClick={() => setPrelevementOnly(true)}
-              style={{
-                padding: '12px 24px', borderRadius: 14, border: 'none',
-                background: prelevementOnly ? '#0f172a' : '#f1f5f9',
-                color: prelevementOnly ? 'white' : '#64748b',
-                fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              🔬 Patients avec prélèvements
-            </button>
-            <button
-              onClick={() => setPrelevementOnly(false)}
-              style={{
-                padding: '12px 24px', borderRadius: 14, border: 'none',
-                background: !prelevementOnly ? '#0f172a' : '#f1f5f9',
-                color: !prelevementOnly ? 'white' : '#64748b',
-                fontWeight: 800, cursor: 'pointer', transition: 'all 0.2s'
-              }}
-            >
-              🔎 Tous les Patients (Recherche/Nouveau Rapport)
-            </button>
-          </div>
-        )}
-
-        {/* SEARCH & FILTERS BAR */}
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
         <div style={{
           background: 'white', padding: '24px 32px', borderRadius: 32, border: '1.5px solid #f1f5f9',
           display: 'flex', gap: 20, marginBottom: 40, alignItems: 'center', boxShadow: '0 15px 30px -10px rgba(0,0,0,0.03)'
@@ -272,7 +184,6 @@ export default function Patients() {
             <>
               <table style={{ width: '100%', borderCollapse: 'collapse' }}>
                 <thead>
-<<<<<<< HEAD
                   <tr style={{ background: '#fcfdfe', borderBottom: '1.5px solid #f1f5f9' }}>
                     <th style={{ padding: '24px 32px', textAlign: 'left', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Matricule</th>
                     <th style={{ padding: '24px 32px', textAlign: 'left', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Patient</th>
@@ -280,40 +191,14 @@ export default function Patients() {
                     <th style={{ padding: '24px 32px', textAlign: 'left', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Localité</th>
                     <th style={{ padding: '24px 32px', textAlign: 'left', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px' }}>Statut</th>
                     <th style={{ padding: '24px 32px', textAlign: 'right' }}>Actions</th>
-=======
-                  <tr style={{ background: '#f8fafc' }}>
-                    <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>Matricule</th>
-                    <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>Patient & Identité</th>
-                    {prelevementOnly ? (
-                      <>
-                        <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>Type de Prélèvement</th>
-                        <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>Date Prélèvement</th>
-                        <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>Localisation</th>
-                      </>
-                    ) : (
-                      <>
-                        <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>Diagnostic Cancer</th>
-                        <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>Stade</th>
-                        <th style={{ padding: '20px 24px', fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: 1, borderBottom: '1px solid #f1f5f9' }}>État Vital</th>
-                      </>
-                    )}
-                    <th style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>Actions</th>
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
                   </tr>
                 </thead>
                 <tbody>
                   {patients.map(p => (
-<<<<<<< HEAD
                     <tr key={p.id} onClick={() => navigate(`/patients/${p.id}`)} style={{ cursor: 'pointer', transition: 'all 0.2s', borderBottom: '1px solid #f8fafc' }} onMouseEnter={e => e.currentTarget.style.background = '#fcfdfe'} onMouseLeave={e => e.currentTarget.style.background = 'white'}>
                       <td style={{ padding: '24px 32px' }}>
                         <span style={{ fontSize: 12, fontWeight: 900, color: '#2563eb', background: '#eff6ff', padding: '6px 14px', borderRadius: 10, fontFamily: "'JetBrains Mono', monospace" }}>
                           PAT-{String(p.patient_seq || p.id).padStart(4, '0')}
-=======
-                    <tr key={p.id} onClick={() => navigate(`/patients/${p.id}`)} style={{ cursor: 'pointer', transition: 'all 0.2s' }}>
-                      <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                        <span style={{ fontSize: 12, fontWeight: 800, color: '#0ea5e9', background: '#f0f9ff', padding: '6px 12px', borderRadius: 8, fontFamily: 'JetBrains Mono' }}>
-                          {p.matricule || `PAT-${new Date(p.created_at || Date.now()).getFullYear()}-${String(p.patient_seq || 0).padStart(4, '0')}`}
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
                         </span>
                       </td>
                       <td style={{ padding: '24px 32px' }}>
@@ -329,7 +214,6 @@ export default function Patients() {
                           </div>
                         </div>
                       </td>
-<<<<<<< HEAD
                       <td style={{ padding: '24px 32px' }}>
                         <div style={{ fontWeight: 800, color: '#334155', fontSize: 14 }}>{p.cancer_type || '—'}</div>
                         <div style={{ fontSize: 12, color: '#94a3b8', marginTop: 4, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -359,55 +243,6 @@ export default function Patients() {
                           </button>
                           <button style={{ width: 40, height: 40, borderRadius: 12, background: '#f8fafc', border: '1.5px solid #f1f5f9', cursor: 'pointer', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
                             <ChevronRight size={20} />
-=======
-                      {prelevementOnly ? (
-                        <>
-                          <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                            <span style={{ fontWeight: 800, color: '#1e293b', fontSize: 13 }}>{p.type_prelevement || '—'}</span>
-                          </td>
-                          <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', fontWeight: 700, color: '#475569', fontSize: 13 }}>
-                            {p.date_prelevement ? new Date(p.date_prelevement).toLocaleDateString('fr-FR') : '—'}
-                          </td>
-                          <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                            <span style={{ background: '#f5f3ff', color: '#7c3aed', padding: '6px 12px', borderRadius: 8, fontSize: 12, fontWeight: 800 }}>
-                              {p.localisation || '—'}
-                            </span>
-                          </td>
-                        </>
-                      ) : (
-                        <>
-                          <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                            <div style={{ fontWeight: 700, color: '#334155', fontSize: 13 }}>{p.cancer_type || 'Diagnostic non précisé'}</div>
-                            <div style={{ fontSize: 11, color: '#94a3b8', marginTop: 2, fontWeight: 600 }}>Wilaya : {p.wilaya || '—'}</div>
-                          </td>
-                          <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                            <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                              <div style={{ width: 8, height: 8, borderRadius: 4, background: p.stade === 'IV' ? '#ef4444' : '#f59e0b' }} />
-                              <span style={{ fontWeight: 800, color: '#1e293b', fontSize: 13 }}>Stade {p.stade || 'II'}</span>
-                            </div>
-                          </td>
-                          <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9' }}>
-                            <span style={{
-                              fontSize: 11, fontWeight: 900, textTransform: 'uppercase', letterSpacing: 0.5,
-                              background: p.statut_vital === 'Décédé' ? '#fee2e2' : '#f0fdf4',
-                              color: p.statut_vital === 'Décédé' ? '#991b1b' : '#166534',
-                              padding: '6px 14px', borderRadius: 30, display: 'inline-block'
-                            }}>
-                              {p.statut_vital || 'Vivant'}
-                            </span>
-                          </td>
-                        </>
-                      )}
-                      <td style={{ padding: '20px 24px', borderBottom: '1px solid #f1f5f9', textAlign: 'right' }}>
-                        <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-                          {user?.role !== 'anapath' && (
-                            <button onClick={(e) => openDeleteModal(e, p)} style={{ width: 36, height: 36, borderRadius: 10, background: '#fee2e2', border: 'none', cursor: 'pointer', color: '#dc2626', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>
-                            </button>
-                          )}
-                          <button className="btn-icon-subtle" style={{ width: 36, height: 36 }}>
-                            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><polyline points="9 18 15 12 9 6" /></svg>
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
                           </button>
                         </div>
                       </td>

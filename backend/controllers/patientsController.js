@@ -221,7 +221,6 @@ const createPatient = async (req, res) => {
     const id = uuidv4();
     const b = req.body;
 
-<<<<<<< HEAD
     const cols = [
       'id', 'nom', 'prenom', 'date_naissance', 'sexe', 'telephone', 'num_carte_nationale', 'num_carte_chifa',
       'adresse', 'commune', 'wilaya', 'latitude', 'longitude', 'fumeur', 'alcool', 'activite_sportive',
@@ -274,9 +273,6 @@ const createPatient = async (req, res) => {
     const placeholders = cols.map(() => '?').join(',');
     await pool.execute(`INSERT INTO patients (${cols.join(',')}) VALUES (${placeholders})`, vals);
 
-    await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom: b.nom, prenom: b.prenom }, req.ip);
-    res.status(201).json({ message: 'Patient créé avec succès', id });
-=======
     // Generate and store matricule using auto-incremented patient_seq
     const [rows] = await pool.execute('SELECT patient_seq, created_at FROM patients WHERE id = ?', [id]);
     const year = new Date(rows[0].created_at).getFullYear();
@@ -289,9 +285,8 @@ const createPatient = async (req, res) => {
     const matricule = `PAT-${year}-${String(seqNum).padStart(4, '0')}`;
     await pool.execute('UPDATE patients SET matricule = ? WHERE id = ?', [matricule, id]);
 
-    await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom, matricule }, req.ip);
+    await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom: b.nom, prenom: b.prenom, matricule }, req.ip);
     res.status(201).json({ message: 'Patient créé avec succès', id, matricule });
->>>>>>> 601c47f32253b3bce4dd4d8134bce39dbc6bdc58
   } catch (error) {
     console.error('CREATE PATIENT ERROR:', error);
     res.status(500).json({ message: error.message });
