@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import Layout from '../components/Layout';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
+import { useAuth } from '../context/AuthContext';
 
 const FIELDS = [
   { key: 'nom', label: 'Nom', weight: 20 },
@@ -54,6 +55,7 @@ export default function Doublons() {
   const [comparison, setComparison] = useState(null); // { p1, p2, similarity }
   const [choices, setChoices] = useState({});
   const [merging, setMerging] = useState(false);
+  const { isAdmin } = useAuth();
 
   const load = () => {
     setLoading(true);
@@ -147,134 +149,134 @@ export default function Doublons() {
   const similarityColor = (s) => s >= 80 ? '#e63946' : s >= 60 ? '#d97706' : '#22c55e';
   const similarityLabel = (s) => s >= 80 ? 'Très similaire' : s >= 60 ? 'Similaire' : 'Peu similaire';
 
-  // Comparison view
-  if (comparison) {
-    const { p1, p2, similarity } = comparison;
-    return (
-      <Layout title="Comparer & Fusionner">
-        {/* Similarity badge */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20, flexWrap: 'wrap' }}>
-          <button className="btn btn-outline" onClick={() => { setComparison(null); navigate('/doublons'); }}>← Retour</button>
+  // Modal de comparaison
+  const comparisonModal = comparison ? (
+    <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(15, 23, 42, 0.6)', backdropFilter: 'blur(4px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 9999, padding: '20px' }}>
+      <div style={{ background: 'white', borderRadius: '16px', width: '100%', maxWidth: '1000px', maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)', display: 'flex', flexDirection: 'column' }}>
+        
+        {/* Header Modal */}
+        <div style={{ padding: '20px 24px', borderBottom: '1px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'sticky', top: 0, background: 'white', zIndex: 10 }}>
+          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#0f172a' }}>Comparer & Fusionner</h2>
+          <button onClick={() => { setComparison(null); navigate('/doublons'); }} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 4, color: '#64748b' }}>
+            <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+        </div>
 
-          <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ background: 'white', border: `2px solid ${similarityColor(similarity)}`, borderRadius: 12, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
-              <div style={{ fontSize: 28, fontWeight: 900, color: similarityColor(similarity), fontFamily: 'JetBrains Mono' }}>{similarity}%</div>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: similarityColor(similarity) }}>{similarityLabel(similarity)}</div>
-                <div style={{ fontSize: 11, color: '#94a3b8' }}>Taux de similarité</div>
+        <div style={{ padding: '24px' }}>
+          {/* Similarity badge */}
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 24, flexWrap: 'wrap', justifyContent: 'space-between' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+              <div style={{ background: 'white', border: `2px solid ${similarityColor(comparison.similarity)}`, borderRadius: 12, padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12 }}>
+                <div style={{ fontSize: 28, fontWeight: 900, color: similarityColor(comparison.similarity), fontFamily: 'JetBrains Mono' }}>{comparison.similarity}%</div>
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: similarityColor(comparison.similarity) }}>{similarityLabel(comparison.similarity)}</div>
+                  <div style={{ fontSize: 11, color: '#94a3b8' }}>Taux de similarité</div>
+                </div>
+                <div style={{ width: 100, height: 8, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                  <div style={{ width: `${comparison.similarity}%`, height: '100%', background: similarityColor(comparison.similarity), borderRadius: 4, transition: 'width 0.5s' }} />
+                </div>
               </div>
-              {/* Progress bar */}
-              <div style={{ width: 100, height: 8, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
-                <div style={{ width: `${similarity}%`, height: '100%', background: similarityColor(similarity), borderRadius: 4, transition: 'width 0.5s' }} />
-              </div>
+            </div>
+
+            <div style={{ display: 'flex', gap: 8 }}>
+              <button className="btn btn-outline btn-sm" onClick={() => { const a={}; FIELDS.forEach(f => a[f.key]='1'); setChoices(a); }}>← Tout P1</button>
+              <button className="btn btn-outline btn-sm" onClick={() => { const a={}; FIELDS.forEach(f => a[f.key]='2'); setChoices(a); }}>Tout P2 →</button>
+              <button className="btn btn-outline btn-sm" onClick={() => {
+                const a={};
+                FIELDS.forEach(f => { a[f.key] = (comparison.p1[f.key] && !comparison.p2[f.key]) ? '1' : (!comparison.p1[f.key] && comparison.p2[f.key]) ? '2' : '1'; });
+                setChoices(a);
+              }}>⚡ Auto</button>
             </div>
           </div>
 
-          <div style={{ display: 'flex', gap: 8 }}>
-            <button className="btn btn-outline btn-sm" onClick={() => { const a={}; FIELDS.forEach(f => a[f.key]='1'); setChoices(a); }}>← Tout P1</button>
-            <button className="btn btn-outline btn-sm" onClick={() => { const a={}; FIELDS.forEach(f => a[f.key]='2'); setChoices(a); }}>Tout P2 →</button>
-            <button className="btn btn-outline btn-sm" onClick={() => {
-              const a={};
-              FIELDS.forEach(f => { a[f.key] = (p1[f.key] && !p2[f.key]) ? '1' : (!p1[f.key] && p2[f.key]) ? '2' : '1'; });
-              setChoices(a);
-            }}>⚡ Auto</button>
-            <button className="btn btn-primary" onClick={handleMerge} disabled={merging}>
-              {merging ? '⏳...' : '🔗 Fusionner'}
+          {/* Comparison table */}
+          <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden', boxShadow: '0 1px 3px rgba(0,0,0,0.05)' }}>
+            {/* Header */}
+            <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 50px 1fr', background: '#f8fafc' }}>
+              <div style={{ padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', borderRight: '1px solid #e2e8f0' }}>Champ</div>
+              <div style={{ padding: '12px 16px', background: '#dbeafe', display: 'flex', alignItems: 'center', gap: 10, borderRight: '1px solid #e2e8f0' }}>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0f4c81', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 11 }}>P1</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#0f4c81' }}>{comparison.p1.prenom} {comparison.p1.nom}</div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>Patient 1</div>
+                </div>
+              </div>
+              <div style={{ padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #e2e8f0', fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>VS</div>
+              <div style={{ padding: '12px 16px', background: '#fef3c7', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 11 }}>P2</div>
+                <div>
+                  <div style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>{comparison.p2.prenom} {comparison.p2.nom}</div>
+                  <div style={{ fontSize: 11, color: '#64748b' }}>Patient 2</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Rows */}
+            {FIELDS.map((f, i) => {
+              const v1 = comparison.p1[f.key];
+              const v2 = comparison.p2[f.key];
+              const same = String(v1||'').toLowerCase().trim() === String(v2||'').toLowerCase().trim();
+              const choice = choices[f.key];
+              return (
+                <div key={f.key} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 50px 1fr', borderTop: '1px solid #f1f5f9', background: i%2===0 ? 'white' : '#fafbfc' }}>
+                  <div style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#64748b', borderRight: '1px solid #f1f5f9', display: 'flex', alignItems: 'center' }}>{f.label}</div>
+
+                  <div onClick={() => setChoices(p => ({ ...p, [f.key]: '1' }))} style={{
+                    padding: '11px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                    background: choice==='1' ? '#eff6ff' : 'transparent',
+                    borderLeft: choice==='1' ? '3px solid #0f4c81' : '3px solid transparent',
+                    borderRight: '1px solid #f1f5f9', transition: 'all 0.15s'
+                  }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${choice==='1'?'#0f4c81':'#cbd5e1'}`, background: choice==='1'?'#0f4c81':'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {choice==='1' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+                    </div>
+                    <span style={{ fontSize: 13, color: v1 ? '#0f172a' : '#94a3b8' }}>{fmt(v1, f.isDate, f.isBool)}</span>
+                  </div>
+
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #f1f5f9' }}>
+                    {same ? <span style={{ fontSize: 14, color: '#22c55e' }}>✓</span> : <span style={{ fontSize: 10, fontWeight: 700, color: '#e63946', background: '#fee2e2', padding: '2px 5px', borderRadius: 4 }}>≠</span>}
+                  </div>
+
+                  <div onClick={() => setChoices(p => ({ ...p, [f.key]: '2' }))} style={{
+                    padding: '11px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
+                    background: choice==='2' ? '#fffbeb' : 'transparent',
+                    borderLeft: choice==='2' ? '3px solid #d97706' : '3px solid transparent',
+                    transition: 'all 0.15s'
+                  }}>
+                    <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${choice==='2'?'#d97706':'#cbd5e1'}`, background: choice==='2'?'#d97706':'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                      {choice==='2' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
+                    </div>
+                    <span style={{ fontSize: 13, color: v2 ? '#0f172a' : '#94a3b8' }}>{fmt(v2, f.isDate, f.isBool)}</span>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+
+          <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 24 }}>
+            <button className="btn btn-primary" onClick={handleMerge} disabled={merging} style={{ padding: '12px 32px', fontSize: '15px' }}>
+              {merging ? '⏳ Fusion en cours...' : '🔗 Confirmer la Fusion'}
             </button>
           </div>
         </div>
-
-        {/* Comparison table */}
-        <div style={{ border: '1px solid #e2e8f0', borderRadius: 12, overflow: 'hidden' }}>
-          {/* Header */}
-          <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr 50px 1fr', background: '#f8fafc' }}>
-            <div style={{ padding: '12px 16px', fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', borderRight: '1px solid #e2e8f0' }}>Champ</div>
-            <div style={{ padding: '12px 16px', background: '#dbeafe', display: 'flex', alignItems: 'center', gap: 10, borderRight: '1px solid #e2e8f0' }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#0f4c81', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 11 }}>P1</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#0f4c81' }}>{p1.prenom} {p1.nom}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Patient 1</div>
-              </div>
-            </div>
-            <div style={{ padding: '12px 8px', display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #e2e8f0', fontSize: 11, color: '#94a3b8', fontWeight: 700 }}>VS</div>
-            <div style={{ padding: '12px 16px', background: '#fef3c7', display: 'flex', alignItems: 'center', gap: 10 }}>
-              <div style={{ width: 26, height: 26, borderRadius: '50%', background: '#d97706', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 800, fontSize: 11 }}>P2</div>
-              <div>
-                <div style={{ fontWeight: 700, fontSize: 13, color: '#92400e' }}>{p2.prenom} {p2.nom}</div>
-                <div style={{ fontSize: 11, color: '#64748b' }}>Patient 2</div>
-              </div>
-            </div>
-          </div>
-
-          {/* Rows */}
-          {FIELDS.map((f, i) => {
-            const v1 = p1[f.key];
-            const v2 = p2[f.key];
-            const same = String(v1||'').toLowerCase().trim() === String(v2||'').toLowerCase().trim();
-            const choice = choices[f.key];
-            return (
-              <div key={f.key} style={{ display: 'grid', gridTemplateColumns: '160px 1fr 50px 1fr', borderTop: '1px solid #f1f5f9', background: i%2===0 ? 'white' : '#fafbfc' }}>
-                <div style={{ padding: '11px 16px', fontSize: 12, fontWeight: 600, color: '#64748b', borderRight: '1px solid #f1f5f9', display: 'flex', alignItems: 'center' }}>{f.label}</div>
-
-                {/* P1 */}
-                <div onClick={() => setChoices(p => ({ ...p, [f.key]: '1' }))} style={{
-                  padding: '11px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
-                  background: choice==='1' ? '#eff6ff' : 'transparent',
-                  borderLeft: choice==='1' ? '3px solid #0f4c81' : '3px solid transparent',
-                  borderRight: '1px solid #f1f5f9', transition: 'all 0.15s'
-                }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${choice==='1'?'#0f4c81':'#cbd5e1'}`, background: choice==='1'?'#0f4c81':'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {choice==='1' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
-                  </div>
-                  <span style={{ fontSize: 13, color: v1 ? '#0f172a' : '#94a3b8' }}>{fmt(v1, f.isDate, f.isBool)}</span>
-                </div>
-
-                {/* Similarity indicator */}
-                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', borderRight: '1px solid #f1f5f9' }}>
-                  {same
-                    ? <span style={{ fontSize: 14, color: '#22c55e' }}>✓</span>
-                    : <span style={{ fontSize: 10, fontWeight: 700, color: '#e63946', background: '#fee2e2', padding: '2px 5px', borderRadius: 4 }}>≠</span>
-                  }
-                </div>
-
-                {/* P2 */}
-                <div onClick={() => setChoices(p => ({ ...p, [f.key]: '2' }))} style={{
-                  padding: '11px 16px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 10,
-                  background: choice==='2' ? '#fffbeb' : 'transparent',
-                  borderLeft: choice==='2' ? '3px solid #d97706' : '3px solid transparent',
-                  transition: 'all 0.15s'
-                }}>
-                  <div style={{ width: 16, height: 16, borderRadius: '50%', border: `2px solid ${choice==='2'?'#d97706':'#cbd5e1'}`, background: choice==='2'?'#d97706':'white', flexShrink: 0, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                    {choice==='2' && <div style={{ width: 6, height: 6, borderRadius: '50%', background: 'white' }} />}
-                  </div>
-                  <span style={{ fontSize: 13, color: v2 ? '#0f172a' : '#94a3b8' }}>{fmt(v2, f.isDate, f.isBool)}</span>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-
-        <div style={{ display: 'flex', justifyContent: 'flex-end', marginTop: 16 }}>
-          <button className="btn btn-primary" onClick={handleMerge} disabled={merging} style={{ padding: '12px 32px' }}>
-            {merging ? '⏳ Fusion en cours...' : '🔗 Confirmer la Fusion'}
-          </button>
-        </div>
-      </Layout>
-    );
-  }
+      </div>
+    </div>
+  ) : null;
 
   // List view
   return (
     <Layout title="Gestion des Doublons">
-      <div className="card">
-        <div className="card-header">
-          <h2>🔍 Doublons Détectés ({doublons.length})</h2>
-          <button className="btn btn-outline" onClick={load}>🔄 Actualiser</button>
-        </div>
-        <div className="card-body">
-          {loading ? (
-            <div className="loading-center"><div className="spinner" /></div>
-          ) : doublons.length === 0 ? (
+      {comparisonModal}
+      {isAdmin ? (
+        <div className="card">
+          <div className="card-header">
+            <h2>🔍 Doublons Détectés ({doublons.length})</h2>
+            <button className="btn btn-outline" onClick={load}>🔄 Actualiser</button>
+          </div>
+          <div className="card-body">
+            {loading ? (
+              <div className="loading-center"><div className="spinner" /></div>
+            ) : doublons.length === 0 ? (
             <div className="empty-state">
               <div style={{ fontSize: 48 }}>✅</div>
               <h3>Aucun doublon détecté</h3>
@@ -309,6 +311,17 @@ export default function Doublons() {
           )}
         </div>
       </div>
+      ) : (
+        <div style={{ textAlign: 'center', padding: '60px', background: 'white', borderRadius: '16px', border: '1px solid #e2e8f0', marginTop: '20px' }}>
+          <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#64748b" strokeWidth="1.5" style={{ marginBottom: '16px' }}>
+            <circle cx="12" cy="12" r="10"/>
+            <line x1="12" y1="8" x2="12" y2="12"/>
+            <line x1="12" y1="16" x2="12.01" y2="16"/>
+          </svg>
+          <h2 style={{ fontSize: '18px', color: '#1e293b', marginBottom: '8px' }}>Outil de Comparaison et Fusion</h2>
+          <p style={{ color: '#64748b' }}>Vous serez redirigé automatiquement ici lors de l'enregistrement d'un patient similaire ou doublon.</p>
+        </div>
+      )}
     </Layout>
   );
 }

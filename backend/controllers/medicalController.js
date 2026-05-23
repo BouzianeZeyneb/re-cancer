@@ -219,6 +219,53 @@ const getAnapathByPatient = async (req, res) => {
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
 
+// ===== LISTE PRÉLÈVEMENTS POUR ANAPATH =====
+const getPrelevementsList = async (req, res) => {
+  try {
+    const search = req.query.search ? `%${req.query.search}%` : '%';
+    const typeFilter = req.query.type_prelevement || null;
+    
+    let query = `
+      SELECT
+        p.id           AS patient_id,
+        p.matricule,
+        p.nom,
+        p.prenom,
+        cc.id          AS case_id,
+        cc.localisation,
+        cc.sous_type,
+        cc.type_cancer,
+        a.id           AS anapath_id,
+        a.date_prelevement,
+        a.type_prelevement,
+        a.type_histologique,
+        a.compte_rendu,
+        a.pathologiste,
+        a.created_at   AS anapath_created_at,
+        cr.id          AS cr_id,
+        cr.statut      AS cr_statut,
+        cr.validated_at AS cr_validated_at
+      FROM anapath a
+      JOIN cancer_cases cc ON a.case_id = cc.id
+      JOIN patients p ON cc.patient_id = p.id
+      LEFT JOIN comptes_rendus_anapath cr ON cr.anapath_id = a.id
+      WHERE p.deleted = false
+        AND (p.nom LIKE ? OR p.prenom LIKE ? OR p.matricule LIKE ?)
+    `;
+    const params = [search, search, search];
+
+    if (typeFilter) {
+      query += ' AND a.type_prelevement = ?';
+      params.push(typeFilter);
+    }
+
+    query += ' ORDER BY a.date_prelevement DESC';
+
+    const [rows] = await pool.execute(query, params);
+    res.json(rows);
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
 const getTraitementsByPatient = async (req, res) => {
   try {
     const [rows] = await pool.execute(`
@@ -294,5 +341,5 @@ module.exports = {
   // Documents
   getDocumentsByPatient, createDocument,
   // patient-specific medical loads
-  getAnapathByPatient, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
+  getAnapathByPatient, getPrelevementsList, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
 };

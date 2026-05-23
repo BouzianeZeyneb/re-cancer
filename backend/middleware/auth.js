@@ -26,7 +26,7 @@ const authMiddleware = async (req, res, next) => {
 
 const requireRole = (...roles) => (req, res, next) => {
   if (!req.user || !roles.includes(req.user.role)) {
-    return res.status(403).json({ message: 'Accès refusé : rôle insuffisant' });
+    return res.status(403).json({ message: 'Accès non autorisé pour votre rôle' });
   }
   next();
 };

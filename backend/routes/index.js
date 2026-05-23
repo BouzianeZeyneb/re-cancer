@@ -36,8 +36,8 @@ const { getAllPatients, getPatientById, createPatient, updatePatient, deletePati
 router.get('/patients', authMiddleware, getAllPatients);
 router.post('/patients/check-duplicate', authMiddleware, checkDuplicateRealtime);
 router.get('/patients/:id', authMiddleware, getPatientById);
-router.post('/patients', authMiddleware, createPatient);
-router.put('/patients/:id', authMiddleware, updatePatient);
+router.post('/patients', authMiddleware, requireRole('admin', 'medecin'), createPatient);
+router.put('/patients/:id', authMiddleware, requireRole('admin', 'medecin'), updatePatient);
 router.delete('/patients/:id', authMiddleware, requireRole('admin', 'medecin'), deletePatient);
 router.post('/patients/merge', authMiddleware, requireRole('admin'), mergePatients);
 
@@ -78,7 +78,8 @@ router.get('/stats/raw', authMiddleware, getRawStatsData);
 router.post('/stats/ia-analysis', authMiddleware, analyzeWilayaIA);
 router.post('/stats/analyze-patient', authMiddleware, analyzePatientIA);
 router.post('/chat-ia', authMiddleware, askGlobalIA);
-router.get('/stats/audit', authMiddleware, requireRole('admin', 'pharmacie'), getAuditLogs);
+router.get('/audit-logs', authMiddleware, requireRole('admin'), getAuditLogs);
+router.get('/stats/audit', authMiddleware, requireRole('admin'), getAuditLogs);
 
 // Chat routes
 const { getConversations, getOrCreateConversation, getMessages, sendMessage, getUsers: getChatUsers } = require('../controllers/chatController');
@@ -153,10 +154,20 @@ const {
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
   getChimioSeances, createChimioSeance,
   getDocumentsByPatient, createDocument,
-  getAnapathByPatient, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
+  getAnapathByPatient, getPrelevementsList, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
 } = require('../controllers/medicalController');
 
+router.get('/anapath/prelevements', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getPrelevementsList);
 router.get('/anapath/patient/:patientId', authMiddleware, getAnapathByPatient);
+
+// Comptes rendus ANAPATH
+const { getByAnapath: getCR, getPrelevementInfo, create: createCR, update: updateCR, valider: validerCR } = require('../controllers/anapathCompteRenduController');
+router.get('/anapath/:anapathId/compte-rendu', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getCR);
+router.get('/anapath/:anapathId/info', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getPrelevementInfo);
+router.post('/anapath/compte-rendu', authMiddleware, requireRole('admin', 'medecin', 'anapath'), createCR);
+router.put('/anapath/compte-rendu/:id', authMiddleware, requireRole('admin', 'medecin', 'anapath'), updateCR);
+router.put('/anapath/compte-rendu/:id/valider', authMiddleware, requireRole('admin', 'anapath'), validerCR);
+
 router.get('/anapath/:caseId', authMiddleware, getAnapath);
 router.post('/anapath', authMiddleware, createAnapath);
 router.put('/anapath/:id', authMiddleware, updateAnapath);
@@ -216,5 +227,123 @@ router.delete('/custom-fields/:id', authMiddleware, requireRole('admin'), remove
 router.get('/custom-fields/:id/value/:recordId', authMiddleware, getValues);
 router.post('/custom-fields/:id/value', authMiddleware, saveValue);
 
-module.exports = router;
+// Additional admin & epi protections
+router.post('/zones', authMiddleware, requireRole('admin', 'epidemiologiste'), (req, res) => res.status(200).send('OK'));
+router.delete('/zones/:id', authMiddleware, requireRole('admin', 'epidemiologiste'), (req, res) => res.status(200).send('OK'));
+router.post('/backup', authMiddleware, requireRole('admin'), (req, res) => res.status(200).send('OK'));
+router.use('/admin', authMiddleware, requireRole('admin'), (req, res, next) => next());
 
+// ── VALIDATIONS ÉPIDÉMIOLOGIQUES ──────────────────────────────────────────────
+router.get('/validations/stats', authMiddleware, requireRole('admin', 'epidemiologiste'), async (req, res) => {
+  try {
+    const { pool } = require('../config/database');
+    const now = new Date();
+    const startOfMonth = `${now.getFullYear()}-${String(now.getMonth()+1).padStart(2,'0')}-01`;
+    const startOfDay = now.toISOString().slice(0,10);
+
+    const [[pending]] = await pool.execute(
+      `SELECT COUNT(*) as cnt FROM cancer_cases c LEFT JOIN validations_epidemio v ON v.case_id = c.id WHERE COALESCE(v.statut,'en_attente')='en_attente'`
+    );
+    const [[approvedToday]] = await pool.execute(
+      `SELECT COUNT(*) as cnt FROM validations_epidemio WHERE statut='approuve' AND DATE(validated_at)=?`, [startOfDay]
+    );
+    const [[rejectedToday]] = await pool.execute(
+      `SELECT COUNT(*) as cnt FROM validations_epidemio WHERE statut='rejete' AND DATE(validated_at)=?`, [startOfDay]
+    );
+    const [[approvedMonth]] = await pool.execute(
+      `SELECT COUNT(*) as cnt FROM validations_epidemio WHERE statut='approuve' AND validated_at >= ?`, [startOfMonth]
+    );
+    const [[rejectedMonth]] = await pool.execute(
+      `SELECT COUNT(*) as cnt FROM validations_epidemio WHERE statut='rejete' AND validated_at >= ?`, [startOfMonth]
+    );
+    const totalMonth = approvedMonth.cnt + rejectedMonth.cnt;
+    const rate = totalMonth > 0 ? Math.round((approvedMonth.cnt / totalMonth) * 100) : 0;
+
+    res.json({
+      pending: pending.cnt,
+      approvedToday: approvedToday.cnt,
+      rejectedToday: rejectedToday.cnt,
+      approvedMonth: approvedMonth.cnt,
+      rejectedMonth: rejectedMonth.cnt,
+      monthlyRate: rate
+    });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+router.get('/validations', authMiddleware, requireRole('admin', 'epidemiologiste'), async (req, res) => {
+  try {
+    const { pool } = require('../config/database');
+    const [rows] = await pool.execute(`
+      SELECT p.id, p.nom, p.prenom, p.date_naissance, p.sexe, p.wilaya,
+             p.num_carte_nationale,
+             c.id as case_id, c.topographie_icdo3, c.morphologie_icdo3,
+             c.tnm_t as stade_tnm_t, c.tnm_n as stade_tnm_n, c.tnm_m as stade_tnm_m,
+             c.date_diagnostic, c.created_at as case_created,
+             COALESCE(v.statut, 'en_attente') as validation_statut,
+             v.id as validation_id, v.commentaire, v.validated_at,
+             u.nom as valideur_nom, u.prenom as valideur_prenom
+      FROM patients p
+      JOIN cancer_cases c ON c.patient_id = p.id
+      LEFT JOIN validations_epidemio v ON v.case_id = c.id
+      WHERE COALESCE(v.statut, 'en_attente') = 'en_attente'
+      ORDER BY c.created_at ASC
+      LIMIT 50
+    `);
+    res.json(rows);
+  } catch (e) {
+    console.error(e);
+    res.status(500).json({ message: e.message });
+  }
+});
+
+router.get('/validations/historique', authMiddleware, requireRole('admin', 'epidemiologiste'), async (req, res) => {
+  try {
+    const { pool } = require('../config/database');
+    const [rows] = await pool.execute(`
+      SELECT p.id, p.nom, p.prenom, p.sexe,
+             c.id as case_id, c.topographie_icdo3,
+             v.statut as validation_statut, v.commentaire, v.validated_at,
+             u.nom as valideur_nom, u.prenom as valideur_prenom
+      FROM validations_epidemio v
+      JOIN cancer_cases c ON v.case_id = c.id
+      JOIN patients p ON c.patient_id = p.id
+      LEFT JOIN users u ON v.validated_by = u.id
+      WHERE v.statut != 'en_attente'
+      ORDER BY v.validated_at DESC
+      LIMIT 30
+    `);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+router.post('/validations/:caseId/approuver', authMiddleware, requireRole('admin', 'epidemiologiste'), async (req, res) => {
+  try {
+    const { pool } = require('../config/database');
+    const { commentaire } = req.body;
+    const userId = req.user.id;
+    await pool.execute(
+      `INSERT INTO validations_epidemio (case_id, statut, commentaire, validated_by, validated_at)
+       VALUES (?, 'approuve', ?, ?, NOW())
+       ON DUPLICATE KEY UPDATE statut='approuve', commentaire=?, validated_by=?, validated_at=NOW()`,
+      [req.params.caseId, commentaire || null, userId, commentaire || null, userId]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+router.post('/validations/:caseId/rejeter', authMiddleware, requireRole('admin', 'epidemiologiste'), async (req, res) => {
+  try {
+    const { pool } = require('../config/database');
+    const { commentaire } = req.body;
+    const userId = req.user.id;
+    await pool.execute(
+      `INSERT INTO validations_epidemio (case_id, statut, commentaire, validated_by, validated_at)
+       VALUES (?, 'rejete', ?, ?, NOW())
+       ON DUPLICATE KEY UPDATE statut='rejete', commentaire=?, validated_by=?, validated_at=NOW()`,
+      [req.params.caseId, commentaire, userId, commentaire, userId]
+    );
+    res.json({ success: true });
+  } catch (e) { res.status(500).json({ message: e.message }); }
+});
+
+module.exports = router;
