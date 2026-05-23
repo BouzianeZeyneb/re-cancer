@@ -272,6 +272,29 @@ export default function Validations() {
     else toast('Aucun dossier en attente');
   };
 
+  const handleExportCSV = () => {
+    if (history.length === 0 && queue.length === 0) return toast.error('Aucune donnée à exporter');
+    const headers = ['ID Cas', 'Statut Actuel', 'Patient', 'Decision', 'Date', 'Type Cancer', 'TNM'];
+    
+    const allData = [
+      ...history.map(h => [h.case_id, 'Historique', `${h.nom} ${h.prenom}`, h.validation_statut, new Date(h.validated_at || h.created_at).toLocaleDateString('fr-FR'), h.topographie_icdo3 || '', h.stade_tnm_t || h.tnm_t || '']),
+      ...queue.map(q => [q.case_id, 'En attente', `${q.nom} ${q.prenom}`, 'En attente', new Date(q.case_created || new Date()).toLocaleDateString('fr-FR'), q.topographie_icdo3 || '', q.stade_tnm_t || q.tnm_t || ''])
+    ];
+    
+    const csvContent = "data:text/csv;charset=utf-8,\uFEFF" 
+      + headers.join(';') + '\n' 
+      + allData.map(r => r.map(cell => `"${String(cell).replace(/"/g, '""')}"`).join(';')).join('\n');
+      
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `Rapport_Validations_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+    toast.success('Rapport CSV exporté avec succès');
+  };
+
   return (
     <Layout title="Validations épidémiologiques">
       {selected && <ReviewModal item={selected} onClose={() => setSelected(null)} onDecision={loadData} />}
@@ -284,8 +307,8 @@ export default function Validations() {
             <h1 style={{ margin: '0 0 8px', fontSize: 24, fontWeight: 600, color: '#0f172a' }}>Validations épidémiologiques</h1>
             <p style={{ margin: 0, fontSize: 14, color: '#64748b' }}>Contrôlez la qualité des dossiers avant intégration aux statistiques nationales</p>
           </div>
-          <button style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, color: '#0f172a', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-            {TI.download} Exporter rapport
+          <button onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 16px', background: 'white', border: '1px solid #e2e8f0', borderRadius: 8, color: '#0f172a', fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+            {TI.download} Exporter rapport CSV
           </button>
         </div>
 
@@ -477,8 +500,8 @@ export default function Validations() {
                   <span>Traiter le suivant</span>
                   {TI.arrowRight}
                 </button>
-                <button style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 16px', background: 'white', color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
-                  {TI.download} Exporter rapport PDF
+                <button onClick={handleExportCSV} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 16px', background: 'white', color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
+                  {TI.download} Exporter rapport CSV
                 </button>
                 <button onClick={() => navigate('/statistiques')} style={{ display: 'flex', alignItems: 'center', gap: 12, width: '100%', padding: '12px 16px', background: 'white', color: '#0f172a', border: '1px solid #e2e8f0', borderRadius: 8, fontSize: 14, fontWeight: 500, cursor: 'pointer' }}>
                   {TI.chartBar} Accéder aux statistiques

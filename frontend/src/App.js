@@ -30,9 +30,7 @@ import AnalysesBiologie from './pages/AnalysesBiologie';
 import Pharmacie from './pages/Pharmacie';
 import AnapathPrelevements from './pages/AnapathPrelevements';
 import AnapathCompteRendu from './pages/AnapathCompteRendu';
-<<<<<<< HEAD
 import Validations from './pages/Validations';
-=======
 import AnapathDashboard from './pages/AnapathDashboard';
 import AnapathHistorique from './pages/AnapathHistorique';
 
@@ -48,7 +46,6 @@ const getRoleHome = (role) => {
     default: return '/patients';
   }
 };
->>>>>>> 0335064a6d6d8a3911a1578e5d93bc9c0cd06547
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -61,44 +58,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     : 'medecin';
 
   if (allowedRoles && !allowedRoles.includes(safeRole)) {
-<<<<<<< HEAD
-    const path = window.location.pathname;
-
-    if (safeRole === 'statisticien' && (path.startsWith('/patients') || path.startsWith('/analyses-biologie'))) {
-      return <Navigate to="/statistiques" replace />;
-    }
-    if ((safeRole === 'pharmacien' || safeRole === 'pharmacie') && (path.startsWith('/patients') || path.startsWith('/carte-sig'))) {
-      return <Navigate to="/pharmacie" replace />;
-    }
-    if (safeRole === 'epidemiologiste' && path.startsWith('/admin')) {
-      return <Navigate to="/" replace />;
-    }
-
-    if (path === '/') {
-      if (safeRole === 'laboratoire') return <Navigate to="/laboratoire" replace />;
-      if (safeRole === 'pharmacien' || safeRole === 'pharmacie') return <Navigate to="/pharmacie" replace />;
-      if (safeRole === 'anapath') return <Navigate to="/patients" replace />;
-      if (safeRole === 'medecin') return <Navigate to="/patients" replace />;
-      if (safeRole === 'statisticien') return <Navigate to="/" replace />;
-      if (safeRole === 'epidemiologiste') return <Navigate to="/" replace />;
-    }
-
-    return (
-      <div style={{ padding: 50, textAlign: 'center', fontFamily: 'Sora' }}>
-        <h2 style={{ color: '#e63946' }}>Accès Refusé</h2>
-        <p>Votre rôle (<strong>{user.role}</strong>) ne vous permet pas d'accéder à cette page.</p>
-        <button
-          onClick={() => window.location.href = '/'}
-          style={{ padding: '8px 16px', background: '#0f4c81', color: 'white', borderRadius: 6, border: 'none', cursor: 'pointer', marginTop: 16 }}
-        >
-          Retour à l'accueil
-        </button>
-      </div>
-    );
-=======
     // Always redirect to the role's home instead of showing an error wall
     return <Navigate to={getRoleHome(safeRole)} replace />;
->>>>>>> 0335064a6d6d8a3911a1578e5d93bc9c0cd06547
   }
   return children;
 };

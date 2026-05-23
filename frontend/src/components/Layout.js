@@ -6,7 +6,7 @@ import api from '../utils/api';
 import { io } from 'socket.io-client';
 import { useTranslation } from 'react-i18next';
 
-const NavItem = ({ to, icon, label, onClick }) => {
+const NavItem = ({ to, icon, label, onClick, badge }) => {
   const location = useLocation();
   const active = to ? location.pathname === to || location.pathname.startsWith(to + '/') : false;
 
@@ -15,6 +15,7 @@ const NavItem = ({ to, icon, label, onClick }) => {
       <button className={`nav-item ${active ? 'active' : ''}`} onClick={onClick}>
         {icon}
         <span>{label}</span>
+        {badge > 0 && <span style={{ marginLeft: 'auto', background: '#3b82f6', color: 'white', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12 }}>{badge}</span>}
       </button>
     );
   }
@@ -23,7 +24,11 @@ const NavItem = ({ to, icon, label, onClick }) => {
     <Link to={to} className={`nav-item ${active ? 'active' : ''}`}>
       {icon}
       <span>{label}</span>
-      {active && <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'currentColor' }} />}
+      {badge > 0 ? (
+        <span style={{ marginLeft: 'auto', background: '#3b82f6', color: 'white', fontSize: 11, fontWeight: 700, padding: '2px 8px', borderRadius: 12 }}>{badge}</span>
+      ) : active ? (
+        <div style={{ marginLeft: 'auto', width: 4, height: 4, borderRadius: '50%', background: 'currentColor' }} />
+      ) : null}
     </Link>
   );
 };
@@ -41,6 +46,22 @@ export default function Layout({ children, title }) {
   const [notifications, setNotifications] = useState([]);
   const [showNotifications, setShowNotifications] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [epidemioPendingCount, setEpidemioPendingCount] = useState(0);
+
+  useEffect(() => {
+    if (isEpidemioRole) {
+      const fetchStats = () => {
+        api.get('/validations/stats').then(res => {
+          if (res.data && typeof res.data.pending === 'number') {
+            setEpidemioPendingCount(res.data.pending);
+          }
+        }).catch(console.error);
+      };
+      fetchStats(); // initial fetch
+      const interval = setInterval(fetchStats, 60000); // poll every 60s
+      return () => clearInterval(interval);
+    }
+  }, [isEpidemioRole]);
 
   useEffect(() => {
     if (user) {
@@ -259,7 +280,7 @@ export default function Layout({ children, title }) {
               <NavItem to="/" label="Tableau de Bord" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="3" width="7" height="7" /><rect x="14" y="3" width="7" height="7" /><rect x="3" y="14" width="7" height="7" /><rect x="14" y="14" width="7" height="7" /></svg>} />
               <NavItem to="/patients" label="Patients" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" /><circle cx="9" cy="7" r="4" /><path d="M23 21v-2a4 4 0 00-3-3.87" /></svg>} />
               <div className="nav-section-title">ANALYSE & SIG</div>
-              <NavItem to="/validations" label="Validations épidémiologiques" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>} />
+              <NavItem to="/validations" label="Validations épidémiologiques" badge={epidemioPendingCount} icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 01-2 2H5a2 2 0 01-2-2V5a2 2 0 012-2h11"/></svg>} />
               <NavItem to="/statistiques" label="Statistiques" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><line x1="18" y1="20" x2="18" y2="10" /><line x1="12" y1="20" x2="12" y2="4" /><line x1="6" y1="20" x2="6" y2="14" /></svg>} />
               <NavItem to="/carte-sig" label="Cartographie SIG" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="10" /><polygon points="16.24 7.76 14.12 14.12 7.76 16.24 9.88 9.88 16.24 7.76" /></svg>} />
             </>

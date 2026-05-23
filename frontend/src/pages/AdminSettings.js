@@ -258,13 +258,12 @@ export default function AdminSettings() {
   const getEntiteLabel = (ent) => entites.find(e => e.value === ent)?.label || ent;
   const getTypeChampLabel = (tc) => typesChamp.find(t => t.value === tc)?.label || tc;
 
-<<<<<<< HEAD
   /* ───── Shared input styles ───── */
   const fieldGroupStyle = { marginBottom: 14, padding: '12px 14px 14px', background: '#f8fafc', borderRadius: 12, border: '1px solid #f1f5f9', transition: 'border-color 0.2s' };
   const inputStyle = { height: 42, borderRadius: 10, fontWeight: 600, width: '100%', border: '1.5px solid #e2e8f0', background: 'white', fontSize: 14, padding: '0 14px', transition: 'border-color 0.2s, box-shadow 0.2s', outline: 'none', boxSizing: 'border-box' };
   const labelStyle = { fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#64748b', marginBottom: 6, display: 'block', letterSpacing: '0.5px' };
   const btnFooterStyle = { padding: '16px 0 4px', borderTop: '1px solid #f1f5f9', marginTop: 8, display: 'flex', gap: 12, justifyContent: 'flex-end' };
-=======
+
   // Non-admin: show only account settings
   if (!isAdmin) {
     return (
@@ -313,7 +312,6 @@ export default function AdminSettings() {
       </Layout>
     );
   }
->>>>>>> 0335064a6d6d8a3911a1578e5d93bc9c0cd06547
 
   return (
     <Layout title="">

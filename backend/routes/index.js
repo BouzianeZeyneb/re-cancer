@@ -289,6 +289,7 @@ router.get('/validations', authMiddleware, requireRole('admin', 'epidemiologiste
       FROM patients p
       JOIN cancer_cases c ON c.patient_id = p.id
       LEFT JOIN validations_epidemio v ON v.case_id = c.id
+      LEFT JOIN users u ON v.validated_by = u.id
       WHERE COALESCE(v.statut, 'en_attente') = 'en_attente'
       ORDER BY c.created_at ASC
       LIMIT 50
