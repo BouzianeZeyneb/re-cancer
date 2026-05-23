@@ -63,6 +63,63 @@
 }
 
 /* =========================================================
+   VOICE RECOGNITION UI
+   ========================================================= */
+.voice-active {
+  border-color: #3b82f6 !important;
+  background: #eff6ff !important;
+  animation: pulse-border 1s infinite;
+}
+
+@keyframes pulse-border {
+
+  0%,
+  100% {
+    border-color: #3b82f6;
+  }
+
+  50% {
+    border-color: #93c5fd;
+  }
+}
+
+.voice-btn.active {
+  background: #ef4444;
+  color: white;
+  animation: voice-pulse 1s infinite;
+}
+
+.pulse-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  background: #ef4444;
+  border-radius: 50%;
+  animation: voice-pulse 1s infinite;
+  margin-right: 6px;
+}
+
+@keyframes voice-pulse {
+
+  0%,
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+
+  50% {
+    transform: scale(1.2);
+    opacity: 0.7;
+  }
+}
+
+.voice-filled {
+  border-color: #10b981 !important;
+  background: #f0fdf4 !important;
+  transition: all 0.3s ease;
+}
+
+/* =========================================================
    RESET & BASE
    ========================================================= */
 *,

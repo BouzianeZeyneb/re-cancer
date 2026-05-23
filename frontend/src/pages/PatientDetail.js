@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
@@ -100,23 +101,27 @@ function SectionCard({ title, children, action, style = {} }) {
 function VitalCard({ icon: Icon, iconColor, iconBg, title, value, unit, trend }) {
   return (
     <div style={{
-      background: 'white', borderRadius: 24, padding: 24, display: 'flex', flexDirection: 'column', flex: 1, minWidth: 150,
-      border: '1px solid #f1f5f9', boxShadow: '0 4px 24px -12px rgba(0,0,0,0.05)'
-    }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 20 }}>
-        <div style={{ width: 40, height: 40, borderRadius: '50%', background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <Icon size={20} strokeWidth={2.5} />
+      background: 'white', borderRadius: 28, padding: 24, display: 'flex', flexDirection: 'column', flex: 1, minWidth: 160,
+      border: '1.5px solid #f1f5f9', boxShadow: '0 10px 15px -3px rgba(0,0,0,0.04)',
+      transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)', cursor: 'default'
+    }}
+      onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-4px)'; e.currentTarget.style.boxShadow = '0 20px 25px -5px rgba(0,0,0,0.06)'; }}
+      onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 15px -3px rgba(0,0,0,0.04)'; }}
+    >
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 24 }}>
+        <div style={{ width: 44, height: 44, borderRadius: 14, background: iconBg, color: iconColor, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: `0 4px 12px ${iconColor}20` }}>
+          <Icon size={22} strokeWidth={2.5} />
         </div>
         {trend && (
-          <div style={{ color: trend === 'up' ? '#dc2626' : (trend === 'down' ? '#16a34a' : '#94a3b8') }}>
-            <Activity size={18} strokeWidth={2} />
+          <div style={{ background: trend === 'up' ? '#fef2f2' : '#f0fdf4', color: trend === 'up' ? '#ef4444' : '#22c55e', padding: '4px 8px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, fontWeight: 800 }}>
+            <Activity size={12} strokeWidth={3} /> {trend === 'up' ? '+2%' : '-1%'}
           </div>
         )}
       </div>
-      <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 4 }}>{title}</div>
-      <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-        <span style={{ fontSize: 28, fontWeight: 900, fontFamily: "'Outfit', sans-serif", color: '#0f172a', letterSpacing: '-1px' }}>{value}</span>
-        <span style={{ fontSize: 12, fontWeight: 600, color: '#94a3b8' }}>{unit}</span>
+      <div style={{ fontSize: 11, fontWeight: 800, color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 6 }}>{title}</div>
+      <div style={{ display: 'flex', alignItems: 'baseline', gap: 6 }}>
+        <span style={{ fontSize: 32, fontWeight: 900, fontFamily: "'Outfit', sans-serif", color: '#0f172a', letterSpacing: '-1px' }}>{value}</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: '#64748b' }}>{unit}</span>
       </div>
     </div>
   );
@@ -193,6 +198,7 @@ export default function PatientDetail() {
   const [patient, setPatient] = useState(null);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState('resume');
+  const [networkInfo, setNetworkInfo] = useState({ ip: 'localhost', port: 5000, frontendPort: 3000 });
 
   const [showDeleteModal, setShowDeleteModal] = useState(false);
 
@@ -313,6 +319,8 @@ export default function PatientDetail() {
 
       setValsDyn(vv);
     }).catch(() => navigate('/patients')).finally(() => setLoading(false));
+
+    api.get('/network-info').then(r => setNetworkInfo(r.data)).catch(() => { });
   }, [id, navigate]);
 
   // also load cancer_cases from patient object directly if API endpoint missing
@@ -487,144 +495,96 @@ export default function PatientDetail() {
   return (
     <Layout title="Fiche Patient">
       <div style={{
-        background: 'radial-gradient(circle at 10% 20%, rgb(239, 246, 255) 0%, rgb(219, 234, 254) 90%)',
+        background: '#f8fafc',
         minHeight: '100vh', padding: '32px', borderRadius: '32px', margin: '-24px', position: 'relative'
       }}>
-        {/* ── HEADER ── */}
-        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 32 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
-            <div style={{ width: 56, height: 56, borderRadius: '50%', background: '#0369a1', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: '0 8px 16px rgba(3,105,161,0.2)' }}>
-              <Heart size={28} strokeWidth={2.5} />
-            </div>
-            <div>
-              <h1 style={{ fontSize: 32, fontWeight: 900, margin: 0, fontFamily: "'Outfit', sans-serif", color: '#0f172a', letterSpacing: '-1px' }}>{t('patient_detail.title')}</h1>
-              <p style={{ margin: '4px 0 0 0', fontSize: 13, fontWeight: 700, color: '#94a3b8', letterSpacing: '1.5px', textTransform: 'uppercase' }}>{t('patient_detail.subtitle')}</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <button onClick={() => navigate('/patients')} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '10px 20px', borderRadius: 24, border: '1px solid #e2e8f0', background: 'white', color: '#0f172a', fontWeight: 600, cursor: 'pointer', boxShadow: '0 2px 10px rgba(0,0,0,0.02)' }}>
-              <ArrowLeft size={18} /> {t('patient_detail.back')}
-            </button>
-          </div>
+        {/* ── BREADCRUMB ── */}
+        <div style={{ marginBottom: 16 }}>
+          <span style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', letterSpacing: '1px', textTransform: 'uppercase' }}>ONCOTRACK / PATIENTS</span>
         </div>
 
         {/* ── HERO CARD ── */}
         <div style={{
-          background: 'linear-gradient(135deg, #e0f2fe 0%, #bae6fd 100%)',
-          borderRadius: 32, padding: '32px 40px', marginBottom: 32,
-          boxShadow: '0 20px 40px -15px rgba(2,132,199,0.15)',
-          position: 'relative', overflow: 'hidden'
+          background: '#ffffff',
+          borderRadius: 12, padding: '24px', marginBottom: 32,
+          border: '1px solid #e2e8f0',
+          position: 'relative'
         }}>
-          {/* Background Pattern */}
-          <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, left: 0, opacity: 0.4, backgroundImage: 'radial-gradient(#38bdf8 1px, transparent 1px)', backgroundSize: '24px 24px', pointerEvents: 'none' }} />
+          {/* Top section: Back, Title, Delete */}
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+            <button onClick={() => navigate('/patients')} style={{ display: 'flex', alignItems: 'center', gap: 6, background: 'transparent', border: 'none', color: '#64748b', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              <ArrowLeft size={16} /> Retour
+            </button>
+            <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Fiche Patient</span>
+            <button onClick={() => setShowDeleteModal(true)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+              Supprimer
+            </button>
+          </div>
 
-          <div style={{ position: 'relative', zIndex: 1, display: 'flex', flexDirection: 'column', gap: 32 }}>
-            {/* Top section: Avatar + Info + Actions */}
-            <div style={{ display: 'flex', gap: 24, alignItems: 'flex-start' }}>
-              <div style={{ position: 'relative' }}>
-                <div style={{ width: 120, height: 120, borderRadius: 32, background: '#0284c7', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 48, fontWeight: 900, fontFamily: "'Outfit', sans-serif", letterSpacing: '-2px', boxShadow: '0 10px 25px rgba(2,132,199,0.3)' }}>
-                  {initials}
-                </div>
-                <div style={{ position: 'absolute', bottom: -8, left: '50%', transform: 'translateX(-50%)', background: 'white', padding: '4px 12px', borderRadius: 20, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 4px 12px rgba(0,0,0,0.1)', border: '1px solid #f1f5f9' }}>
-                  <div style={{ width: 8, height: 8, borderRadius: '50%', background: '#22c55e' }} />
-                  <span style={{ fontSize: 11, fontWeight: 800, color: '#16a34a', letterSpacing: '0.5px' }}>{t('patient_detail.active')}</span>
-                </div>
-              </div>
+          <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
+            <div style={{
+              width: 64, height: 64, borderRadius: '50%',
+              background: 'linear-gradient(135deg, #2563eb 0%, #6366f1 100%)',
+              color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              fontSize: 24, fontWeight: 900, fontFamily: "'Outfit', sans-serif"
+            }}>
+              {initials}
+            </div>
 
-              <div style={{ flex: 1, paddingTop: 8 }}>
-                <h2 style={{ fontSize: 42, fontWeight: 900, margin: '0 0 12px 0', fontFamily: "'Outfit', sans-serif", color: '#0f172a', letterSpacing: '-1.5px' }}>
-                  {patient.prenom} <span style={{ textTransform: 'uppercase' }}>{patient.nom}</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 4 }}>
+                <h2 style={{ fontSize: 24, fontWeight: 700, margin: 0, color: '#0f172a' }}>
+                  {patient.prenom} {patient.nom}
                 </h2>
-
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center', marginBottom: 16 }}>
-                  <span style={{ background: '#0f172a', color: 'white', padding: '6px 16px', borderRadius: 24, fontSize: 13, fontWeight: 800, letterSpacing: '0.5px' }}>
-                    {dossierNum}
-                  </span>
-                  <span style={{ background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(4px)', padding: '6px 16px', borderRadius: 24, fontSize: 13, fontWeight: 600, color: '#475569', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    <CalendarIcon size={14} /> {t('patient_detail.update')} {patient.updated_at ? format(parseISO(patient.updated_at), 'dd/MM/yyyy · HH:mm') : '—'}
-                  </span>
-                  {mainCase?.stade && (
-                    <span style={{ background: '#ffedd5', color: '#c2410c', padding: '6px 16px', borderRadius: 24, fontSize: 13, fontWeight: 800, border: '1px solid #fed7aa', display: 'flex', alignItems: 'center', gap: 6 }}>
-                      <Activity size={14} /> {mainCase.stade}
-                    </span>
-                  )}
-                </div>
-
-                <p style={{ margin: 0, fontSize: 15, color: '#475569', fontWeight: 500 }}>
-                  {mainCase?.sous_type || 'Type non spécifié'} — {mainCase?.statut_patient || 'En attente'}.
-                </p>
+                <span style={{ background: '#dcfce7', color: '#15803d', padding: '2px 8px', borderRadius: 12, fontSize: 11, fontWeight: 700 }}>
+                  VIVANT
+                </span>
               </div>
 
-              <div style={{ display: 'flex', gap: 12, paddingTop: 12 }}>
-                <div style={{ display: 'flex', gap: 8, background: 'rgba(255,255,255,0.5)', padding: 6, borderRadius: 24 }}>
-                  <button onClick={() => window.print()} title="Imprimer le dossier" style={{ width: 40, height: 40, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}><Printer size={18} /></button>
-                  <button onClick={() => { navigator.clipboard.writeText(window.location.href); toast.success('Lien copié dans le presse-papier'); }} title="Partager le dossier" style={{ width: 40, height: 40, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}><Share2 size={18} /></button>
-                  <button onClick={() => { const text = `DOSSIER PATIENT\n${dossierNum}\n\nNom: ${patient.prenom} ${patient.nom}\nSexe: ${patient.sexe === 'M' ? 'Homme' : 'Femme'} | Âge: ${age} ans\nDate naissance: ${patient.date_naissance}\nTéléphone: ${patient.telephone || '—'}\nWilaya: ${patient.wilaya || '—'}\nCarte Nationale: ${patient.num_carte_nationale || '—'}\n\nDIAGNOSTIC:\nType: ${mainCase?.type_cancer || '—'}\nSous-type: ${mainCase?.sous_type || '—'}\nStade: ${mainCase?.stade || '—'}\nÉtat: ${mainCase?.etat || '—'}\nStatut: ${mainCase?.statut_patient || '—'}\n\nAntécédents médicaux: ${patient.antecedents_medicaux || '—'}\nAntécédents familiaux: ${patient.antecedents_familiaux || '—'}\nTabac: ${patient.consommation_tabac || 'Inconnu'}\nAlcool: ${patient.consommation_alcool || 'Inconnu'}`; const blob = new Blob([text], { type: 'text/plain' }); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `dossier_${patient.nom}_${patient.prenom}.txt`; a.click(); URL.revokeObjectURL(url); toast.success('Dossier téléchargé'); }} title="Télécharger le dossier" style={{ width: 40, height: 40, borderRadius: '50%', background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#475569', boxShadow: '0 2px 8px rgba(0,0,0,0.05)' }}><FileDown size={18} /></button>
-                </div>
-                <button onClick={() => navigate(`/patients/${id}/modifier`)} style={{ padding: '0 24px', height: 52, borderRadius: 26, background: 'white', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: '#0f172a', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 12px rgba(0,0,0,0.05)' }}>
-                  <Edit3 size={18} /> {t('patient_detail.edit')}
-                </button>
-                <button onClick={() => { setTab('consultations'); setShowConsultationModal(true); }} style={{ padding: '0 24px', height: 52, borderRadius: 26, background: '#0284c7', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 8, color: 'white', fontWeight: 700, fontSize: 14, boxShadow: '0 4px 12px rgba(2,132,199,0.3)' }}>
-                  <CalendarIcon size={18} /> {t('patient_detail.schedule')}
-                </button>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 12, color: '#64748b', fontSize: 14 }}>
+                <span>{patient.sexe === 'M' ? 'Homme' : 'Femme'} · {age} ans</span>
+                <span>📍 {patient.wilaya || '—'}</span>
+                <span>📞 {patient.telephone || '—'}</span>
               </div>
             </div>
 
-            {/* Bottom section: Quick Summary Strip */}
-            <div style={{ display: 'flex', background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(8px)', borderRadius: 24, padding: '20px 32px', gap: 40, border: '1px solid rgba(255,255,255,0.8)' }}>
-              <div style={{ flex: 1, borderRight: '1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}><User size={14} /> {t('patient_detail.gender_age')}</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{patient.sexe === 'M' ? t('patient_detail.male') : t('patient_detail.female')} · {age} {t('patient_detail.years')}</div>
+            <div style={{ textAlign: 'right' }}>
+              <div style={{ fontSize: 11, fontWeight: 700, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 4 }}>
+                Groupe Sanguin
               </div>
-              <div style={{ flex: 1, borderRight: '1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}><Activity size={14} /> {t('patient_detail.cancer_type')}</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{mainCase?.type_cancer || '—'}</div>
-              </div>
-              <div style={{ flex: 1, borderRight: '1px solid rgba(0,0,0,0.05)' }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}><Printer size={14} /> {t('patient_detail.phone')}</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{patient.telephone || '—'}</div>
-              </div>
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: 6, color: '#64748b', fontSize: 11, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 8 }}><CalendarIcon size={14} /> {t('patient_detail.admission')}</div>
-                <div style={{ fontSize: 18, fontWeight: 800, color: '#0f172a', fontFamily: "'Outfit', sans-serif" }}>{format(parseISO(patient.created_at || new Date().toISOString()), 'yyyy-MM-dd')}</div>
+              <div style={{ fontSize: 24, fontWeight: 800, color: '#ef4444' }}>
+                {patient.groupe_sanguin || 'A-'}
               </div>
             </div>
           </div>
         </div>
 
-        {/* ── VITALS ── */}
-        <div style={{ display: 'flex', gap: 24, marginBottom: 32 }}>
-          <VitalCard icon={Heart} iconColor="#ef4444" iconBg="#fee2e2" title={t('patient_detail.vitals.pulse')} value="78" unit="bpm" trend="up" />
-          <VitalCard icon={Droplets} iconColor="#3b82f6" iconBg="#dbeafe" title={t('patient_detail.vitals.bp')} value="128/82" unit="mmHg" trend="up" />
-          <VitalCard icon={Thermometer} iconColor="#f59e0b" iconBg="#fef3c7" title={t('patient_detail.vitals.temp')} value="36.8" unit="°C" trend="down" />
-          <VitalCard icon={Wind} iconColor="#10b981" iconBg="#d1fae5" title={t('patient_detail.vitals.spo2')} value="94" unit="%" trend="down" />
-        </div>
-
-        {/* ── Horizontal tabs ── */}
+        {/* ── TABS ── */}
         <div style={{
-          display: 'flex', gap: 10, padding: '6px',
-          background: 'rgba(255,255,255,0.4)', backdropFilter: 'blur(12px)', WebkitBackdropFilter: 'blur(12px)',
-          borderRadius: 16, marginBottom: 30, overflowX: 'auto',
-          border: '1px solid rgba(255,255,255,0.6)',
-          boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.5), 0 4px 12px rgba(0,0,0,0.03)'
+          display: 'flex', gap: 24, padding: '0 8px', background: 'transparent',
+          marginBottom: 32, borderBottom: '1px solid #e2e8f0', overflowX: 'auto',
+          scrollbarWidth: 'none', msOverflowStyle: 'none'
         }}>
-          {TABS.map(t => (
-            <button key={t.key} onClick={() => setTab(t.key)}
-              style={{
-                background: tab === t.key ? 'white' : 'transparent',
-                border: 'none', cursor: 'pointer',
-                padding: '12px 24px', fontSize: 14, fontWeight: tab === t.key ? 800 : 600,
-                color: tab === t.key ? '#2563eb' : '#64748b',
-                borderRadius: 12,
-                boxShadow: tab === t.key ? '0 4px 14px rgba(37,99,235,0.15)' : 'none',
-                whiteSpace: 'nowrap', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                fontFamily: "'Outfit', sans-serif"
-              }}>
-              {t.label}
-            </button>
-          ))}
+          {TABS.map(t => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                style={{
+                  padding: '12px 0', border: 'none', cursor: 'pointer',
+                  fontSize: 14, fontWeight: 600, whiteSpace: 'nowrap',
+                  background: 'transparent',
+                  color: active ? '#3b82f6' : '#64748b',
+                  borderBottom: active ? '2px solid #3b82f6' : '2px solid transparent',
+                  marginBottom: '-1px'
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
         </div>
-
         {/* ════════════════════ TAB CONTENT ════════════════════ */}
 
         {/* ── RÉSUMÉ ── */}
@@ -632,45 +592,25 @@ export default function PatientDetail() {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
             {/* Top 3 Cards Row */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 24 }}>
-              {/* Profil Oncologique */}
-              <div style={{ background: '#ffe4e6', borderRadius: 24, padding: 32, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#be123c', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>Profil Oncologique</div>
-                <div style={{ fontSize: 40, fontWeight: 900, color: '#881337', fontFamily: "'Outfit', sans-serif", letterSpacing: '-1px', marginBottom: 8 }}>{mainCase?.stade || '—'}</div>
-                <div style={{ fontSize: 14, fontWeight: 700, color: '#e11d48', display: 'flex', alignItems: 'center', gap: 8 }}>
-                  TNM : {mainCase?.tnm || 'T? N? M?'}
-                </div>
+              {/* STADIFICATION TNM */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Stadification TNM</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{mainCase?.stade || '—'}</div>
+                <div style={{ fontSize: 13, color: '#3b82f6' }}>{mainCase?.tnm_t || 'T'}{mainCase?.tnm_n || 'N'}{mainCase?.tnm_m || 'M'}</div>
               </div>
 
-              {/* Standard ICD-O-3 */}
-              <div style={{ background: '#e0f2fe', borderRadius: 24, padding: 32, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#0369a1', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>Standard ICD-O-3</div>
-                <div style={{ marginBottom: 12 }}>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: '#0c4a6e', fontFamily: "'Outfit', sans-serif" }}>{mainCase?.code_topographie || '—'}</span>
-                  <span style={{ fontSize: 18, color: '#64748b', marginLeft: 8 }}>Topographie</span>
-                </div>
-                <div>
-                  <span style={{ fontSize: 24, fontWeight: 800, color: '#0c4a6e', fontFamily: "'Outfit', sans-serif" }}>{mainCase?.code_morphologie || '—'}</span>
-                  <span style={{ fontSize: 18, color: '#64748b', marginLeft: 8 }}>Morphologie</span>
-                </div>
+              {/* CODE ICD-O-3 */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Code ICD-O-3</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{mainCase?.topographie_icdo3 || mainCase?.code_topographie || 'C—'}</div>
+                <div style={{ fontSize: 13, color: '#3b82f6' }}>Morphologie : {mainCase?.morphologie_icdo3 || mainCase?.code_morphologie || 'M—'}</div>
               </div>
 
-              {/* Facteurs de Risque */}
-              <div style={{ background: '#ffedd5', borderRadius: 24, padding: 32, display: 'flex', flexDirection: 'column' }}>
-                <div style={{ fontSize: 12, fontWeight: 800, color: '#c2410c', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 20 }}>Facteurs de Risque</div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-                  {patient.consommation_tabac && patient.consommation_tabac !== 'Non' && (
-                    <span style={{ background: 'white', color: '#9a3412', padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}><Wind size={14} /> Tabac</span>
-                  )}
-                  {patient.consommation_alcool && patient.consommation_alcool !== 'Non' && (
-                    <span style={{ background: 'white', color: '#9a3412', padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}><Activity size={14} /> Alcool</span>
-                  )}
-                  {!patient.activite_sportive && (
-                    <span style={{ background: 'white', color: '#9a3412', padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}><Activity size={14} /> Sédentaire</span>
-                  )}
-                  {(patient.consommation_tabac === 'Non' && patient.consommation_alcool === 'Non' && patient.activite_sportive) && (
-                    <span style={{ background: 'white', color: '#16a34a', padding: '6px 16px', borderRadius: 20, fontSize: 13, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 6, boxShadow: '0 2px 4px rgba(0,0,0,0.02)' }}><CheckCircle2 size={14} /> Aucun connu</span>
-                  )}
-                </div>
+              {/* CODE ICD-10 */}
+              <div style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: 24 }}>
+                <div style={{ fontSize: 11, fontWeight: 700, color: '#64748b', textTransform: 'uppercase', marginBottom: 12 }}>Code ICD-10</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>{mainCase?.code_icd10 || 'C50.9'}</div>
+                <div style={{ fontSize: 13, color: '#3b82f6' }}>Diagnostic Princ.</div>
               </div>
             </div>
 
@@ -695,7 +635,27 @@ export default function PatientDetail() {
                   <InfoRow label="Alcool" value={patient.consommation_alcool || 'Inconnu'} />
                   <InfoRow label="Sport" value={patient.activite_sportive ? 'Actif' : 'Sédentaire'} />
                 </SectionCard>
+
+
               </div>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
+                <SectionCard title="RISQUE CLINIQUE" style={{ background: '#ffffff', border: '1px solid #e2e8f0', borderRadius: 12, padding: '0', boxShadow: 'none' }}>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+                    {patient.consommation_tabac && patient.consommation_tabac !== 'Non' && (
+                      <span style={{ background: '#f8fafc', color: '#0f172a', padding: '8px 16px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #e2e8f0' }}><Wind size={16} color="#ef4444" /> Tabac</span>
+                    )}
+                    {patient.consommation_alcool && patient.consommation_alcool !== 'Non' && (
+                      <span style={{ background: '#f8fafc', color: '#0f172a', padding: '8px 16px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #e2e8f0' }}><Activity size={16} color="#ef4444" /> Alcool</span>
+                    )}
+                    {!patient.activite_sportive && (
+                      <span style={{ background: '#f8fafc', color: '#0f172a', padding: '8px 16px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #e2e8f0' }}><Activity size={16} color="#ef4444" /> Sédentaire</span>
+                    )}
+                    {(patient.consommation_tabac === 'Non' && patient.consommation_alcool === 'Non' && patient.activite_sportive) && (
+                      <span style={{ background: '#f8fafc', color: '#0f172a', padding: '8px 16px', borderRadius: 12, fontSize: 14, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 8, border: '1px solid #e2e8f0' }}><CheckCircle2 size={16} color="#10b981" /> Aucun risque majeur</span>
+                    )}
+                  </div>
+                </SectionCard>
 
               {/* Activité récente */}
               <SectionCard title={
@@ -735,6 +695,7 @@ export default function PatientDetail() {
                   })()}
                 </div>
               </SectionCard>
+              </div>
             </div>
           </div>
         )}
@@ -985,25 +946,25 @@ export default function PatientDetail() {
                 : (
                   <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
                     {imgs.map((img, i) => (
-                      <div key={img.id || i} style={{ background: 'white', borderRadius: 28, border: '1.5px solid #f1f5f9', padding: 32, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 20 }}>
+                      <div key={img.id || i} style={{ background: '#ffffff', borderRadius: 12, border: '1px solid #e2e8f0', padding: 20 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 16 }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                            <div style={{ width: 40, height: 40, borderRadius: 10, background: '#f8fafc', border: '1.5px solid #f1f5f9', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
+                            <div style={{ width: 40, height: 40, borderRadius: 8, background: '#f8fafc', border: '1px solid #e2e8f0', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#64748b' }}>
                               <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><rect x="3" y="3" width="18" height="18" rx="2" /><circle cx="8.5" cy="8.5" r="1.5" /><path d="m21 15-5-5L5 21" /></svg>
                             </div>
                             <div>
-                              <h3 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', margin: 0 }}>{img.type_examen}</h3>
-                              <div style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{img.date_examen ? format(parseISO(img.date_examen), 'dd MMM yyyy') : '—'}</div>
+                              <h3 style={{ fontSize: 16, fontWeight: 700, color: '#0f172a', margin: 0 }}>{img.type_examen}</h3>
+                              <div style={{ fontSize: 13, color: '#64748b' }}>{img.date_examen ? format(parseISO(img.date_examen), 'dd MMM yyyy') : '—'}</div>
                             </div>
                           </div>
-                          <span style={{ fontSize: 12, fontWeight: 800, color: '#3b82f6', background: '#eff6ff', padding: '4px 12px', borderRadius: 8, height: 'fit-content' }}>
+                          <span style={{ fontSize: 11, fontWeight: 700, color: '#64748b', background: '#f1f5f9', padding: '4px 12px', borderRadius: 12, height: 'fit-content', textTransform: 'uppercase' }}>
                             {img.region || 'Standard'}
                           </span>
                         </div>
-                        <p style={{ fontSize: 14, color: '#475569', lineHeight: 1.6, margin: 0, padding: 20, background: '#f8fafc', borderRadius: 16 }}>
-                          <strong style={{ color: '#0f172a', display: 'block', marginBottom: 8, fontSize: 11, textTransform: 'uppercase' }}>Considérations Cliniques</strong>
+                        <div style={{ fontSize: 14, color: '#0f172a', lineHeight: 1.6, margin: 0, padding: 0 }}>
+                          <strong style={{ color: '#64748b', display: 'block', marginBottom: 4, fontSize: 11, textTransform: 'uppercase', letterSpacing: '0.5px' }}>Considérations Cliniques</strong>
                           {img.conclusion || 'Aucune conclusion détaillée.'}
-                        </p>
+                        </div>
                       </div>
                     ))}
                   </div>
@@ -1592,6 +1553,33 @@ export default function PatientDetail() {
             </div>
           </div>
         )}
+
+        {/* ── TABS ── */}
+        <div style={{
+          display: 'flex', gap: 8, padding: 8, background: 'rgba(255,255,255,0.6)', backdropFilter: 'blur(10px)',
+          borderRadius: 20, marginBottom: 40, border: '1px solid #f1f5f9', overflowX: 'auto',
+          scrollbarWidth: 'none', msOverflowStyle: 'none'
+        }}>
+          {TABS.map(t => {
+            const active = tab === t.key;
+            return (
+              <button
+                key={t.key}
+                onClick={() => setTab(t.key)}
+                style={{
+                  padding: '12px 24px', borderRadius: 14, border: 'none', cursor: 'pointer',
+                  fontSize: 14, fontWeight: 800, whiteSpace: 'nowrap', transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                  background: active ? 'linear-gradient(135deg, #0f172a, #334155)' : 'transparent',
+                  color: active ? 'white' : '#64748b',
+                  boxShadow: active ? '0 10px 15px -3px rgba(15,23,42,0.2)' : 'none',
+                  transform: active ? 'scale(1.02)' : 'scale(1)'
+                }}
+              >
+                {t.label}
+              </button>
+            );
+          })}
+        </div>
       </div>
       <style>{`
         @keyframes slideUp {
@@ -1630,50 +1618,99 @@ export default function PatientDetail() {
           </div>
         </Modal>
       )}
-
     </Layout>
   );
 }
 
 function Modal({ title, onClose, onSave, children }) {
-  return (
+  return ReactDOM.createPortal(
     <div style={{
-      position: 'fixed', inset: 0, backgroundColor: 'rgba(0,0,0,0.65)', backdropFilter: 'blur(4px)',
-      zIndex: 10000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px'
-    }}>
-      <div style={{
-        backgroundColor: 'white', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0,0,0,0.25)',
-        width: '100%', maxWidth: '750px', display: 'flex', flexDirection: 'column', maxHeight: '90vh',
-        animation: 'modalSlideUp 0.3s ease-out'
+      position: 'fixed', inset: 0,
+      background: 'rgba(15, 23, 42, 0.6)',
+      backdropFilter: 'blur(8px)', WebkitBackdropFilter: 'blur(8px)',
+      zIndex: 99999,
+      display: 'flex', alignItems: 'flex-start', justifyContent: 'center',
+      padding: '24px 20px',
+      overflowY: 'auto',
+      animation: 'modalOverlayIn 0.2s ease-out'
+    }} onClick={onClose}>
+      <div onClick={e => e.stopPropagation()} style={{
+        backgroundColor: 'white', borderRadius: 20,
+        boxShadow: '0 32px 64px -12px rgba(0,0,0,0.3), 0 0 0 1px rgba(0,0,0,0.05)',
+        width: '100%', maxWidth: 750, maxHeight: '90vh',
+        margin: 'auto 0',
+        display: 'flex', flexDirection: 'column',
+        overflow: 'hidden',
+        animation: 'modalContentIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
       }}>
-        <div style={{ padding: '24px', borderBottom: '1px solid #f1f5f9', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#f8fafc', borderTopLeftRadius: '16px', borderTopRightRadius: '16px' }}>
-          <h2 style={{ margin: 0, fontSize: '18px', fontWeight: 800, color: '#1e293b', display: 'flex', alignItems: 'center', gap: '10px' }}>
-            {title}
-          </h2>
-          <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#94a3b8', fontSize: '20px', padding: '5px' }}>✕</button>
+        {/* Gradient Header */}
+        <div style={{
+          background: 'linear-gradient(135deg, #2563eb 0%, #6366f1 100%)',
+          padding: '22px 28px 18px',
+          position: 'relative', overflow: 'hidden', flexShrink: 0
+        }}>
+          <div style={{ position: 'absolute', top: -20, right: -20, width: 80, height: 80, borderRadius: '50%', background: 'rgba(255,255,255,0.1)' }} />
+          <div style={{ position: 'absolute', bottom: -30, right: 60, width: 60, height: 60, borderRadius: '50%', background: 'rgba(255,255,255,0.07)' }} />
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', position: 'relative', zIndex: 1 }}>
+            <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'white', letterSpacing: '-0.3px' }}>
+              {title}
+            </h2>
+            <button onClick={onClose} style={{
+              width: 32, height: 32, borderRadius: 8,
+              border: '1px solid rgba(255,255,255,0.3)',
+              background: 'rgba(255,255,255,0.15)',
+              cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+              color: 'white', transition: 'all 0.15s'
+            }}
+              onMouseEnter={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.3)'; }}
+              onMouseLeave={e => { e.currentTarget.style.background = 'rgba(255,255,255,0.15)'; }}
+            >
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
+          </div>
         </div>
-        <div style={{ padding: '28px', overflowY: 'auto', flex: 1, backgroundColor: '#ffffff' }}>
+
+        {/* Body */}
+        <div style={{ padding: '24px 28px', overflowY: 'auto', flex: 1 }}>
           {children}
         </div>
-        <div style={{ padding: '20px 24px', borderTop: '1px solid #f1f5f9', background: '#f8fafc', display: 'flex', gap: '12px', justifyContent: 'flex-end', borderBottomLeftRadius: '16px', borderBottomRightRadius: '16px' }}>
+
+        {/* Footer */}
+        <div style={{
+          padding: '16px 28px', borderTop: '1px solid #f1f5f9', background: '#f8fafc',
+          display: 'flex', gap: 12, justifyContent: 'flex-end', flexShrink: 0
+        }}>
           <button onClick={onClose} style={{
-            padding: '10px 20px', borderRadius: '10px', border: '1px solid #e2e8f0', background: 'white',
-            color: '#64748b', fontWeight: 600, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s'
-          }}>Annuler</button>
+            padding: '0 22px', height: 44, borderRadius: 11, fontWeight: 700, fontSize: 14,
+            border: '1.5px solid #e2e8f0', background: 'white', color: '#64748b',
+            cursor: 'pointer', transition: 'all 0.15s'
+          }}
+            onMouseEnter={e => { e.currentTarget.style.borderColor = '#cbd5e1'; e.currentTarget.style.background = '#f8fafc'; }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = '#e2e8f0'; e.currentTarget.style.background = 'white'; }}
+          >Annuler</button>
           <button onClick={onSave} style={{
-            padding: '10px 24px', borderRadius: '10px', border: 'none', background: 'linear-gradient(135deg, #2563eb, #1d4ed8)',
-            color: 'white', fontWeight: 700, fontSize: '14px', cursor: 'pointer', transition: 'all 0.2s',
-            boxShadow: '0 4px 6px -1px rgba(37, 99, 235, 0.3)'
-          }}>Enregistrer</button>
+            padding: '0 26px', height: 44, borderRadius: 11, fontWeight: 800, fontSize: 14,
+            border: 'none', background: 'linear-gradient(135deg, #2563eb, #6366f1)',
+            color: 'white', cursor: 'pointer', transition: 'all 0.15s',
+            boxShadow: '0 4px 12px rgba(37,99,235,0.3)'
+          }}
+            onMouseEnter={e => { e.currentTarget.style.transform = 'translateY(-1px)'; e.currentTarget.style.boxShadow = '0 6px 16px rgba(37,99,235,0.4)'; }}
+            onMouseLeave={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 4px 12px rgba(37,99,235,0.3)'; }}
+          >Enregistrer</button>
         </div>
       </div>
       <style>{`
-        @keyframes modalSlideUp {
-          from { opacity: 0; transform: translateY(20px) scale(0.98); }
-          to { opacity: 1; transform: translateY(0) scale(1); }
+        @keyframes modalOverlayIn {
+          from { opacity: 0; }
+          to   { opacity: 1; }
+        }
+        @keyframes modalContentIn {
+          from { opacity: 0; transform: scale(0.92) translateY(24px); }
+          to   { opacity: 1; transform: scale(1) translateY(0); }
         }
       `}</style>
-    </div>
+    </div>,
+    document.body
   );
 }
 

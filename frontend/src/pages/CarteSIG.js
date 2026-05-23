@@ -1,15 +1,15 @@
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import Layout from '../components/Layout';
-import { 
+import {
   useMap,
   useMapEvents
 } from 'react-leaflet';
 import { useLocation } from 'react-router-dom';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
-import { 
-  Plus, X, Pencil, Trash2, Layers, Filter, MousePointer2, 
-  Circle as CircleIcon, Square, Pentagon, RefreshCw, 
+import {
+  Plus, X, Pencil, Trash2, Layers, Filter, MousePointer2,
+  Circle as CircleIcon, Square, Pentagon, RefreshCw,
   MapPin, Download, AlertTriangle, Users, Zap, Check, ChevronDown
 } from 'lucide-react';
 import { renderToStaticMarkup } from 'react-dom/server';
@@ -22,44 +22,44 @@ const ALGERIA_BOUNDS = [[18.5, -9.0], [37.5, 12.5]];
 const STORAGE_KEY = 'sig_oncotrack_v4';
 
 const WILAYA_COORDS = {
-  "Adrar":[27.87,0.28],"Chlef":[36.16,1.33],"Laghouat":[33.8,2.87],
-  "Oum El Bouaghi":[35.87,7.11],"Batna":[35.556,6.174],"Béjaïa":[36.752,5.056],
-  "Biskra":[34.85,5.73],"Béchar":[31.62,-2.22],"Blida":[36.47,2.83],
-  "Bouira":[36.37,3.9],"Tamanrasset":[22.785,5.523],"Tébessa":[35.4,8.12],
-  "Tlemcen":[34.88,-1.316],"Tiaret":[35.37,1.32],"Tizi Ouzou":[36.717,4.05],
-  "Alger":[36.737,3.086],"Djelfa":[34.67,3.26],"Jijel":[36.82,5.77],
-  "Sétif":[36.19,5.41],"Saïda":[34.84,0.15],"Skikda":[36.88,6.9],
-  "Sidi Bel Abbès":[35.19,-0.63],"Annaba":[36.9,7.767],"Guelma":[36.46,7.43],
-  "Constantine":[36.365,6.614],"Médéa":[36.26,2.75],"Mostaganem":[35.93,0.09],
-  "M'Sila":[35.7,4.54],"Mascara":[35.4,0.14],"Ouargla":[31.95,5.33],
-  "Oran":[35.691,-0.641],"El Bayadh":[33.68,1.02],"Illizi":[26.48,8.47],
-  "Bordj Bou Arréridj":[36.07,4.76],"Boumerdès":[36.76,3.48],
-  "El Tarf":[36.77,8.31],"Tindouf":[27.67,-8.14],"Tissemsilt":[35.6,1.81],
-  "El Oued":[33.36,6.86],"Khenchela":[35.43,7.14],"Souk Ahras":[36.28,7.95],
-  "Tipaza":[36.59,2.45],"Mila":[36.45,6.26],"Aïn Defla":[36.26,1.97],
-  "Naâma":[33.27,-0.31],"Aïn Témouchent":[35.3,-1.14],"Ghardaïa":[32.49,3.67],
-  "Relizane":[35.74,0.55],"Timimoun":[29.26,0.23],
-  "Bordj Badji Mokhtar":[21.33,0.95],"Ouled Djellal":[34.42,5.07],
-  "Béni Abbès":[30.13,-2.17],"In Salah":[27.19,2.47],
-  "In Guezzam":[19.57,5.77],"Touggourt":[33.1,6.06],
-  "Djanet":[24.55,9.48],"El M'Ghair":[33.95,5.93],"El Meniaa":[30.58,2.88]
+  "Adrar": [27.87, 0.28], "Chlef": [36.16, 1.33], "Laghouat": [33.8, 2.87],
+  "Oum El Bouaghi": [35.87, 7.11], "Batna": [35.556, 6.174], "Béjaïa": [36.752, 5.056],
+  "Biskra": [34.85, 5.73], "Béchar": [31.62, -2.22], "Blida": [36.47, 2.83],
+  "Bouira": [36.37, 3.9], "Tamanrasset": [22.785, 5.523], "Tébessa": [35.4, 8.12],
+  "Tlemcen": [34.88, -1.316], "Tiaret": [35.37, 1.32], "Tizi Ouzou": [36.717, 4.05],
+  "Alger": [36.737, 3.086], "Djelfa": [34.67, 3.26], "Jijel": [36.82, 5.77],
+  "Sétif": [36.19, 5.41], "Saïda": [34.84, 0.15], "Skikda": [36.88, 6.9],
+  "Sidi Bel Abbès": [35.19, -0.63], "Annaba": [36.9, 7.767], "Guelma": [36.46, 7.43],
+  "Constantine": [36.365, 6.614], "Médéa": [36.26, 2.75], "Mostaganem": [35.93, 0.09],
+  "M'Sila": [35.7, 4.54], "Mascara": [35.4, 0.14], "Ouargla": [31.95, 5.33],
+  "Oran": [35.691, -0.641], "El Bayadh": [33.68, 1.02], "Illizi": [26.48, 8.47],
+  "Bordj Bou Arréridj": [36.07, 4.76], "Boumerdès": [36.76, 3.48],
+  "El Tarf": [36.77, 8.31], "Tindouf": [27.67, -8.14], "Tissemsilt": [35.6, 1.81],
+  "El Oued": [33.36, 6.86], "Khenchela": [35.43, 7.14], "Souk Ahras": [36.28, 7.95],
+  "Tipaza": [36.59, 2.45], "Mila": [36.45, 6.26], "Aïn Defla": [36.26, 1.97],
+  "Naâma": [33.27, -0.31], "Aïn Témouchent": [35.3, -1.14], "Ghardaïa": [32.49, 3.67],
+  "Relizane": [35.74, 0.55], "Timimoun": [29.26, 0.23],
+  "Bordj Badji Mokhtar": [21.33, 0.95], "Ouled Djellal": [34.42, 5.07],
+  "Béni Abbès": [30.13, -2.17], "In Salah": [27.19, 2.47],
+  "In Guezzam": [19.57, 5.77], "Touggourt": [33.1, 6.06],
+  "Djanet": [24.55, 9.48], "El M'Ghair": [33.95, 5.93], "El Meniaa": [30.58, 2.88]
 };
 
 const PROFESSION_COLORS = {
-  'Agriculteur / Ouvrier agricole':'#10b981',
-  'Ouvrier industriel / Usine':'#f97316',
-  'Mineur / Extraction':'#78716c',
-  'Pêcheur / Maritime':'#0ea5e9',
-  'Enseignant / Éducation':'#8b5cf6',
-  'Personnel de santé':'#ec4899',
-  'Informatique / Bureautique':'#6366f1',
-  'Commerce / Vente':'#f59e0b',
-  'Artisan / Menuisier / Forgeron':'#a16207',
-  'Chauffeur / Transport':'#14b8a6',
-  'Fonctionnaire / Administration':'#64748b',
-  'Militaire / Police':'#1e40af',
-  'Retraité':'#9ca3af',
-  'Sans emploi / Chômeur':'#d1d5db'
+  'Agriculteur / Ouvrier agricole': '#10b981',
+  'Ouvrier industriel / Usine': '#f97316',
+  'Mineur / Extraction': '#78716c',
+  'Pêcheur / Maritime': '#0ea5e9',
+  'Enseignant / Éducation': '#8b5cf6',
+  'Personnel de santé': '#ec4899',
+  'Informatique / Bureautique': '#6366f1',
+  'Commerce / Vente': '#f59e0b',
+  'Artisan / Menuisier / Forgeron': '#a16207',
+  'Chauffeur / Transport': '#14b8a6',
+  'Fonctionnaire / Administration': '#64748b',
+  'Militaire / Police': '#1e40af',
+  'Retraité': '#9ca3af',
+  'Sans emploi / Chômeur': '#d1d5db'
 };
 
 const RISK_LEVELS = {
@@ -81,14 +81,14 @@ const ZONE_TYPES = [
 // --- HELPERS ---
 const distanceBetween = (p1, p2) => {
   const R = 6371e3; // metres
-  const φ1 = p1[0] * Math.PI/180;
-  const φ2 = p2[0] * Math.PI/180;
-  const Δφ = (p2[0]-p1[0]) * Math.PI/180;
-  const Δλ = (p2[1]-p1[1]) * Math.PI/180;
-  const a = Math.sin(Δφ/2) * Math.sin(Δφ/2) +
-          Math.cos(φ1) * Math.cos(φ2) *
-          Math.sin(Δλ/2) * Math.sin(Δλ/2);
-  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+  const φ1 = p1[0] * Math.PI / 180;
+  const φ2 = p2[0] * Math.PI / 180;
+  const Δφ = (p2[0] - p1[0]) * Math.PI / 180;
+  const Δλ = (p2[1] - p1[1]) * Math.PI / 180;
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+    Math.cos(φ1) * Math.cos(φ2) *
+    Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
   return R * c;
 };
 
@@ -135,9 +135,9 @@ export default function CarteSIG() {
   const [selectedZone, setSelectedZone] = useState(null);
 
   // State: Drawing
-  const [drawMode, setDrawMode] = useState('view'); 
+  const [drawMode, setDrawMode] = useState('view');
   const [drawingState, setDrawingState] = useState({ vertices: [], startPoint: null, preview: null });
-  
+
   // Refs to bypass closure stale state in Leaflet events
   const drawModeRef = useRef(drawMode);
   const drawingStateRef = useRef(drawingState);
@@ -154,7 +154,7 @@ export default function CarteSIG() {
     patients.forEach(p => {
       // Filter by gender
       if (appliedFilters.gender !== 'Tous' && p.sexe !== appliedFilters.gender) return;
-      
+
       // Filter by age
       const age = p.age || (p.date_naissance ? new Date().getFullYear() - new Date(p.date_naissance).getFullYear() : null);
       if (appliedFilters.ageMin && age < parseInt(appliedFilters.ageMin)) return;
@@ -260,7 +260,7 @@ export default function CarteSIG() {
         const coords = NORM_WILAYA_COORDS[normalizeWilaya(s.name)];
         if (!coords) return;
         // More dramatic scaling for small numbers
-        const radius = 15000 + (s.value * 8000); 
+        const radius = 15000 + (s.value * 8000);
         // Realistic thresholds for the current database size
         const color = s.value >= 15 ? '#ef4444' : s.value >= 7 ? '#f97316' : '#22c55e';
         L.circle(coords, { radius, fillColor: color, fillOpacity: 0.35, color: color, weight: 2 })
@@ -278,7 +278,7 @@ export default function CarteSIG() {
         if (z.shapeType === 'polygon') layer = L.polygon(z.coordinates, style);
         else if (z.shapeType === 'rectangle') layer = L.rectangle(z.coordinates, style);
         else if (z.shapeType === 'circle') layer = L.circle(z.center, { radius: z.radius, ...style });
-        
+
         if (layer) {
           layer.on('click', () => setSelectedZone(z));
           layer.addTo(riskLayerRef.current);
@@ -303,17 +303,17 @@ export default function CarteSIG() {
         profEntries.forEach(([prof, count], i) => {
           if (appliedFilters.profession && prof !== appliedFilters.profession) return;
           const color = PROFESSION_COLORS[prof] || '#64748b';
-          
+
           // Use CircleMarker (pixel-based) for "Different Way" and better visibility
           const pixelRadius = 8 + Math.sqrt(count) * 4;
-          
+
           // Offset in pixels for clustering effect
           const angle = (i / profEntries.length) * 2 * Math.PI;
           const offsetDist = 15; // pixels
           const latOffset = (offsetDist * Math.cos(angle)) / 111000;
           const lngOffset = (offsetDist * Math.sin(angle)) / (111000 * Math.cos(coords[0] * Math.PI / 180));
 
-          L.circleMarker([coords[0] + latOffset, coords[1] + lngOffset], { 
+          L.circleMarker([coords[0] + latOffset, coords[1] + lngOffset], {
             radius: pixelRadius,
             fillColor: color,
             fillOpacity: 0.9,
@@ -321,8 +321,8 @@ export default function CarteSIG() {
             weight: 2,
             className: 'profession-dot'
           })
-          .bindTooltip(`<b>${wilaya} — ${prof}</b><br>${count} patients`)
-          .addTo(profLayerRef.current);
+            .bindTooltip(`<b>${wilaya} — ${prof}</b><br>${count} patients`)
+            .addTo(profLayerRef.current);
         });
       });
     }
@@ -416,7 +416,7 @@ export default function CarteSIG() {
     if (currentMode === 'polygon') {
       if (type === 'click') {
         const newVertices = [...currentState.vertices, e.latlng];
-        
+
         // Add vertex marker
         const marker = L.circleMarker(e.latlng, {
           radius: 5, color: '#3b82f6', fillColor: '#fff', fillOpacity: 1, weight: 2
@@ -432,7 +432,7 @@ export default function CarteSIG() {
         setDrawingState(prev => ({ ...prev, vertices: newVertices }));
       } else if (type === 'dblclick') {
         if (currentState.vertices.length < 3) return;
-        
+
         const center = getPolygonCenter(currentState.vertices);
         openModal({
           shapeType: 'polygon',
@@ -551,7 +551,7 @@ export default function CarteSIG() {
   return (
     <Layout title="Carte SIG">
       <div className="sig-page">
-        
+
         {/* HEADER */}
         <div className="sig-header-row">
           <div className="sig-title">
@@ -565,7 +565,7 @@ export default function CarteSIG() {
 
         {/* CONTROLS GRID */}
         <div className="sig-controls-grid">
-          
+
           {/* Card 1: Layers */}
           <div className="sig-card">
             <div className="card-header">
@@ -601,7 +601,7 @@ export default function CarteSIG() {
             <div className="filter-row">
               <div className="filter-group">
                 <label>Cancer</label>
-                <select className="filter-select" value={filters.cancerType} onChange={e => setFilters({...filters, cancerType: e.target.value})}>
+                <select className="filter-select" value={filters.cancerType} onChange={e => setFilters({ ...filters, cancerType: e.target.value })}>
                   <option value="">Tous les cancers</option>
                   <option>Sein</option><option>Poumon</option><option>Colorectal</option><option>Gastrique</option>
                   <option>Peau</option><option>Thyroïde</option><option>Hépatique</option><option>Leucémie</option><option>Prostate</option>
@@ -609,7 +609,7 @@ export default function CarteSIG() {
               </div>
               <div className="filter-group">
                 <label>Sexe</label>
-                <select className="filter-select" value={filters.gender} onChange={e => setFilters({...filters, gender: e.target.value})}>
+                <select className="filter-select" value={filters.gender} onChange={e => setFilters({ ...filters, gender: e.target.value })}>
                   <option value="Tous">Tous</option>
                   <option value="M">Masculin</option>
                   <option value="F">Féminin</option>
@@ -617,28 +617,28 @@ export default function CarteSIG() {
               </div>
               <div className="filter-group" style={{ minWidth: 60 }}>
                 <label>Age Min</label>
-                <input type="number" className="filter-select" value={filters.ageMin} onChange={e => setFilters({...filters, ageMin: e.target.value})} placeholder="0" />
+                <input type="number" className="filter-select" value={filters.ageMin} onChange={e => setFilters({ ...filters, ageMin: e.target.value })} placeholder="0" />
               </div>
               <div className="filter-group" style={{ minWidth: 60 }}>
                 <label>Age Max</label>
-                <input type="number" className="filter-select" value={filters.ageMax} onChange={e => setFilters({...filters, ageMax: e.target.value})} placeholder="100" />
+                <input type="number" className="filter-select" value={filters.ageMax} onChange={e => setFilters({ ...filters, ageMax: e.target.value })} placeholder="100" />
               </div>
               <div className="filter-group">
                 <label>Wilaya</label>
-                <select className="filter-select" value={filters.wilaya} onChange={e => setFilters({...filters, wilaya: e.target.value})}>
+                <select className="filter-select" value={filters.wilaya} onChange={e => setFilters({ ...filters, wilaya: e.target.value })}>
                   <option value="">Toutes</option>
                   {Object.keys(WILAYA_COORDS).sort().map(w => <option key={w} value={w}>{w}</option>)}
                 </select>
               </div>
               <div className="filter-group">
                 <label>Profession</label>
-                <select className="filter-select" value={filters.profession} onChange={e => setFilters({...filters, profession: e.target.value})}>
+                <select className="filter-select" value={filters.profession} onChange={e => setFilters({ ...filters, profession: e.target.value })}>
                   <option value="">Toutes les professions</option>
                   {availableProfessions.map(p => <option key={p} value={p}>{p}</option>)}
                 </select>
               </div>
             </div>
-            <button className="btn btn-primary" style={{ marginTop: 8, height: 32, fontSize: 11 }} onClick={() => setAppliedFilters({...filters})}>Appliquer</button>
+            <button className="btn btn-primary" style={{ marginTop: 8, height: 32, fontSize: 11 }} onClick={() => setAppliedFilters({ ...filters })}>Appliquer</button>
           </div>
 
           {/* Card 3: Draw */}
@@ -659,9 +659,9 @@ export default function CarteSIG() {
               </button>
             </div>
             <div className="draw-instructions">
-              {drawMode === 'view' ? "Choisissez un outil pour dessiner sur la carte." : 
-               drawMode === 'polygon' ? "• Cliquez pour ajouter des points.\n• Double-clic pour terminer." :
-               "• Cliquez et glissez pour dessiner la zone."}
+              {drawMode === 'view' ? "Choisissez un outil pour dessiner sur la carte." :
+                drawMode === 'polygon' ? "• Cliquez pour ajouter des points.\n• Cliquez « Terminer » pour valider le polygone." :
+                  "• Cliquez et glissez pour dessiner la zone."}
             </div>
           </div>
 
@@ -696,6 +696,18 @@ export default function CarteSIG() {
           {drawMode !== 'view' && (
             <div className="draw-floating-pill">
               <span>{drawMode === 'polygon' ? `Mode Polygone — ${drawingState.vertices.length} points` : `Mode ${drawMode === 'rectangle' ? 'Rectangle' : 'Cercle'}`}</span>
+              {drawMode === 'polygon' && drawingState.vertices.length >= 3 && (
+                <span className="draw-pill-finish" onClick={() => {
+                  const center = getPolygonCenter(drawingState.vertices);
+                  openModal({
+                    shapeType: 'polygon',
+                    coordinates: drawingState.vertices.map(v => [v.lat, v.lng]),
+                    center,
+                  });
+                  setDrawMode('view');
+                  clearDraw();
+                }}>✓ Terminer</span>
+              )}
               <span className="draw-pill-cancel" onClick={() => { setDrawMode('view'); clearDraw(); }}>Annuler (Esc)</span>
             </div>
           )}
@@ -703,98 +715,98 @@ export default function CarteSIG() {
         </div>
 
         {/* DETAIL PANEL */}
-          {selectedZone && (
-            <div className="sig-detail-panel">
-              <div className="detail-header">
-                <div>
-                  <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>{selectedZone.name}</h3>
-                  <span style={{ fontSize: 11, color: RISK_LEVELS[selectedZone.risk]?.color, fontWeight: 700 }}>Risque {RISK_LEVELS[selectedZone.risk]?.label}</span>
-                </div>
-                <X size={16} style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setSelectedZone(null)} />
+        {selectedZone && (
+          <div className="sig-detail-panel">
+            <div className="detail-header">
+              <div>
+                <h3 style={{ margin: 0, fontSize: 14, fontWeight: 800 }}>{selectedZone.name}</h3>
+                <span style={{ fontSize: 11, color: RISK_LEVELS[selectedZone.risk]?.color, fontWeight: 700 }}>Risque {RISK_LEVELS[selectedZone.risk]?.label}</span>
               </div>
-              <div className="detail-body">
-                <div className="detail-section-title">Informations Générales</div>
-                <div style={{ fontSize: 12, color: '#334155', display: 'grid', gap: 6, marginBottom: 16 }}>
-                  <div style={{ display: 'flex', gap: 8 }}><MapPin size={12} color="#94a3b8" /> {selectedZone.wilaya}, {selectedZone.city}</div>
-                  <div style={{ display: 'flex', gap: 8 }}><Plus size={12} color="#94a3b8" /> Type: {ZONE_TYPES.find(t=>t.id===selectedZone.type)?.label}</div>
-                  <div style={{ display: 'flex', gap: 8 }}><MapPin size={12} color="#94a3b8" /> {selectedZone.center[0].toFixed(4)}, {selectedZone.center[1].toFixed(4)}</div>
-                </div>
-
-                <div className="detail-section-title">Corrélations Professionnelles</div>
-                <div className="prof-stats">
-                  {(selectedZone.linkedProfs || []).map(lp => {
-                    const count = profMap[selectedZone.wilaya]?.[lp] || 0;
-                    return (
-                      <div key={lp} className="prof-stat-row">
-                        <span className="prof-name">{lp}</span>
-                        <span className="prof-perc">{count} patients</span>
-                      </div>
-                    );
-                  })}
-                  {(selectedZone.linkedProfs || []).length === 0 && <div style={{ fontSize: 11, color: '#94a3b8' }}>Aucune profession liée.</div>}
-                </div>
-
-                <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setModalData(selectedZone); setIsModalOpen(true); }}><Pencil size={12} /> Modifier</button>
-                  <button className="btn btn-outline btn-sm" style={{ flex: 1, color: '#ef4444' }} onClick={() => deleteZone(selectedZone.id)}><Trash2 size={12} /> Supprimer</button>
-                </div>
-              </div>
+              <X size={16} style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setSelectedZone(null)} />
             </div>
-          )}
-        </div>
+            <div className="detail-body">
+              <div className="detail-section-title">Informations Générales</div>
+              <div style={{ fontSize: 12, color: '#334155', display: 'grid', gap: 6, marginBottom: 16 }}>
+                <div style={{ display: 'flex', gap: 8 }}><MapPin size={12} color="#94a3b8" /> {selectedZone.wilaya}, {selectedZone.city}</div>
+                <div style={{ display: 'flex', gap: 8 }}><Plus size={12} color="#94a3b8" /> Type: {ZONE_TYPES.find(t => t.id === selectedZone.type)?.label}</div>
+                <div style={{ display: 'flex', gap: 8 }}><MapPin size={12} color="#94a3b8" /> {selectedZone.center[0].toFixed(4)}, {selectedZone.center[1].toFixed(4)}</div>
+              </div>
 
-        {/* MODAL ZONE FORM */}
-        {isModalOpen && (
-          <div className="sig-modal-overlay">
-            <div className="sig-modal-card">
-              <div className="modal-header">
-                <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{modalData.id ? 'Modifier la Zone' : 'Nouvelle Zone de Risque'}</h3>
-                <X size={20} style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setIsModalOpen(false)} />
+              <div className="detail-section-title">Corrélations Professionnelles</div>
+              <div className="prof-stats">
+                {(selectedZone.linkedProfs || []).map(lp => {
+                  const count = profMap[selectedZone.wilaya]?.[lp] || 0;
+                  return (
+                    <div key={lp} className="prof-stat-row">
+                      <span className="prof-name">{lp}</span>
+                      <span className="prof-perc">{count} patients</span>
+                    </div>
+                  );
+                })}
+                {(selectedZone.linkedProfs || []).length === 0 && <div style={{ fontSize: 11, color: '#94a3b8' }}>Aucune profession liée.</div>}
               </div>
-              <div className="modal-body">
-                <div className="filter-group" style={{ marginBottom: 16 }}>
-                  <label>Nom de la zone *</label>
-                  <input className="filter-select" style={{ height: 40 }} value={modalData.name} onChange={e => setModalData({...modalData, name: e.target.value})} placeholder="Ex: Zone Industrielle Arzew" />
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                  <div className="filter-group">
-                    <label>Wilaya *</label>
-                    <select className="filter-select" value={modalData.wilaya} onChange={e => setModalData({...modalData, wilaya: e.target.value})}>
-                      <option value="">Choisir...</option>
-                      {Object.keys(WILAYA_COORDS).sort().map(w => <option key={w} value={w}>{w}</option>)}
-                    </select>
-                  </div>
-                  <div className="filter-group">
-                    <label>Ville / Commune</label>
-                    <input className="filter-select" value={modalData.city} onChange={e => setModalData({...modalData, city: e.target.value})} placeholder="Saisir la ville..." />
-                  </div>
-                </div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-                  <div className="filter-group">
-                    <label>Type de risque *</label>
-                    <select className="filter-select" value={modalData.type} onChange={e => setModalData({...modalData, type: e.target.value})}>
-                      {ZONE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
-                    </select>
-                  </div>
-                  <div className="filter-group">
-                    <label>Niveau de risque *</label>
-                    <select className="filter-select" value={modalData.risk} onChange={e => setModalData({...modalData, risk: e.target.value})}>
-                      {Object.entries(RISK_LEVELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
-                    </select>
-                  </div>
-                </div>
-                <div className="filter-group">
-                  <label>Notes</label>
-                  <textarea className="filter-select" rows={3} value={modalData.notes} onChange={e => setModalData({...modalData, notes: e.target.value})} placeholder="Détails supplémentaires..." />
-                </div>
-              </div>
-              <div className="modal-footer">
-                <button className="btn btn-outline" style={{ borderRadius: 8 }} onClick={() => setIsModalOpen(false)}>Annuler</button>
-                <button className="btn btn-primary-gradient" style={{ borderRadius: 8, padding: '0 24px' }} onClick={saveZone}>+ Enregistrer la Zone</button>
+
+              <div style={{ marginTop: 16, display: 'flex', gap: 8 }}>
+                <button className="btn btn-outline btn-sm" style={{ flex: 1 }} onClick={() => { setModalData(selectedZone); setIsModalOpen(true); }}><Pencil size={12} /> Modifier</button>
+                <button className="btn btn-outline btn-sm" style={{ flex: 1, color: '#ef4444' }} onClick={() => deleteZone(selectedZone.id)}><Trash2 size={12} /> Supprimer</button>
               </div>
             </div>
           </div>
         )}
+      </div>
+
+      {/* MODAL ZONE FORM */}
+      {isModalOpen && (
+        <div className="sig-modal-overlay">
+          <div className="sig-modal-card">
+            <div className="modal-header">
+              <h3 style={{ margin: 0, fontSize: 18, fontWeight: 800 }}>{modalData.id ? 'Modifier la Zone' : 'Nouvelle Zone de Risque'}</h3>
+              <X size={20} style={{ cursor: 'pointer', color: '#94a3b8' }} onClick={() => setIsModalOpen(false)} />
+            </div>
+            <div className="modal-body">
+              <div className="filter-group" style={{ marginBottom: 16 }}>
+                <label>Nom de la zone *</label>
+                <input className="filter-select" style={{ height: 40 }} value={modalData.name} onChange={e => setModalData({ ...modalData, name: e.target.value })} placeholder="Ex: Zone Industrielle Arzew" />
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="filter-group">
+                  <label>Wilaya * <span style={{ fontSize: 9, color: '#94a3b8', fontWeight: 400, textTransform: 'none' }}>(auto-détectée, modifiable)</span></label>
+                  <select className="filter-select" style={{ height: 40, cursor: 'pointer', appearance: 'auto', WebkitAppearance: 'menulist' }} value={modalData.wilaya} onChange={e => setModalData({ ...modalData, wilaya: e.target.value })}>
+                    <option value="">Choisir...</option>
+                    {Object.keys(WILAYA_COORDS).sort().map(w => <option key={w} value={w}>{w}</option>)}
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <label>Ville / Commune</label>
+                  <input className="filter-select" style={{ height: 40 }} value={modalData.city} onChange={e => setModalData({ ...modalData, city: e.target.value })} placeholder="Saisir la ville..." />
+                </div>
+              </div>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+                <div className="filter-group">
+                  <label>Type de risque *</label>
+                  <select className="filter-select" value={modalData.type} onChange={e => setModalData({ ...modalData, type: e.target.value })}>
+                    {ZONE_TYPES.map(t => <option key={t.id} value={t.id}>{t.label}</option>)}
+                  </select>
+                </div>
+                <div className="filter-group">
+                  <label>Niveau de risque *</label>
+                  <select className="filter-select" value={modalData.risk} onChange={e => setModalData({ ...modalData, risk: e.target.value })}>
+                    {Object.entries(RISK_LEVELS).map(([k, v]) => <option key={k} value={k}>{v.label}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div className="filter-group">
+                <label>Notes</label>
+                <textarea className="filter-select" rows={3} value={modalData.notes} onChange={e => setModalData({ ...modalData, notes: e.target.value })} placeholder="Détails supplémentaires..." />
+              </div>
+            </div>
+            <div className="modal-footer">
+              <button className="btn btn-outline" style={{ borderRadius: 8 }} onClick={() => setIsModalOpen(false)}>Annuler</button>
+              <button className="btn btn-primary-gradient" style={{ borderRadius: 8, padding: '0 24px' }} onClick={saveZone}>+ Enregistrer la Zone</button>
+            </div>
+          </div>
+        </div>
+      )}
     </Layout>
   );
 }

@@ -328,6 +328,61 @@ const initMedicalTables = async () => {
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_tabac VARCHAR(100) DEFAULT 'Inconnu'`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS consommation_alcool VARCHAR(100) DEFAULT 'Inconnu'`);
     await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS deleted BOOLEAN DEFAULT false`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS allergies TEXT`);
+
+    // --- NEW PATIENT FIELDS MIGRATION ---
+    // Identité Civile
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS nom_jeune_fille VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS lieu_naissance VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS commune_naissance VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS nationalite VARCHAR(100) DEFAULT 'Algérienne'`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS situation_matrimoniale VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS niveau_instruction VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS langues_parlees JSON`);
+
+    // Contact & Résidence
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS telephone2 VARCHAR(20)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS email VARCHAR(150)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS code_postal VARCHAR(20)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS nom_proche VARCHAR(150)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS lien_parente VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS telephone_proche VARCHAR(20)`);
+
+    // Couverture Sociale
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS type_couverture VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS num_affiliation VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS medecin_traitant_nom VARCHAR(150)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS medecin_traitant_tel VARCHAR(20)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS mutuelle BOOLEAN DEFAULT false`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS mutuelle_nom VARCHAR(150)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS prise_en_charge_ald BOOLEAN DEFAULT false`);
+
+    // Habitudes de Vie
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS drogues BOOLEAN DEFAULT false`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS activite_physique VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS alimentation VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS exposition_pro BOOLEAN DEFAULT false`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS exposition_pro_detail TEXT`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS nb_cigarettes_jour VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS annees_tabac VARCHAR(50)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS type_tabac VARCHAR(100)`);
+
+    // Antécédents
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_chirurgicaux TEXT`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_familiaux_cancer BOOLEAN DEFAULT false`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_familiaux_qui VARCHAR(100)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS antecedents_familiaux_type VARCHAR(200)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS diabete BOOLEAN DEFAULT false`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS hypertension BOOLEAN DEFAULT false`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS autres_maladies_chroniques TEXT`);
+
+    // Statut & Suivi
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS statut_patient VARCHAR(100) DEFAULT 'Nouveau'`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS date_deces DATE`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS cause_deces VARCHAR(200)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS etablissement_suivi VARCHAR(200)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS medecin_responsable VARCHAR(36)`);
+    await conn.execute(`ALTER TABLE patients ADD COLUMN IF NOT EXISTS notes_observations TEXT`);
 
     // Anapath table
     await conn.execute(`

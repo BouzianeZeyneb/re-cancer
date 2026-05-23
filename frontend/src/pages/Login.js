@@ -124,11 +124,12 @@ export default function Login() {
               <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>Test Environments</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
+                  { role: 'Admin', email: 'admin@registre-cancer.dz' },
                   { role: 'Médecin', email: 'medecin@hospital.dz' },
                   { role: 'Anapath', email: 'anapath@hospital.dz' },
                   { role: 'Laboratoire', email: 'labo@hospital.dz' }
                 ].map(acc => (
-                  <div key={acc.email} onClick={() => setForm({ email: acc.email, password: 'password123' })} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}>
+                  <div key={acc.email} onClick={() => setForm({ email: acc.email, password: acc.role === 'Admin' ? 'admin123' : 'password123' })} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: '#3b82f6' }}>{acc.role}</span>
                     <span style={{ fontSize: 12, color: '#94a3b8', fontStyle: 'italic' }}>{acc.email}</span>
                   </div>

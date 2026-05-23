@@ -24,7 +24,7 @@ const getAllPatients = async (req, res) => {
     if (wilaya) { query += ' AND p.wilaya LIKE ?'; params.push(`%${wilaya}%`); }
 
     const offset = (page - 1) * limit;
-    
+
     // Total count query
     const countQuery = `SELECT COUNT(*) as total FROM patients p WHERE p.deleted = false ${query.split('WHERE p.deleted = false')[1] || ''}`;
     const [countResult] = await pool.execute(countQuery, params);
@@ -96,50 +96,50 @@ const calculateDetailedSimilarity = (newP, oldP) => {
   const simPrenom1 = getSimilarityScore(newP.prenom, oldP.prenom);
   const simNom2 = getSimilarityScore(newP.nom, oldP.prenom);
   const simPrenom2 = getSimilarityScore(newP.prenom, oldP.nom);
-  
+
   let simNom = simNom1;
   let simPrenom = simPrenom1;
   if ((simNom2 + simPrenom2) > (simNom1 + simPrenom1)) {
     simNom = simNom2;
     simPrenom = simPrenom2;
   }
-  
+
   let simDate = 0;
   if (newP.date_naissance && oldP.date_naissance) {
     try {
       const d1 = new Date(newP.date_naissance).toISOString().substring(0, 10);
       const d2 = new Date(oldP.date_naissance).toISOString().substring(0, 10);
       if (d1 === d2) simDate = 100;
-    } catch(e) {}
+    } catch (e) { }
   } else if (!newP.date_naissance && !oldP.date_naissance) {
     simDate = 100;
   }
-  
+
   const simSexe = (newP.sexe === oldP.sexe) ? 100 : 0;
-  
+
   let simCNI = 0;
   if (newP.num_carte_nationale && oldP.num_carte_nationale) {
     simCNI = getSimilarityScore(newP.num_carte_nationale, oldP.num_carte_nationale);
   } else if (!newP.num_carte_nationale && !oldP.num_carte_nationale) {
     simCNI = 100;
   }
-  
+
   const simWilaya = getSimilarityScore(newP.wilaya, oldP.wilaya);
 
   let totalScore = 0;
   let weightSum = 0;
   const addScore = (score, weight) => { totalScore += score * weight; weightSum += weight; };
-  
+
   if (newP.num_carte_nationale || oldP.num_carte_nationale) addScore(simCNI, 3);
   addScore(simNom, 2.5);
   addScore(simPrenom, 2.5);
   addScore(simDate, 2.5);
   addScore(simSexe, 0.5);
   if (newP.wilaya || oldP.wilaya) addScore(simWilaya, 1);
-  
+
   const global = Math.round(totalScore / weightSum);
   const identifier = oldP.id ? oldP.id.split('-')[0].toUpperCase() : 'UNKNOWN';
-  
+
   return {
     global,
     details: [
@@ -158,15 +158,15 @@ const calculateDetailedSimilarity = (newP, oldP) => {
 
 const checkForDuplicate = async (patient, reqId = null) => {
   if (patient.forceSave) return null;
-  
+
   // To avoid missing any soft match (like swapped letters, completely wrong first letter, etc),
   // we retrieve the lightweight fields for ALL patients. In a JS backend this takes ~5ms for 10k patients.
   const query = `SELECT id, nom, prenom, date_naissance, sexe, num_carte_nationale, wilaya FROM patients WHERE id != ?`;
   const [candidates] = await pool.execute(query, [reqId || 'noop']);
-  
+
   let bestMatch = null;
   let highestScore = 0;
-  
+
   for (const cand of candidates) {
     // Règle d'exclusion absolue : si les deux ont un CNI ET qu'ils sont différents → pas un doublon
     const newCNI = (patient.num_carte_nationale || '').trim();
@@ -176,27 +176,27 @@ const checkForDuplicate = async (patient, reqId = null) => {
     }
 
     const similarity = calculateDetailedSimilarity(patient, cand);
-    
+
     // Règle positive : Nom + Prénom identiques = doublon probable (si pas de CNI pour départager)
     const nomScore = getSimilarityScore(patient.nom, cand.nom);
     const prenomScore = getSimilarityScore(patient.prenom, cand.prenom);
     const isExactNameMatch = nomScore >= 95 && prenomScore >= 95;
-    
+
     // Règle positive : CNI identique = doublon certain
     const isCNIMatch = newCNI && oldCNI &&
       getSimilarityScore(newCNI, oldCNI) >= 95;
-    
+
     // Forcer le score à 85% minimum si correspondance de nom (sans CNI contradictoire) ou CNI
     const effectiveScore = (isExactNameMatch || isCNIMatch)
       ? Math.max(similarity.global, 85)
       : similarity.global;
-    
+
     if (effectiveScore > highestScore) {
       highestScore = effectiveScore;
       bestMatch = { ...similarity, global: effectiveScore };
     }
   }
-  
+
   if (highestScore >= 60) {
     return bestMatch;
   }
@@ -212,15 +212,61 @@ const createPatient = async (req, res) => {
     }
 
     const id = uuidv4();
-    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool } = req.body;
-    
-    await pool.execute(
-      `INSERT INTO patients (id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, latitude, longitude, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool, created_by) 
-       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
-      [id, nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, latitude || null, longitude || null, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', req.user.id]
-    );
+    const b = req.body;
 
-    await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom, prenom }, req.ip);
+    const cols = [
+      'id', 'nom', 'prenom', 'date_naissance', 'sexe', 'telephone', 'num_carte_nationale', 'num_carte_chifa',
+      'adresse', 'commune', 'wilaya', 'latitude', 'longitude', 'fumeur', 'alcool', 'activite_sportive',
+      'autres_medicaments', 'autres_facteurs_risque', 'groupe_sanguin', 'email', 'profession',
+      'consommation_tabac', 'consommation_alcool', 'created_by',
+      // New fields
+      'nom_jeune_fille', 'lieu_naissance', 'commune_naissance', 'nationalite', 'situation_matrimoniale',
+      'niveau_instruction', 'langues_parlees', 'telephone2', 'code_postal',
+      'nom_proche', 'lien_parente', 'telephone_proche',
+      'type_couverture', 'num_affiliation', 'medecin_traitant_nom', 'medecin_traitant_tel',
+      'mutuelle', 'mutuelle_nom', 'prise_en_charge_ald',
+      'drogues', 'activite_physique', 'alimentation', 'exposition_pro', 'exposition_pro_detail',
+      'nb_cigarettes_jour', 'annees_tabac', 'type_tabac',
+      'antecedents_medicaux', 'antecedents_chirurgicaux', 'antecedents_familiaux_cancer',
+      'antecedents_familiaux_qui', 'antecedents_familiaux_type', 'diabete', 'hypertension',
+      'allergies', 'autres_maladies_chroniques',
+      'statut_patient', 'date_deces', 'cause_deces', 'etablissement_suivi', 'notes_observations'
+    ];
+
+    const vals = [
+      id, b.nom, b.prenom, b.date_naissance, b.sexe, b.telephone,
+      b.num_carte_nationale || null, b.num_carte_chifa || null,
+      b.adresse, b.commune, b.wilaya, b.latitude || null, b.longitude || null,
+      b.fumeur || false, b.alcool || false, b.activite_sportive || false,
+      b.autres_medicaments || null, b.autres_facteurs_risque || null,
+      b.groupe_sanguin || null, b.email || null, b.profession || null,
+      b.consommation_tabac || 'Inconnu', b.consommation_alcool || 'Inconnu', req.user.id,
+      // New values
+      b.nom_jeune_fille || null, b.lieu_naissance || null, b.commune_naissance || null,
+      b.nationalite || 'Algérienne', b.situation_matrimoniale || null,
+      b.niveau_instruction || null,
+      b.langues_parlees ? JSON.stringify(b.langues_parlees) : null,
+      b.telephone2 || null, b.code_postal || null,
+      b.nom_proche || null, b.lien_parente || null, b.telephone_proche || null,
+      b.type_couverture || null, b.num_affiliation || null,
+      b.medecin_traitant_nom || null, b.medecin_traitant_tel || null,
+      b.mutuelle || false, b.mutuelle_nom || null, b.prise_en_charge_ald || false,
+      b.drogues || false, b.activite_physique || null, b.alimentation || null,
+      b.exposition_pro || false, b.exposition_pro_detail || null,
+      b.nb_cigarettes_jour || null, b.annees_tabac || null, b.type_tabac || null,
+      b.antecedents_medicaux || null, b.antecedents_chirurgicaux || null,
+      b.antecedents_familiaux_cancer || false,
+      b.antecedents_familiaux_qui || null, b.antecedents_familiaux_type || null,
+      b.diabete || false, b.hypertension || false,
+      b.allergies || null, b.autres_maladies_chroniques || null,
+      b.statut_patient || 'Nouveau', b.date_deces || null, b.cause_deces || null,
+      b.etablissement_suivi || null, b.notes_observations || null
+    ];
+
+    const placeholders = cols.map(() => '?').join(',');
+    await pool.execute(`INSERT INTO patients (${cols.join(',')}) VALUES (${placeholders})`, vals);
+
+    await auditLog(req.user.id, 'CREATE_PATIENT', 'patients', id, { nom: b.nom, prenom: b.prenom }, req.ip);
     res.status(201).json({ message: 'Patient créé avec succès', id });
   } catch (error) {
     console.error('CREATE PATIENT ERROR:', error);
@@ -231,18 +277,66 @@ const createPatient = async (req, res) => {
 const updatePatient = async (req, res) => {
   try {
     const { id } = req.params;
-    
+
     const duplicateMatch = await checkForDuplicate(req.body, id);
     if (duplicateMatch) {
       return res.status(409).json({ code: 'DUPLICATE_SUSPECTED', similarityInfo: duplicateMatch });
     }
-    
-    const { nom, prenom, date_naissance, sexe, telephone, num_carte_nationale, num_carte_chifa, adresse, commune, wilaya, fumeur, alcool, activite_sportive, autres_medicaments, autres_facteurs_risque, assurance, groupe_sanguin, email, profession, consommation_tabac, consommation_alcool } = req.body;
-    
-    await pool.execute(
-      `UPDATE patients SET nom=?, prenom=?, date_naissance=?, sexe=?, telephone=?, num_carte_nationale=?, num_carte_chifa=?, adresse=?, commune=?, wilaya=?, fumeur=?, alcool=?, activite_sportive=?, autres_medicaments=?, autres_facteurs_risque=?, assurance=?, groupe_sanguin=?, email=?, profession=?, consommation_tabac=?, consommation_alcool=? WHERE id=?`,
-      [nom, prenom, date_naissance, sexe, telephone, num_carte_nationale || null, num_carte_chifa || null, adresse, commune, wilaya, fumeur||false, alcool||false, activite_sportive||false, autres_medicaments, autres_facteurs_risque, assurance || null, groupe_sanguin || null, email || null, profession || null, consommation_tabac || 'Inconnu', consommation_alcool || 'Inconnu', id]
-    );
+
+    const b = req.body;
+
+    const setClauses = [
+      'nom=?', 'prenom=?', 'date_naissance=?', 'sexe=?', 'telephone=?',
+      'num_carte_nationale=?', 'num_carte_chifa=?', 'adresse=?', 'commune=?', 'wilaya=?',
+      'fumeur=?', 'alcool=?', 'activite_sportive=?', 'autres_medicaments=?', 'autres_facteurs_risque=?',
+      'groupe_sanguin=?', 'email=?', 'profession=?', 'consommation_tabac=?', 'consommation_alcool=?',
+      // New fields
+      'nom_jeune_fille=?', 'lieu_naissance=?', 'commune_naissance=?', 'nationalite=?',
+      'situation_matrimoniale=?', 'niveau_instruction=?', 'langues_parlees=?',
+      'telephone2=?', 'code_postal=?',
+      'nom_proche=?', 'lien_parente=?', 'telephone_proche=?',
+      'type_couverture=?', 'num_affiliation=?', 'medecin_traitant_nom=?', 'medecin_traitant_tel=?',
+      'mutuelle=?', 'mutuelle_nom=?', 'prise_en_charge_ald=?',
+      'drogues=?', 'activite_physique=?', 'alimentation=?', 'exposition_pro=?', 'exposition_pro_detail=?',
+      'nb_cigarettes_jour=?', 'annees_tabac=?', 'type_tabac=?',
+      'antecedents_medicaux=?', 'antecedents_chirurgicaux=?', 'antecedents_familiaux_cancer=?',
+      'antecedents_familiaux_qui=?', 'antecedents_familiaux_type=?', 'diabete=?', 'hypertension=?',
+      'allergies=?', 'autres_maladies_chroniques=?',
+      'statut_patient=?', 'date_deces=?', 'cause_deces=?', 'etablissement_suivi=?', 'notes_observations=?'
+    ];
+
+    const vals = [
+      b.nom, b.prenom, b.date_naissance, b.sexe, b.telephone,
+      b.num_carte_nationale || null, b.num_carte_chifa || null,
+      b.adresse, b.commune, b.wilaya,
+      b.fumeur || false, b.alcool || false, b.activite_sportive || false,
+      b.autres_medicaments || null, b.autres_facteurs_risque || null,
+      b.groupe_sanguin || null, b.email || null, b.profession || null,
+      b.consommation_tabac || 'Inconnu', b.consommation_alcool || 'Inconnu',
+      // New values
+      b.nom_jeune_fille || null, b.lieu_naissance || null, b.commune_naissance || null,
+      b.nationalite || 'Algérienne', b.situation_matrimoniale || null,
+      b.niveau_instruction || null,
+      b.langues_parlees ? JSON.stringify(b.langues_parlees) : null,
+      b.telephone2 || null, b.code_postal || null,
+      b.nom_proche || null, b.lien_parente || null, b.telephone_proche || null,
+      b.type_couverture || null, b.num_affiliation || null,
+      b.medecin_traitant_nom || null, b.medecin_traitant_tel || null,
+      b.mutuelle || false, b.mutuelle_nom || null, b.prise_en_charge_ald || false,
+      b.drogues || false, b.activite_physique || null, b.alimentation || null,
+      b.exposition_pro || false, b.exposition_pro_detail || null,
+      b.nb_cigarettes_jour || null, b.annees_tabac || null, b.type_tabac || null,
+      b.antecedents_medicaux || null, b.antecedents_chirurgicaux || null,
+      b.antecedents_familiaux_cancer || false,
+      b.antecedents_familiaux_qui || null, b.antecedents_familiaux_type || null,
+      b.diabete || false, b.hypertension || false,
+      b.allergies || null, b.autres_maladies_chroniques || null,
+      b.statut_patient || 'Nouveau', b.date_deces || null, b.cause_deces || null,
+      b.etablissement_suivi || null, b.notes_observations || null,
+      id
+    ];
+
+    await pool.execute(`UPDATE patients SET ${setClauses.join(',')} WHERE id=?`, vals);
 
     await auditLog(req.user.id, 'UPDATE_PATIENT', 'patients', id, req.body, req.ip);
     res.json({ message: 'Patient modifié avec succès' });
@@ -302,7 +396,7 @@ const mergePatients = async (req, res) => {
 const checkDuplicateRealtime = async (req, res) => {
   try {
     const { nom, prenom, date_naissance, num_carte_nationale, num_carte_chifa } = req.body;
-    
+
     if (num_carte_nationale) {
       const [existing] = await pool.execute('SELECT * FROM patients WHERE num_carte_nationale = ? LIMIT 1', [num_carte_nationale]);
       if (existing.length) return res.json({ duplicate: existing[0], reason: 'Même carte nationale' });
@@ -340,12 +434,12 @@ const getPublicPatientInfo = async (req, res) => {
 const updatePublicHabitudes = async (req, res) => {
   try {
     const { id } = req.params;
-    const { fumeur, alcool, activite_sportive, alimentation, antecedents_familiaux } = req.body;
-    
+    const { fumeur, alcool, activite_sportive, alimentation, antecedents_familiaux, allergies } = req.body;
+
     // Concaténer l'alimentation dans autres_facteurs_risque si renseigné
     let queryAppendAlimentation = '';
-    const params = [fumeur, alcool, activite_sportive, antecedents_familiaux];
-    
+    const params = [fumeur, alcool, activite_sportive, antecedents_familiaux, allergies];
+
     if (alimentation) {
       queryAppendAlimentation = `autres_facteurs_risque = CONCAT(IFNULL(autres_facteurs_risque, ''), ?),`;
       params.push(`\nAlimentation étudiée: ${alimentation}\n`);
@@ -354,7 +448,7 @@ const updatePublicHabitudes = async (req, res) => {
 
     await pool.execute(
       `UPDATE patients SET 
-        fumeur = ?, alcool = ?, activite_sportive = ?, antecedents_familiaux = ?,
+        fumeur = ?, alcool = ?, activite_sportive = ?, antecedents_familiaux = ?, allergies = ?,
         ${queryAppendAlimentation}
         updated_at = CURRENT_TIMESTAMP
        WHERE id = ?`,

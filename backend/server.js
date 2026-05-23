@@ -20,6 +20,19 @@ app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
 
 app.use('/api', routes);
+app.get('/api/network-info', (req, res) => {
+  const { networkInterfaces } = require('os');
+  const nets = networkInterfaces();
+  let localIP = 'localhost';
+  for (const name of Object.keys(nets)) {
+    for (const net of nets[name]) {
+      if (net.family === 'IPv4' && !net.internal) {
+        localIP = net.address;
+      }
+    }
+  }
+  res.json({ ip: localIP, port: process.env.PORT || 5000, frontendPort: 3000 });
+});
 app.get('/health', (req, res) => res.json({ status: 'OK', timestamp: new Date().toISOString() }));
 
 const connectedUsers = {};
