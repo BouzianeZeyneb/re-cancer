@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
+const { createNotification } = require('./notificationsController');
 
 // ===== ANAPATH =====
 const getAnapath = async (req, res) => {
@@ -17,6 +18,17 @@ const createAnapath = async (req, res) => {
       `INSERT INTO anapath (id, case_id, date_prelevement, type_prelevement, pathologiste, type_histologique, resultat_biopsie, her2, er, pr, grade_sbr, grade_tumoral, marges_chirurgicales, ki67, pd_l1, mmr_msi, autres_marqueurs, autres_marqueurs_custom, compte_rendu, created_by) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)`,
       [id, case_id, n(date_prelevement), n(type_prelevement), n(pathologiste), n(type_histologique), n(resultat_biopsie), her2||'Non testé', er||'Non testé', pr||'Non testé', n(grade_sbr), n(grade_tumoral), n(marges_chirurgicales), n(ki67), n(pd_l1), n(mmr_msi), n(autres_marqueurs), n(autres_marqueurs_custom), n(compte_rendu), req.user.id]
     );
+
+    // Notifications pour le rôle ANAPATH
+    try {
+      const [anapaths] = await pool.execute('SELECT id FROM users WHERE role = "anapath"');
+      const io = req.app.get('io');
+      const msg = `Nouveau prélèvement (${type_prelevement || 'Non spécifié'}) ajouté pour analyse.`;
+      for (const anapath of anapaths) {
+        await createNotification(anapath.id, 'Nouveau Prélèvement ANAPATH', msg, `/anapath/prelevements`, io);
+      }
+    } catch(err) { console.error('Erreur notification anapath:', err); }
+
     res.status(201).json({ id, message: 'Anapath créé' });
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
@@ -224,6 +236,8 @@ const getPrelevementsList = async (req, res) => {
   try {
     const search = req.query.search ? `%${req.query.search}%` : '%';
     const typeFilter = req.query.type_prelevement || null;
+    const statutFilter = req.query.statut || null;
+    const dateFilter = req.query.date || null;
     
     let query = `
       SELECT
@@ -250,13 +264,29 @@ const getPrelevementsList = async (req, res) => {
       JOIN patients p ON cc.patient_id = p.id
       LEFT JOIN comptes_rendus_anapath cr ON cr.anapath_id = a.id
       WHERE p.deleted = false
-        AND (p.nom LIKE ? OR p.prenom LIKE ? OR p.matricule LIKE ?)
+        AND (p.nom LIKE ? OR p.prenom LIKE ? OR p.matricule LIKE ?
+             OR cc.type_cancer LIKE ? OR cc.sous_type LIKE ? OR a.type_histologique LIKE ?
+             OR cc.localisation LIKE ? OR a.resultat_biopsie LIKE ? OR cr.diagnostic LIKE ?)
     `;
-    const params = [search, search, search];
+    const params = [search, search, search, search, search, search, search, search, search];
 
     if (typeFilter) {
       query += ' AND a.type_prelevement = ?';
       params.push(typeFilter);
+    }
+
+    if (statutFilter) {
+      if (statutFilter === 'en_attente') {
+        query += ' AND cr.statut IS NULL';
+      } else {
+        query += ' AND cr.statut = ?';
+        params.push(statutFilter);
+      }
+    }
+
+    if (dateFilter) {
+      query += ' AND DATE(a.date_prelevement) = ?';
+      params.push(dateFilter);
     }
 
     query += ' ORDER BY a.date_prelevement DESC';
@@ -330,6 +360,88 @@ const createDocument = async (req, res) => {
   } catch(e) { res.status(500).json({ message: e.message }); }
 };
 
+// ===== LISTE COMPTES RENDUS ANAPATH (historique) =====
+const getComptesRendusList = async (req, res) => {
+  try {
+    const search = req.query.search ? `%${req.query.search}%` : '%';
+    const statutFilter = req.query.statut || null;
+
+    let query = `
+      SELECT
+        cr.id           AS cr_id,
+        cr.statut,
+        cr.observation,
+        cr.diagnostic,
+        cr.conclusion,
+        cr.created_at,
+        cr.validated_at,
+        cr.updated_at,
+        p.nom, p.prenom, p.matricule,
+        a.type_prelevement, a.date_prelevement,
+        cc.localisation, cc.type_cancer,
+        u_created.nom  AS created_by_nom,  u_created.prenom  AS created_by_prenom,
+        u_valid.nom    AS validated_by_nom, u_valid.prenom    AS validated_by_prenom,
+        a.id           AS anapath_id
+      FROM comptes_rendus_anapath cr
+      JOIN patients p   ON cr.patient_id  = p.id
+      JOIN anapath  a   ON cr.anapath_id  = a.id
+      JOIN cancer_cases cc ON cr.case_id  = cc.id
+      LEFT JOIN users u_created   ON cr.created_by   = u_created.id
+      LEFT JOIN users u_valid     ON cr.validated_by  = u_valid.id
+      WHERE p.deleted = false
+        AND (p.nom LIKE ? OR p.prenom LIKE ? OR p.matricule LIKE ? OR cr.diagnostic LIKE ?)
+    `;
+    const params = [search, search, search, search];
+
+    if (statutFilter) {
+      query += ' AND cr.statut = ?';
+      params.push(statutFilter);
+    }
+
+    query += ' ORDER BY cr.updated_at DESC';
+
+    const [rows] = await pool.execute(query, params);
+    res.json(rows);
+  } catch (e) { res.status(500).json({ message: e.message }); }
+};
+
+// ===== ANAPATH DASHBOARD STATS =====
+const getAnapathStats = async (req, res) => {
+  try {
+    const [[{ total_prelevements }]] = await pool.execute('SELECT COUNT(*) AS total_prelevements FROM anapath');
+    const [[{ total_cr }]] = await pool.execute('SELECT COUNT(*) AS total_cr FROM comptes_rendus_anapath');
+    const [[{ total_valides }]] = await pool.execute("SELECT COUNT(*) AS total_valides FROM comptes_rendus_anapath WHERE statut = 'validé'");
+    const [[{ total_brouillons }]] = await pool.execute("SELECT COUNT(*) AS total_brouillons FROM comptes_rendus_anapath WHERE statut = 'brouillon'");
+
+    // Prélèvements without any compte rendu = pending
+    const [[{ en_attente }]] = await pool.execute(`
+      SELECT COUNT(*) AS en_attente FROM anapath a
+      LEFT JOIN comptes_rendus_anapath cr ON cr.anapath_id = a.id
+      WHERE cr.id IS NULL
+    `);
+
+    // Last 5 recently validated
+    const [recents] = await pool.execute(`
+      SELECT cr.validated_at, p.nom, p.prenom, a.type_prelevement, cr.diagnostic
+      FROM comptes_rendus_anapath cr
+      JOIN patients p ON cr.patient_id = p.id
+      JOIN anapath a ON cr.anapath_id = a.id
+      WHERE cr.statut = 'validé'
+      ORDER BY cr.validated_at DESC
+      LIMIT 5
+    `);
+
+    res.json({
+      total_prelevements: Number(total_prelevements),
+      total_cr: Number(total_cr),
+      total_valides: Number(total_valides),
+      total_brouillons: Number(total_brouillons),
+      en_attente: Number(en_attente),
+      recents
+    });
+  } catch(e) { res.status(500).json({ message: e.message }); }
+};
+
 module.exports = {
   getAnapath, createAnapath, updateAnapath, deleteAnapath,
   getBiologie, getBiologieByPatient, createBiologie, deleteBiologie,
@@ -341,5 +453,9 @@ module.exports = {
   // Documents
   getDocumentsByPatient, createDocument,
   // patient-specific medical loads
-  getAnapathByPatient, getPrelevementsList, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
+  getAnapathByPatient, getPrelevementsList, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient,
+  // Dashboard stats
+  getAnapathStats,
+  // Reports history
+  getComptesRendusList
 };

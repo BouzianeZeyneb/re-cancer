@@ -36,24 +36,19 @@ const getLabRequestsByPatient = async (req, res) => {
 
 const getRequestsForLabo = async (req, res) => {
   try {
-    // Admin/medecin can see all requests, labo sees only their own
-    const isLaboOnly = req.user.role === 'laboratoire';
-    const query = isLaboOnly
-      ? `SELECT lr.*, p.nom as patient_nom, p.prenom as patient_prenom, m.nom as medecin_nom, m.prenom as medecin_prenom, u.nom as labo_nom, u.prenom as labo_prenom
-         FROM lab_requests lr
-         LEFT JOIN patients p ON lr.patient_id = p.id
-         LEFT JOIN users m ON lr.medecin_id = m.id
-         LEFT JOIN users u ON lr.labo_id = u.id
-         WHERE lr.labo_id = ?
-         ORDER BY lr.created_at DESC`
-      : `SELECT lr.*, p.nom as patient_nom, p.prenom as patient_prenom, m.nom as medecin_nom, m.prenom as medecin_prenom, u.nom as labo_nom, u.prenom as labo_prenom
-         FROM lab_requests lr
-         LEFT JOIN patients p ON lr.patient_id = p.id
-         LEFT JOIN users m ON lr.medecin_id = m.id
-         LEFT JOIN users u ON lr.labo_id = u.id
-         ORDER BY lr.created_at DESC`;
-    const params = isLaboOnly ? [req.user.id] : [];
-    const [rows] = await pool.execute(query, params);
+    // All authenticated roles (labo, admin, medecin) see ALL demandes — shared inbox
+    const query = `
+      SELECT lr.*,
+        p.nom as patient_nom, p.prenom as patient_prenom,
+        m.nom as medecin_nom, m.prenom as medecin_prenom,
+        u.nom as labo_nom, u.prenom as labo_prenom
+      FROM lab_requests lr
+      LEFT JOIN patients p ON lr.patient_id = p.id
+      LEFT JOIN users m ON lr.medecin_id = m.id
+      LEFT JOIN users u ON lr.labo_id = u.id
+      ORDER BY lr.created_at DESC
+    `;
+    const [rows] = await pool.execute(query);
     res.json(rows);
   } catch (error) {
     res.status(500).json({ message: error.message });

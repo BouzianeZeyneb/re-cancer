@@ -30,6 +30,21 @@ import AnalysesBiologie from './pages/AnalysesBiologie';
 import Pharmacie from './pages/Pharmacie';
 import AnapathPrelevements from './pages/AnapathPrelevements';
 import AnapathCompteRendu from './pages/AnapathCompteRendu';
+import AnapathDashboard from './pages/AnapathDashboard';
+import AnapathHistorique from './pages/AnapathHistorique';
+
+// Returns the default home path for a given role
+const getRoleHome = (role) => {
+  switch (role) {
+    case 'laboratoire': return '/laboratoire';
+    case 'pharmacie':
+    case 'pharmacien': return '/pharmacie';
+    case 'anapath': return '/anapath/dashboard';
+    case 'medecin': return '/';
+    case 'admin': return '/';
+    default: return '/patients';
+  }
+};
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
@@ -42,26 +57,8 @@ const ProtectedRoute = ({ children, allowedRoles }) => {
     : 'medecin';
 
   if (allowedRoles && !allowedRoles.includes(safeRole)) {
-    const path = window.location.pathname;
-    if (path === '/') {
-      if (safeRole === 'laboratoire') return <Navigate to="/laboratoire" replace />;
-      if (safeRole === 'pharmacien' || safeRole === 'pharmacie') return <Navigate to="/pharmacie" replace />;
-      if (safeRole === 'anapath') return <Navigate to="/patients" replace />;
-      if (safeRole === 'medecin') return <Navigate to="/patients" replace />;
-    }
-
-    return (
-      <div style={{ padding: 50, textAlign: 'center', fontFamily: 'Sora' }}>
-        <h2 style={{ color: '#e63946' }}>Accès Refusé</h2>
-        <p>Votre rôle (<strong>{user.role}</strong>) ne vous permet pas d'accéder à cette page.</p>
-        <button
-          onClick={() => window.location.href = '/'}
-          style={{ padding: '8px 16px', background: '#0f4c81', color: 'white', borderRadius: 6, border: 'none', cursor: 'pointer', marginTop: 16 }}
-        >
-          Retour à l'accueil
-        </button>
-      </div>
-    );
+    // Always redirect to the role's home instead of showing an error wall
+    return <Navigate to={getRoleHome(safeRole)} replace />;
   }
   return children;
 };
@@ -91,14 +88,16 @@ function AppRoutes() {
       <Route path="/carte-sig" element={<ProtectedRoute allowedRoles={['admin']}><CarteSIG /></ProtectedRoute>} />
       <Route path="/utilisateurs" element={<ProtectedRoute allowedRoles={['admin']}><Utilisateurs /></ProtectedRoute>} />
       <Route path="/audit" element={<ProtectedRoute allowedRoles={['admin', 'pharmacie']}><AuditLogs /></ProtectedRoute>} />
-      <Route path="/parametres" element={<ProtectedRoute allowedRoles={['admin']}><AdminSettings /></ProtectedRoute>} />
+      <Route path="/parametres" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath', 'pharmacie', 'pharmacien']}><AdminSettings /></ProtectedRoute>} />
 
       {/* Partagés */}
       <Route path="/statistiques" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Statistiques /></ProtectedRoute>} />
       <Route path="/laboratoire" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire']}><Laboratoire /></ProtectedRoute>} />
 
-      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><AnalysesBiologie /></ProtectedRoute>} />
+      <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><AnalysesBiologie /></ProtectedRoute>} />
       <Route path="/pharmacie" element={<ProtectedRoute allowedRoles={['admin', 'pharmacien', 'pharmacie']}><Pharmacie /></ProtectedRoute>} />
+      <Route path="/anapath/dashboard" element={<ProtectedRoute allowedRoles={['admin','medecin','anapath']}><AnapathDashboard /></ProtectedRoute>} />
+      <Route path="/anapath/historique" element={<ProtectedRoute allowedRoles={['admin','medecin','anapath']}><AnapathHistorique /></ProtectedRoute>} />
       <Route path="/anapath/prelevements" element={<ProtectedRoute allowedRoles={['admin','medecin','anapath']}><AnapathPrelevements /></ProtectedRoute>} />
       <Route path="/anapath/compte-rendu/:anapathId" element={<ProtectedRoute allowedRoles={['admin','medecin','anapath']}><AnapathCompteRendu /></ProtectedRoute>} />
 
