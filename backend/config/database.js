@@ -659,6 +659,29 @@ const initMedicalTables = async () => {
       )
     `);
 
+    // ===== COMPTES RENDUS ANAPATH =====
+    await conn.execute(`
+      CREATE TABLE IF NOT EXISTS comptes_rendus_anapath (
+        id               VARCHAR(36) PRIMARY KEY,
+        anapath_id       VARCHAR(36) NOT NULL,
+        patient_id       VARCHAR(36) NOT NULL,
+        case_id          VARCHAR(36) NOT NULL,
+        observation      TEXT,
+        diagnostic       TEXT,
+        conclusion       TEXT,
+        statut           ENUM('brouillon','validé') DEFAULT 'brouillon',
+        validated_at     DATETIME,
+        validated_by     VARCHAR(36),
+        created_by       VARCHAR(36),
+        created_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        updated_at       TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+        FOREIGN KEY (anapath_id) REFERENCES anapath(id) ON DELETE CASCADE,
+        FOREIGN KEY (patient_id) REFERENCES patients(id) ON DELETE CASCADE,
+        FOREIGN KEY (case_id)    REFERENCES cancer_cases(id) ON DELETE CASCADE,
+        FOREIGN KEY (created_by) REFERENCES users(id) ON DELETE SET NULL
+      )
+    `);
+
     console.log('✅ Medical and Pharmacy modules tables initialized');
   } catch (e) {
     console.error('Medical tables error:', e.message);

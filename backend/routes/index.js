@@ -153,10 +153,20 @@ const {
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
   getChimioSeances, createChimioSeance,
   getDocumentsByPatient, createDocument,
-  getAnapathByPatient, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
+  getAnapathByPatient, getPrelevementsList, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
 } = require('../controllers/medicalController');
 
+router.get('/anapath/prelevements', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getPrelevementsList);
 router.get('/anapath/patient/:patientId', authMiddleware, getAnapathByPatient);
+
+// Comptes rendus ANAPATH
+const { getByAnapath: getCR, getPrelevementInfo, create: createCR, update: updateCR, valider: validerCR } = require('../controllers/anapathCompteRenduController');
+router.get('/anapath/:anapathId/compte-rendu', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getCR);
+router.get('/anapath/:anapathId/info', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getPrelevementInfo);
+router.post('/anapath/compte-rendu', authMiddleware, requireRole('admin', 'medecin', 'anapath'), createCR);
+router.put('/anapath/compte-rendu/:id', authMiddleware, requireRole('admin', 'medecin', 'anapath'), updateCR);
+router.put('/anapath/compte-rendu/:id/valider', authMiddleware, requireRole('admin', 'anapath'), validerCR);
+
 router.get('/anapath/:caseId', authMiddleware, getAnapath);
 router.post('/anapath', authMiddleware, createAnapath);
 router.put('/anapath/:id', authMiddleware, updateAnapath);

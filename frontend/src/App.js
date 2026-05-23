@@ -28,29 +28,32 @@ import PatientFormulairePublic from './pages/PatientFormulairePublic';
 import Laboratoire from './pages/Laboratoire';
 import AnalysesBiologie from './pages/AnalysesBiologie';
 import Pharmacie from './pages/Pharmacie';
+import AnapathPrelevements from './pages/AnapathPrelevements';
+import AnapathCompteRendu from './pages/AnapathCompteRendu';
 
 const ProtectedRoute = ({ children, allowedRoles }) => {
   const { user, loading } = useAuth();
   if (loading) return <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', height: '100vh' }}><div className="spinner" /></div>;
   if (!user) return <Navigate to="/login" replace />;
 
-  // Normalize role to lowercase, default to 'anapath' if somehow empty/corrupted in DB
+  // Normalize role to lowercase
   const safeRole = (user.role && typeof user.role === 'string' && user.role.trim() !== '')
     ? user.role.toLowerCase()
-    : 'anapath';
+    : 'medecin';
 
   if (allowedRoles && !allowedRoles.includes(safeRole)) {
     const path = window.location.pathname;
     if (path === '/') {
       if (safeRole === 'laboratoire') return <Navigate to="/laboratoire" replace />;
       if (safeRole === 'pharmacien' || safeRole === 'pharmacie') return <Navigate to="/pharmacie" replace />;
-      if (safeRole === 'medecin' || safeRole === 'anapath') return <Navigate to="/patients" replace />;
+      if (safeRole === 'anapath') return <Navigate to="/patients" replace />;
+      if (safeRole === 'medecin') return <Navigate to="/patients" replace />;
     }
 
     return (
       <div style={{ padding: 50, textAlign: 'center', fontFamily: 'Sora' }}>
         <h2 style={{ color: '#e63946' }}>Accès Refusé</h2>
-        <p>Votre rôle (<strong>{user.role || 'anapath'}</strong>) ne vous permet pas d'accéder à cette page.</p>
+        <p>Votre rôle (<strong>{user.role}</strong>) ne vous permet pas d'accéder à cette page.</p>
         <button
           onClick={() => window.location.href = '/'}
           style={{ padding: '8px 16px', background: '#0f4c81', color: 'white', borderRadius: 6, border: 'none', cursor: 'pointer', marginTop: 16 }}
@@ -96,6 +99,8 @@ function AppRoutes() {
 
       <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath']}><AnalysesBiologie /></ProtectedRoute>} />
       <Route path="/pharmacie" element={<ProtectedRoute allowedRoles={['admin', 'pharmacien', 'pharmacie']}><Pharmacie /></ProtectedRoute>} />
+      <Route path="/anapath/prelevements" element={<ProtectedRoute allowedRoles={['admin','medecin','anapath']}><AnapathPrelevements /></ProtectedRoute>} />
+      <Route path="/anapath/compte-rendu/:anapathId" element={<ProtectedRoute allowedRoles={['admin','medecin','anapath']}><AnapathCompteRendu /></ProtectedRoute>} />
 
 
       <Route path="*" element={<Navigate to="/" replace />} />

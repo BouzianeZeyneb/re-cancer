@@ -32,6 +32,7 @@ export default function Layout({ children, title }) {
   const { user, logout, isAdmin, isPharmacien } = useAuth();
   const isPharmacieRole = user?.role === 'pharmacie'; // Rôle pharmacie strict (pas pharmacien legacy)
   const isLaboratoireRole = user?.role === 'laboratoire'; // Rôle laboratoire restreint
+  const isAnapathRole = user?.role === 'anapath'; // Rôle anapath restreint
   const navigate = useNavigate();
   const { t, i18n } = useTranslation();
   const location = useLocation();
@@ -199,7 +200,16 @@ export default function Layout({ children, title }) {
                   </svg>
                 }
               />
-              <div className="nav-section-title">MODULES</div>
+              <NavItem
+  to="/anapath/prelevements"
+  label="Prélèvements"
+  icon={
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+    </svg>
+  }
+/>
+<div className="nav-section-title">MODULES</div>
               <NavItem
                 to="/analyses-biologie"
                 label="Analyses Biologie"
@@ -222,6 +232,70 @@ export default function Layout({ children, title }) {
                     <path d="M2 22h20" />
                     <path d="M9 13.51h6" />
                     <path d="M4.53 13.51a3 3 0 0 0-2.53 3.53C2.26 19.34 3.73 21 5.61 21h12.78c1.88 0 3.35-1.66 3.61-3.96a3 3 0 0 0-2.53-3.53l-1.47-.2v-3.71A2.5 2.5 0 0 0 15.5 7H14V2H10v5H8.5a2.5 2.5 0 0 0-2.5 2.5v3.71l-1.47.2z" />
+                  </svg>
+                }
+              />
+            </>
+          ) : isAnapathRole ? (
+            /* ════════════════════════════════════════
+                Sidebar ANAPATH — accès restreint
+               ════════════════════════════════════════ */
+            <>
+              <div className="nav-section-title">PRINCIPAL</div>
+              <NavItem
+                to="/patients"
+                label="Patients"
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M23 21v-2a4 4 0 00-3-3.87" />
+                  </svg>
+                }
+              />
+              <NavItem
+                to="/cas-cancer"
+                label="Diagnostics"
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z" />
+                    <polyline points="14,2 14,8 20,8" />
+                    <line x1="16" y1="13" x2="8" y2="13" />
+                    <line x1="16" y1="17" x2="8" y2="17" />
+                  </svg>
+                }
+              />
+              
+                <NavItem
+                  to="/anapath/prelevements"
+                  label="Prélèvements"
+                  icon={
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+                    </svg>
+                  }
+                />
+              <NavItem
+                to="/analyses-biologie"
+                label="Analyses Biologie"
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M8 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8" />
+                    <polyline points="8 3 8 8 3 8" />
+                    <line x1="12" y1="11" x2="12" y2="17" />
+                    <line x1="9" y1="14" x2="15" y2="14" />
+                  </svg>
+                }
+              />
+              <NavItem
+                to="/consultations"
+                label="Consultations"
+                icon={
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M16 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" />
+                    <circle cx="9" cy="7" r="4" />
+                    <path d="M22 21v-2a4 4 0 0 0-3-3.87" />
+                    <path d="M16 3.13a4 4 0 0 1 0 7.75" />
                   </svg>
                 }
               />
