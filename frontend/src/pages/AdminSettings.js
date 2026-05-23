@@ -116,8 +116,27 @@ function Modal({ show, onClose, title, subtitle, icon, accentColor = '#3b82f6', 
 
 export default function AdminSettings() {
   const { user } = useAuth();
+  const isAdmin = user?.role === 'admin';
   const [activeTab, setActiveTab] = useState('listes');
   const [loading, setLoading] = useState(true);
+
+  // Password change state (for all roles)
+  const [pwData, setPwData] = useState({ currentPassword: '', newPassword: '', confirm: '' });
+  const [pwLoading, setPwLoading] = useState(false);
+
+  const handlePasswordChange = async (e) => {
+    e.preventDefault();
+    if (pwData.newPassword !== pwData.confirm) return toast.error('Les mots de passe ne correspondent pas');
+    if (pwData.newPassword.length < 6) return toast.error('Le mot de passe doit faire au moins 6 caractères');
+    setPwLoading(true);
+    try {
+      await api.put('/auth/password', { currentPassword: pwData.currentPassword, newPassword: pwData.newPassword });
+      toast.success('Mot de passe modifié avec succès');
+      setPwData({ currentPassword: '', newPassword: '', confirm: '' });
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Erreur lors du changement de mot de passe');
+    } finally { setPwLoading(false); }
+  };
 
   // States for Listes (Paramètres)
   const [parametres, setParametres] = useState([]);
@@ -239,11 +258,62 @@ export default function AdminSettings() {
   const getEntiteLabel = (ent) => entites.find(e => e.value === ent)?.label || ent;
   const getTypeChampLabel = (tc) => typesChamp.find(t => t.value === tc)?.label || tc;
 
+<<<<<<< HEAD
   /* ───── Shared input styles ───── */
   const fieldGroupStyle = { marginBottom: 14, padding: '12px 14px 14px', background: '#f8fafc', borderRadius: 12, border: '1px solid #f1f5f9', transition: 'border-color 0.2s' };
   const inputStyle = { height: 42, borderRadius: 10, fontWeight: 600, width: '100%', border: '1.5px solid #e2e8f0', background: 'white', fontSize: 14, padding: '0 14px', transition: 'border-color 0.2s, box-shadow 0.2s', outline: 'none', boxSizing: 'border-box' };
   const labelStyle = { fontSize: 11, fontWeight: 800, textTransform: 'uppercase', color: '#64748b', marginBottom: 6, display: 'block', letterSpacing: '0.5px' };
   const btnFooterStyle = { padding: '16px 0 4px', borderTop: '1px solid #f1f5f9', marginTop: 8, display: 'flex', gap: 12, justifyContent: 'flex-end' };
+=======
+  // Non-admin: show only account settings
+  if (!isAdmin) {
+    return (
+      <Layout title="Mon Compte">
+        <div style={{ maxWidth: 560, margin: '0 auto', padding: '40px 12px' }}>
+          <div style={{ marginBottom: 32 }}>
+            <h1 style={{ fontSize: 28, fontWeight: 900, color: '#0f172a', margin: 0, fontFamily: 'Outfit' }}>Mon Compte</h1>
+            <p style={{ color: '#64748b', fontSize: 14, marginTop: 4, fontWeight: 500 }}>Gérez vos informations personnelles</p>
+          </div>
+
+          {/* Profile Card */}
+          <div style={{ background: 'white', borderRadius: 24, border: '1.5px solid #f1f5f9', padding: 32, marginBottom: 24, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 20, marginBottom: 24 }}>
+              <div style={{ width: 60, height: 60, borderRadius: 18, background: 'linear-gradient(135deg, #0f172a 0%, #334155 100%)', color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 22, fontWeight: 900 }}>
+                {user?.nom?.[0]}{user?.prenom?.[0]}
+              </div>
+              <div>
+                <div style={{ fontSize: 20, fontWeight: 900, color: '#0f172a' }}>{user?.prenom} {user?.nom}</div>
+                <div style={{ fontSize: 13, color: '#64748b', fontWeight: 600 }}>{user?.email}</div>
+                <span style={{ display: 'inline-block', marginTop: 4, fontSize: 10, fontWeight: 900, textTransform: 'uppercase', background: '#f1f5f9', color: '#475569', padding: '3px 10px', borderRadius: 6 }}>{user?.role}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Password change */}
+          <div style={{ background: 'white', borderRadius: 24, border: '1.5px solid #f1f5f9', padding: 32, boxShadow: '0 4px 6px -1px rgba(0,0,0,0.02)' }}>
+            <h3 style={{ fontSize: 16, fontWeight: 900, color: '#0f172a', marginTop: 0, marginBottom: 24 }}>Changer le mot de passe</h3>
+            <form onSubmit={handlePasswordChange}>
+              {[['currentPassword', 'Mot de passe actuel'], ['newPassword', 'Nouveau mot de passe'], ['confirm', 'Confirmer le nouveau mot de passe']].map(([k, l]) => (
+                <div key={k} style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 6 }}>{l}</label>
+                  <input
+                    type="password" required
+                    value={pwData[k]}
+                    onChange={e => setPwData(p => ({ ...p, [k]: e.target.value }))}
+                    style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14, boxSizing: 'border-box', outline: 'none' }}
+                  />
+                </div>
+              ))}
+              <button type="submit" disabled={pwLoading} style={{ marginTop: 8, padding: '12px 28px', borderRadius: 12, background: '#0f172a', color: 'white', border: 'none', fontSize: 13, fontWeight: 800, cursor: 'pointer', width: '100%' }}>
+                {pwLoading ? 'Enregistrement...' : 'Mettre à jour le mot de passe'}
+              </button>
+            </form>
+          </div>
+        </div>
+      </Layout>
+    );
+  }
+>>>>>>> 0335064a6d6d8a3911a1578e5d93bc9c0cd06547
 
   return (
     <Layout title="">

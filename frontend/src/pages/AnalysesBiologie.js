@@ -78,6 +78,33 @@ export default function AnalysesBiologie() {
     } catch (e) { toast.error('Erreur'); }
   };
 
+  const handleCreateRequest = async () => {
+    if (!requestData.labo_id) return toast.error('Sélectionnez un laboratoire');
+    if (!requestData.analyses_demandees.length) return toast.error('Sélectionnez au moins une analyse');
+    try {
+      await api.post('/lab-requests', {
+        patient_id: selectedPatient.id,
+        labo_id: requestData.labo_id,
+        analyses_demandees: requestData.analyses_demandees,
+        notes_labo: requestData.notes_labo
+      });
+      toast.success('Demande envoyée au laboratoire !');
+      setShowRequestForm(false);
+      setRequestData({ labo_id: '', analyses_demandees: [], notes_labo: '' });
+      const r = await api.get(`/lab-requests/patient/${selectedPatient.id}`);
+      setLabRequests(r.data);
+    } catch (e) { toast.error(e.response?.data?.message || 'Erreur lors de la création'); }
+  };
+
+  const toggleAnalyse = (analyse) => {
+    setRequestData(prev => ({
+      ...prev,
+      analyses_demandees: prev.analyses_demandees.includes(analyse)
+        ? prev.analyses_demandees.filter(a => a !== analyse)
+        : [...prev.analyses_demandees, analyse]
+    }));
+  };
+
   const bioChartData = () => {
     const dates = [...new Set(biologie.map(b => b.date_examen?.slice(0, 10)))].sort();
     const params = [...new Set(biologie.map(b => b.parametre))].slice(0, 3);
@@ -115,12 +142,16 @@ export default function AnalysesBiologie() {
                 </div>
             </div>
             <div style={{ display: 'flex', gap: 12 }}>
-                <button onClick={() => setShowRequestForm(true)} style={{ padding: '12px 24px', borderRadius: 12, background: 'white', border: '1.5px solid #e2e8f0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
-                    NOUVELLE DEMANDE LABO
-                </button>
-                <button onClick={() => setShowForm(true)} style={{ padding: '12px 24px', borderRadius: 12, background: '#0f172a', color: 'white', border: 'none', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
-                    + SAISIE RÉSULTAT
-                </button>
+                {!isLaboratoire && (
+                  <button onClick={() => setShowRequestForm(true)} style={{ padding: '12px 24px', borderRadius: 12, background: 'white', border: '1.5px solid #e2e8f0', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                      NOUVELLE DEMANDE LABO
+                  </button>
+                )}
+                {!isLaboratoire && (
+                  <button onClick={() => setShowForm(true)} style={{ padding: '12px 24px', borderRadius: 12, background: '#0f172a', color: 'white', border: 'none', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>
+                      + SAISIE RÉSULTAT
+                  </button>
+                )}
             </div>
           </div>
 
@@ -195,6 +226,89 @@ export default function AnalysesBiologie() {
           </div>
         )}
         </div>
+
+        {/* ── Demande Labo Modal ── */}
+        {showRequestForm && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ background: 'white', borderRadius: 24, padding: 36, width: '100%', maxWidth: 640, maxHeight: '90vh', overflowY: 'auto', boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 28 }}>
+                <div>
+                  <h2 style={{ fontSize: 20, fontWeight: 900, color: '#0f172a', margin: 0 }}>Nouvelle Demande Labo</h2>
+                  <p style={{ color: '#64748b', fontSize: 13, margin: '4px 0 0' }}>Patient : <strong>{selectedPatient.prenom} {selectedPatient.nom}</strong></p>
+                </div>
+                <button onClick={() => { setShowRequestForm(false); setRequestData({ labo_id: '', analyses_demandees: [], notes_labo: '' }); }} style={{ background: '#f1f5f9', border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
+              </div>
+
+              {/* Labo selector */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 12, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 8 }}>Laboratoire *</label>
+                <select value={requestData.labo_id} onChange={e => setRequestData(p => ({ ...p, labo_id: e.target.value }))} style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 14, fontWeight: 600, outline: 'none' }}>
+                  <option value=''>-- Sélectionner un laboratoire --</option>
+                  {labos.map(l => <option key={l.id} value={l.id}>{l.prenom} {l.nom}</option>)}
+                </select>
+              </div>
+
+              {/* Analyses checklist */}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 12, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 12 }}>Analyses à réaliser *</label>
+                {Object.entries(ANALYSES_CATEGORIES).map(([cat, items]) => (
+                  <div key={cat} style={{ marginBottom: 16 }}>
+                    <div style={{ fontSize: 11, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8 }}>{cat}</div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                      {items.map(item => {
+                        const checked = requestData.analyses_demandees.includes(item);
+                        return (
+                          <button key={item} onClick={() => toggleAnalyse(item)} style={{ padding: '6px 14px', borderRadius: 10, border: `1.5px solid ${checked ? '#3b82f6' : '#e2e8f0'}`, background: checked ? '#eff6ff' : 'white', color: checked ? '#1d4ed8' : '#475569', fontSize: 12, fontWeight: 700, cursor: 'pointer', transition: 'all 0.15s' }}>
+                            {checked ? '✓ ' : ''}{item}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
+                ))}
+              </div>
+
+              {/* Notes */}
+              <div style={{ marginBottom: 28 }}>
+                <label style={{ fontSize: 12, fontWeight: 800, color: '#64748b', textTransform: 'uppercase', letterSpacing: 0.5, display: 'block', marginBottom: 8 }}>Note clinique (optionnelle)</label>
+                <textarea value={requestData.notes_labo} onChange={e => setRequestData(p => ({ ...p, notes_labo: e.target.value }))} rows={3} placeholder='Instructions ou contexte clinique pour le laboratoire...' style={{ width: '100%', padding: '12px 16px', borderRadius: 12, border: '1.5px solid #e2e8f0', fontSize: 13, resize: 'vertical', outline: 'none', boxSizing: 'border-box' }} />
+              </div>
+
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button onClick={() => { setShowRequestForm(false); setRequestData({ labo_id: '', analyses_demandees: [], notes_labo: '' }); }} style={{ padding: '12px 24px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Annuler</button>
+                <button onClick={handleCreateRequest} style={{ padding: '12px 24px', borderRadius: 12, background: '#0f172a', color: 'white', border: 'none', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Envoyer la demande →</button>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {/* ── Add Biologie Modal ── */}
+        {showForm && (
+          <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.45)', zIndex: 1000, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20 }}>
+            <div style={{ background: 'white', borderRadius: 24, padding: 36, width: '100%', maxWidth: 520, boxShadow: '0 20px 60px rgba(0,0,0,0.15)' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+                <h2 style={{ fontSize: 18, fontWeight: 900, color: '#0f172a', margin: 0 }}>Saisie Résultat Biologie</h2>
+                <button onClick={() => setShowForm(false)} style={{ background: '#f1f5f9', border: 'none', borderRadius: 10, width: 36, height: 36, cursor: 'pointer', fontSize: 18, color: '#64748b' }}>✕</button>
+              </div>
+              {[['date_examen','Date','date'],['type_examen','Type examen','text'],['parametre','Paramètre','text'],['valeur','Valeur','text'],['unite','Unité','text'],['valeur_normale','Valeur normale','text']].map(([k,l,t]) => (
+                <div key={k} style={{ marginBottom: 16 }}>
+                  <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 6 }}>{l}</label>
+                  <input type={t} value={formData[k]||''} onChange={e => setFormData(p=>({...p,[k]:e.target.value}))} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13, boxSizing: 'border-box', outline: 'none' }} />
+                </div>
+              ))}
+              <div style={{ marginBottom: 24 }}>
+                <label style={{ fontSize: 12, fontWeight: 700, color: '#64748b', display: 'block', marginBottom: 6 }}>Interprétation</label>
+                <select value={formData.interpretation||'Normal'} onChange={e=>setFormData(p=>({...p,interpretation:e.target.value}))} style={{ width: '100%', padding: '10px 14px', borderRadius: 10, border: '1.5px solid #e2e8f0', fontSize: 13 }}>
+                  {['Normal','Bas','Haut','Critique'].map(v=><option key={v}>{v}</option>)}
+                </select>
+              </div>
+              <div style={{ display: 'flex', gap: 12, justifyContent: 'flex-end' }}>
+                <button onClick={() => setShowForm(false)} style={{ padding: '11px 22px', borderRadius: 12, border: '1.5px solid #e2e8f0', background: 'white', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Annuler</button>
+                <button onClick={handleAddBiologie} style={{ padding: '11px 22px', borderRadius: 12, background: '#0f172a', color: 'white', border: 'none', fontSize: 13, fontWeight: 800, cursor: 'pointer' }}>Enregistrer</button>
+              </div>
+            </div>
+          </div>
+        )}
       </Layout>
     );
   }

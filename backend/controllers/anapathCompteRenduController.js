@@ -1,5 +1,6 @@
 const { v4: uuidv4 } = require('uuid');
 const { pool } = require('../config/database');
+const { createNotification } = require('./notificationsController');
 
 // GET /anapath/:anapathId/compte-rendu
 const getByAnapath = async (req, res) => {
@@ -111,6 +112,25 @@ const valider = async (req, res) => {
        WHERE id = ?`,
       [n(observation), n(diagnostic), n(conclusion), req.user.id, req.params.id]
     );
+
+    // Notify the referring doctor
+    try {
+      const [crData] = await pool.execute(
+        `SELECT cc.medecin_traitant, cc.created_by AS case_creator, a.created_by AS anapath_creator, p.nom, p.prenom 
+         FROM comptes_rendus_anapath cr
+         JOIN anapath a ON cr.anapath_id = a.id
+         JOIN cancer_cases cc ON cr.case_id = cc.id
+         JOIN patients p ON cr.patient_id = p.id
+         WHERE cr.id = ?`,
+        [req.params.id]
+      );
+      const recipientId = crData.length > 0 ? (crData[0].medecin_traitant || crData[0].case_creator || crData[0].anapath_creator) : null;
+      if (recipientId) {
+        const io = req.app.get('io');
+        const msg = `Le compte rendu ANAPATH pour ${crData[0].nom} ${crData[0].prenom} a été validé.`;
+        await createNotification(recipientId, 'Compte Rendu Validé', msg, `/cas-cancer`, io);
+      }
+    } catch (err) { console.error('Erreur notification validation cr:', err); }
 
     res.json({ message: 'Compte rendu validé avec succès' });
   } catch (e) {

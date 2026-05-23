@@ -49,6 +49,10 @@ export default function AnapathPrelevements() {
   const [error, setError] = useState(null);
   const [search, setSearch] = useState('');
   const [typeFilter, setTypeFilter] = useState('');
+  const [statutFilter, setStatutFilter] = useState('');
+  const [dateFilter, setDateFilter] = useState('');
+  const [notifications, setNotifications] = useState([]);
+  const [showNotifications, setShowNotifications] = useState(false);
   const [sortField, setSortField] = useState('date_prelevement');
   const [sortDir, setSortDir] = useState('desc');
 
@@ -59,6 +63,8 @@ export default function AnapathPrelevements() {
       const params = new URLSearchParams();
       if (search.trim()) params.append('search', search.trim());
       if (typeFilter) params.append('type_prelevement', typeFilter);
+      if (statutFilter) params.append('statut', statutFilter);
+      if (dateFilter) params.append('date', dateFilter);
       const res = await api.get(`/anapath/prelevements?${params.toString()}`);
       setPrelevements(res.data);
     } catch (e) {
@@ -66,7 +72,14 @@ export default function AnapathPrelevements() {
     } finally {
       setLoading(false);
     }
-  }, [search, typeFilter]);
+  }, [search, typeFilter, statutFilter, dateFilter]);
+
+  useEffect(() => {
+    api.get('/notifications').then(res => {
+      // Filtrer éventuellement pour les notifications anapath si désiré, ou tout garder.
+      setNotifications(res.data);
+    }).catch(console.error);
+  }, []);
 
   useEffect(() => {
     const timer = setTimeout(fetchPrelevements, 300);
@@ -141,15 +154,96 @@ export default function AnapathPrelevements() {
               </div>
             </div>
           </div>
-          <div style={{
-            background: 'rgba(255,255,255,0.12)', borderRadius: 12,
-            padding: '12px 20px', textAlign: 'center', backdropFilter: 'blur(10px)'
-          }}>
+          
+          <div style={{ display: 'flex', gap: 16, alignItems: 'center' }}>
+            <button
+              id="btn-prelevements-historique"
+              onClick={() => navigate('/anapath/historique')}
+              style={{
+                background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 12,
+                padding: '10px 16px', color: 'white', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(10px)',
+                fontWeight: 600,
+                transition: 'background 0.2s'
+              }}
+              onMouseEnter={e => e.currentTarget.style.background = 'rgba(255,255,255,0.2)'}
+              onMouseLeave={e => e.currentTarget.style.background = 'rgba(255,255,255,0.12)'}
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
+                <polyline points="14 2 14 8 20 8" />
+              </svg>
+              Historique
+            </button>
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowNotifications(!showNotifications)}
+                style={{
+                  background: 'rgba(255,255,255,0.12)', border: 'none', borderRadius: 12,
+                  padding: '10px 16px', color: 'white', cursor: 'pointer',
+                  display: 'flex', alignItems: 'center', gap: 8, backdropFilter: 'blur(10px)',
+                  fontWeight: 600
+                }}
+              >
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.73 21a2 2 0 0 1-3.46 0" /></svg>
+                Notifications
+                {notifications.filter(n => !n.lu).length > 0 && (
+                  <span style={{ background: '#ef4444', color: 'white', padding: '2px 8px', borderRadius: 12, fontSize: 12 }}>
+                    {notifications.filter(n => !n.lu).length}
+                  </span>
+                )}
+              </button>
+              
+              {showNotifications && (
+                <div style={{
+                  position: 'absolute', top: '100%', right: 0, marginTop: 8, width: 320,
+                  background: 'white', borderRadius: 12, boxShadow: '0 10px 25px rgba(0,0,0,0.1)',
+                  zIndex: 50, border: '1px solid #e2e8f0', overflow: 'hidden'
+                }}>
+                  <div style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', background: '#f8fafc', fontWeight: 700, color: '#1e293b' }}>
+                    Vos Notifications
+                  </div>
+                  <div style={{ maxHeight: 300, overflowY: 'auto', textAlign: 'left' }}>
+                    {notifications.length === 0 ? (
+                      <div style={{ padding: 24, textAlign: 'center', color: '#94a3b8', fontSize: 13 }}>Aucune notification.</div>
+                    ) : (
+                      notifications.map(n => (
+                        <div key={n.id} style={{ padding: '12px 16px', borderBottom: '1px solid #f1f5f9', opacity: n.lu ? 0.6 : 1 }}>
+                          <div style={{ fontWeight: 600, fontSize: 13, color: '#0f172a' }}>{n.titre}</div>
+                          <div style={{ fontSize: 12, color: '#64748b', marginTop: 4 }}>{n.message}</div>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 8, alignItems: 'center' }}>
+                            <span style={{ fontSize: 11, color: '#94a3b8' }}>{new Date(n.created_at).toLocaleString('fr-FR')}</span>
+                            {!n.lu && (
+                              <button
+                                onClick={() => {
+                                  api.put(`/notifications/${n.id}/read`).then(() => {
+                                    setNotifications(prev => prev.map(notif => notif.id === n.id ? { ...notif, lu: true } : notif));
+                                  });
+                                }}
+                                style={{ background: 'none', border: 'none', color: '#3b82f6', fontSize: 11, cursor: 'pointer', padding: 0 }}
+                              >
+                                Marquer lu
+                              </button>
+                            )}
+                          </div>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div style={{
+              background: 'rgba(255,255,255,0.12)', borderRadius: 12,
+              padding: '12px 20px', textAlign: 'center', backdropFilter: 'blur(10px)'
+            }}>
             <div style={{ color: 'white', fontSize: 28, fontWeight: 800, lineHeight: 1 }}>
               {prelevements.length}
             </div>
             <div style={{ color: 'rgba(255,255,255,0.6)', fontSize: 12, fontWeight: 600, marginTop: 4 }}>
               PRÉLÈVEMENT{prelevements.length !== 1 ? 'S' : ''}
+            </div>
             </div>
           </div>
         </div>
@@ -171,7 +265,7 @@ export default function AnapathPrelevements() {
               id="search-prelevements"
               value={search}
               onChange={e => setSearch(e.target.value)}
-              placeholder="Rechercher par nom, prénom ou matricule..."
+              placeholder="Nom, matricule, diagnostic..."
               style={{
                 width: '100%', paddingLeft: 40, paddingRight: 16, height: 42,
                 border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13.5,
@@ -212,9 +306,56 @@ export default function AnapathPrelevements() {
             </svg>
           </div>
 
-          {(search || typeFilter) && (
+          {/* Statut filter */}
+          <div style={{ position: 'relative' }}>
+            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"
+              style={{ position: 'absolute', left: 11, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+              <circle cx="12" cy="12" r="10" />
+              <polyline points="12 6 12 12 16 14" />
+            </svg>
+            <select
+              id="filter-statut"
+              value={statutFilter}
+              onChange={e => setStatutFilter(e.target.value)}
+              style={{
+                height: 42, paddingLeft: 34, paddingRight: 36,
+                border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13,
+                fontFamily: 'Sora, sans-serif', background: '#f8fafc',
+                outline: 'none', cursor: 'pointer', color: '#334155',
+                appearance: 'none', minWidth: 160
+              }}
+            >
+              <option value="">Tous les statuts</option>
+              <option value="en_attente">En attente</option>
+              <option value="brouillon">Brouillon</option>
+              <option value="validé">Validé</option>
+            </select>
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#94a3b8" strokeWidth="2"
+              style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', pointerEvents: 'none' }}>
+              <path d="M6 9l6 6 6-6" />
+            </svg>
+          </div>
+
+          {/* Date filter */}
+          <div style={{ position: 'relative' }}>
+            <input
+              type="date"
+              id="filter-date"
+              value={dateFilter}
+              onChange={e => setDateFilter(e.target.value)}
+              style={{
+                height: 42, paddingLeft: 12, paddingRight: 12,
+                border: '1.5px solid #e2e8f0', borderRadius: 10, fontSize: 13,
+                fontFamily: 'Sora, sans-serif', background: '#f8fafc',
+                outline: 'none', cursor: 'pointer', color: '#334155',
+                minWidth: 140
+              }}
+            />
+          </div>
+
+          {(search || typeFilter || statutFilter || dateFilter) && (
             <button
-              onClick={() => { setSearch(''); setTypeFilter(''); }}
+              onClick={() => { setSearch(''); setTypeFilter(''); setStatutFilter(''); setDateFilter(''); }}
               style={{
                 height: 42, padding: '0 16px', borderRadius: 10, border: '1.5px solid #fecaca',
                 background: '#fef2f2', color: '#dc2626', cursor: 'pointer', fontSize: 13,

@@ -154,9 +154,13 @@ const {
   getEffetsSecondaires, createEffetSecondaire, resolveEffet,
   getChimioSeances, createChimioSeance,
   getDocumentsByPatient, createDocument,
-  getAnapathByPatient, getPrelevementsList, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient
+  getAnapathByPatient, getPrelevementsList, getTraitementsByPatient, getConsultationsByPatient, getImagerieByPatient, getEffetsByPatient,
+  getAnapathStats,
+  getComptesRendusList
 } = require('../controllers/medicalController');
 
+router.get('/anapath/stats', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getAnapathStats);
+router.get('/anapath/historique', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getComptesRendusList);
 router.get('/anapath/prelevements', authMiddleware, requireRole('admin', 'medecin', 'anapath'), getPrelevementsList);
 router.get('/anapath/patient/:patientId', authMiddleware, getAnapathByPatient);
 
@@ -209,7 +213,7 @@ router.use('/pharmacie', authMiddleware, pharmacieRoutes);
 // Lab requests
 const { createRequest, getRequestsByCase, getRequestsForLabo, uploadPdf, getLabRequestsByPatient } = require('../controllers/labRequestsController');
 const uploadLab = require('../middleware/upload');
-router.post('/lab-requests', authMiddleware, requireRole('admin', 'medecin', 'laboratoire'), createRequest);
+router.post('/lab-requests', authMiddleware, requireRole('admin', 'medecin'), createRequest);
 router.get('/lab-requests/case/:caseId', authMiddleware, getRequestsByCase);
 router.get('/lab-requests/patient/:patientId', authMiddleware, getLabRequestsByPatient);
 router.get('/lab-requests/labo', authMiddleware, requireRole('laboratoire', 'admin', 'medecin'), getRequestsForLabo);
