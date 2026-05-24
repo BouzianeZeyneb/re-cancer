@@ -5,8 +5,9 @@ import { io } from 'socket.io-client';
 import axios from 'axios';
 import toast from 'react-hot-toast';
 
-const API = 'http://localhost:5000/api';
-const SOCKET_URL = 'http://localhost:5000';
+import { API_URL, BASE_URL } from '../utils/api';
+const API = API_URL;
+const SOCKET_URL = BASE_URL;
 
 const roleLabel = { admin: 'Admin', medecin: 'Médecin', laboratoire: 'Laboratoire', epidemiologie: 'Épidémiologie' };
 const roleColor = { admin: '#e63946', medecin: '#0f4c81', laboratoire: '#7c3aed', epidemiologie: '#2d6a4f' };

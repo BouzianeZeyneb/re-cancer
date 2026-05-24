@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import api from '../utils/api';
+import api, { BASE_URL } from '../utils/api';
 import { io } from 'socket.io-client';
 import { useTranslation } from 'react-i18next';
 
@@ -66,7 +66,7 @@ export default function Layout({ children, title }) {
   useEffect(() => {
     if (user) {
       api.get('/notifications').then(res => setNotifications(res.data)).catch(console.error);
-      const socket = io('http://localhost:5000');
+      const socket = io(BASE_URL);
       socket.emit('join_user', user.id);
       socket.on('new_notification', (notif) => {
         setNotifications(prev => [notif, ...prev]);

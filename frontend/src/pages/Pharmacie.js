@@ -6,10 +6,8 @@ import {
 } from 'lucide-react';
 import { io } from 'socket.io-client';
 import Layout from '../components/Layout';
-import { 
-  getPharmacyStocks, getPharmacyStats, createPharmacyDrug, updatePharmacyDrug, deletePharmacyDrug,
-  getPendingValidations, updatePharmacyValidation, getPharmacyAlternatives 
-} from '../utils/api';
+import api, { BASE_URL, getPharmacyStocks, getPharmacyStats, createPharmacyDrug, updatePharmacyDrug, deletePharmacyDrug,
+  getPendingValidations, updatePharmacyValidation, getPharmacyAlternatives } from '../utils/api';
 import toast from 'react-hot-toast';
 
 export default function Pharmacie() {
@@ -41,7 +39,7 @@ export default function Pharmacie() {
 
   // Socket setup with cleanup to prevent memory leaks
   useEffect(() => {
-    const socket = io('http://localhost:5000');
+    const socket = io(BASE_URL);
     
     socket.on('pharmacy_update', () => {
       loadData(false); // Silent background refresh

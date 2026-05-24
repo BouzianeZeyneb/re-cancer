@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
-import api from '../utils/api';
+import api, { BASE_URL } from '../utils/api';
 import toast from 'react-hot-toast';
 import { Line } from 'react-chartjs-2';
 import { Chart as ChartJS, CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend } from 'chart.js';
@@ -216,7 +216,7 @@ export default function AnalysesBiologie() {
                                 <div style={{ fontSize: 13, fontWeight: 700, color: '#0f172a', marginBottom: 4 }}>Labo: {r.labo_nom}</div>
                                 <div style={{ fontSize: 12, color: '#64748b' }}>{JSON.parse(r.analyses_demandees || '[]').join(', ')}</div>
                                 {r.fichier_pdf && (
-                                    <a href={`http://localhost:5000${r.fichier_pdf}`} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 12, textAlign: 'center', padding: '8px', background: '#0f172a', color: 'white', fontSize: 11, fontWeight: 800, borderRadius: 8, textDecoration: 'none' }}>VOIR RÉSULTAT PDF</a>
+                                    <a href={`${BASE_URL}${r.fichier_pdf}`} target="_blank" rel="noreferrer" style={{ display: 'block', marginTop: 12, textAlign: 'center', padding: '8px', background: '#0f172a', color: 'white', fontSize: 11, fontWeight: 800, borderRadius: 8, textDecoration: 'none' }}>VOIR RÉSULTAT PDF</a>
                                 )}
                             </div>
                         ))}

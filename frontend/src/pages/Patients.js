@@ -5,7 +5,7 @@ import { getPatients } from '../utils/api';
 import api from '../utils/api';
 import { useAuth } from '../context/AuthContext';
 import toast from 'react-hot-toast';
-import { Search, Plus, Filter, Download, Trash2, ChevronRight, User, MapPin, Activity, Calendar, MoreHorizontal, FileText, Upload, CheckCircle2, ChevronLeft } from 'lucide-react';
+import { Search, Plus, Filter, Download, Trash2, Edit3, ChevronRight, User, MapPin, Activity, Calendar, MoreHorizontal, FileText, Upload, CheckCircle2, ChevronLeft } from 'lucide-react';
 import { format, parseISO } from 'date-fns';
 
 export default function Patients() {
@@ -238,7 +238,10 @@ export default function Patients() {
                       </td>
                       <td style={{ padding: '24px 32px', textAlign: 'right' }}>
                         <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end' }}>
-                          <button onClick={(e) => openDeleteModal(e, p)} style={{ width: 40, height: 40, borderRadius: 12, background: '#fff1f2', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'}>
+                          <button onClick={(e) => { e.stopPropagation(); navigate(`/patients/${p.id}/modifier`); }} style={{ width: 40, height: 40, borderRadius: 12, background: '#eff6ff', border: 'none', cursor: 'pointer', color: '#2563eb', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
+                            <Edit3 size={18} />
+                          </button>
+                          <button onClick={(e) => openDeleteModal(e, p)} style={{ width: 40, height: 40, borderRadius: 12, background: '#fff1f2', border: 'none', cursor: 'pointer', color: '#ef4444', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s' }} onMouseEnter={e => e.currentTarget.style.transform = 'scale(1.1)'} onMouseLeave={e => e.currentTarget.style.transform = 'scale(1)'}>
                             <Trash2 size={18} />
                           </button>
                           <button style={{ width: 40, height: 40, borderRadius: 12, background: '#f8fafc', border: '1.5px solid #f1f5f9', cursor: 'pointer', color: '#0f172a', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>

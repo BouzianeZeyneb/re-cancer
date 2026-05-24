@@ -4,7 +4,7 @@ import { useParams, Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import Layout from '../components/Layout';
 import { getPatient, getCasesByPatient } from '../utils/api';
-import api from '../utils/api';
+import api, { BASE_URL } from '../utils/api';
 import { differenceInYears, parseISO, format } from 'date-fns';
 import { QRCodeCanvas } from 'qrcode.react';
 import toast from 'react-hot-toast';
@@ -15,7 +15,7 @@ import {
 } from 'chart.js';
 import zoomPlugin from 'chartjs-plugin-zoom';
 import 'hammerjs';
-import { Heart, Droplets, Thermometer, Wind, Activity, Edit3, Printer, Share2, FileDown, Calendar as CalendarIcon, ArrowLeft, MoreHorizontal, User, FileText, CheckCircle2 } from 'lucide-react';
+import { Heart, Droplets, Thermometer, Wind, Activity, Edit3, Trash2, Printer, Share2, FileDown, Calendar as CalendarIcon, ArrowLeft, MoreHorizontal, User, FileText, CheckCircle2 } from 'lucide-react';
 import { useTranslation } from 'react-i18next';
 
 ChartJS.register(CategoryScale, LinearScale, PointElement, LineElement, Title, Tooltip, Legend, zoomPlugin);
@@ -516,9 +516,14 @@ export default function PatientDetail() {
               <ArrowLeft size={16} /> Retour
             </button>
             <span style={{ fontSize: 14, fontWeight: 700, color: '#0f172a' }}>Fiche Patient</span>
-            <button onClick={() => setShowDeleteModal(true)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
-              Supprimer
-            </button>
+            <div style={{ display: 'flex', gap: 16 }}>
+              <button onClick={() => navigate(`/patients/${id}/modifier`)} style={{ background: 'transparent', border: 'none', color: '#2563eb', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Edit3 size={16} /> Modifier
+              </button>
+              <button onClick={() => setShowDeleteModal(true)} style={{ background: 'transparent', border: 'none', color: '#ef4444', fontSize: 13, fontWeight: 600, cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
+                <Trash2 size={16} /> Supprimer
+              </button>
+            </div>
           </div>
 
           <div style={{ display: 'flex', gap: 24, alignItems: 'center' }}>
@@ -865,7 +870,7 @@ export default function PatientDetail() {
                         </div>
                         <div style={{ textAlign: 'right' }}>
                           {req.statut === 'Terminée' && req.fichier_pdf ? (
-                            <a href={`http://localhost:5000${req.fichier_pdf}`} target="_blank" rel="noreferrer"
+                            <a href={`${BASE_URL}${req.fichier_pdf}`} target="_blank" rel="noreferrer"
                               style={{ display: 'inline-block', padding: '8px 16px', background: '#eff6ff', color: '#2563eb', fontWeight: 700, fontSize: 13, borderRadius: 8, textDecoration: 'none' }}>
                               Voir les résultats (PDF)
                             </a>

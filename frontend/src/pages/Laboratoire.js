@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
-import api from '../utils/api';
+import api, { BASE_URL } from '../utils/api';
 import toast from 'react-hot-toast';
 import { format, parseISO } from 'date-fns';
 import { fr } from 'date-fns/locale';
@@ -123,7 +123,7 @@ export default function Laboratoire() {
                              <input type="file" accept=".pdf" hidden disabled={uploadingId === req.id} onChange={(e) => handleFileUpload(req.id, e.target.files[0])} />
                         </label>
                     ) : (
-                        <a href={`http://localhost:5000${req.fichier_pdf}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#f8fafc', border: '1.5px solid #e2e8f0', color: '#0f172a', borderRadius: 12, fontSize: 13, fontWeight: 800, textDecoration: 'none' }}>
+                        <a href={`${BASE_URL}${req.fichier_pdf}`} target="_blank" rel="noreferrer" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '12px 24px', background: '#f8fafc', border: '1.5px solid #e2e8f0', color: '#0f172a', borderRadius: 12, fontSize: 13, fontWeight: 800, textDecoration: 'none' }}>
                             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/></svg>
                             VOIR ARCHIVE
                         </a>

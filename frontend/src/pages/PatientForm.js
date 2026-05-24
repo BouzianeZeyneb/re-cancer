@@ -242,15 +242,18 @@ export default function PatientForm() {
     if (isEdit) {
       getPatient(id).then(r => {
         const p = r.data;
-        setForm({
-          nom: p.nom || '', prenom: p.prenom || '', date_naissance: p.date_naissance?.slice(0, 10) || '',
-          sexe: p.sexe || 'M', telephone: p.telephone || '',
-          num_carte_nationale: p.num_carte_nationale || '', num_carte_chifa: p.num_carte_chifa || '',
-          adresse: p.adresse || '', commune: p.commune || '', wilaya: p.wilaya || '',
-          assurance: p.assurance || '', groupe_sanguin: p.groupe_sanguin || '',
-          consommation_tabac: p.consommation_tabac || 'Inconnu', consommation_alcool: p.consommation_alcool || 'Inconnu',
-          activite_sportive: Boolean(p.activite_sportive),
-          autres_medicaments: p.autres_medicaments || '', autres_facteurs_risque: p.autres_facteurs_risque || ''
+        setForm(prev => {
+          const merged = { ...prev, ...p };
+          if (p.date_naissance) merged.date_naissance = p.date_naissance.slice(0, 10);
+          merged.activite_sportive = Boolean(p.activite_sportive);
+          
+          // Ensure arrays remain arrays
+          if (typeof merged.langues_parlees === 'string') {
+            try { merged.langues_parlees = JSON.parse(merged.langues_parlees); } catch(e) { merged.langues_parlees = []; }
+          }
+          if (!Array.isArray(merged.langues_parlees)) merged.langues_parlees = [];
+          
+          return merged;
         });
         api.get(`/valeurs-dynamiques/${id}`).then(r => {
           const vals = {};

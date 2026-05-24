@@ -43,6 +43,8 @@ const getRoleHome = (role) => {
     case 'anapath': return '/anapath/dashboard';
     case 'medecin': return '/';
     case 'admin': return '/';
+    case 'epidemio':
+    case 'epidemiologiste': return '/statistiques';
     default: return '/patients';
   }
 };
@@ -71,10 +73,10 @@ function AppRoutes() {
     <Routes>
       <Route path="/login" element={user ? <Navigate to="/" replace /> : <Login />} />
       <Route path="/patient-forms/:id" element={<PatientFormulairePublic />} />
-      <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'epidemiologiste', 'statisticien', 'pharmacien', 'pharmacie']}><Dashboard /></ProtectedRoute>} />
+      <Route path="/" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'epidemiologiste', 'epidemio', 'statisticien', 'pharmacien', 'pharmacie']}><Dashboard /></ProtectedRoute>} />
 
       {/* Patients: Admin, Medecin, Labo, Anapath, Pharmacie, Epidemio */}
-      <Route path="/patients" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath', 'pharmacie', 'pharmacien', 'epidemiologiste']}><Patients /></ProtectedRoute>} />
+      <Route path="/patients" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath', 'pharmacie', 'pharmacien', 'epidemiologiste', 'epidemio']}><Patients /></ProtectedRoute>} />
       <Route path="/patients/nouveau" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><PatientForm /></ProtectedRoute>} />
       <Route path="/patients/:id" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath', 'pharmacie', 'pharmacien']}><PatientDetail /></ProtectedRoute>} />
       <Route path="/patients/:id/modifier" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><PatientForm /></ProtectedRoute>} />
@@ -86,15 +88,15 @@ function AppRoutes() {
 
       {/* Admin uniquement / Modules SIG / Doublons pour Medecin */}
       <Route path="/doublons" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><Doublons /></ProtectedRoute>} />
-      <Route path="/carte-sig" element={<ProtectedRoute allowedRoles={['admin', 'epidemiologiste', 'statisticien']}><CarteSIG /></ProtectedRoute>} />
+      <Route path="/carte-sig" element={<ProtectedRoute allowedRoles={['admin', 'epidemiologiste', 'epidemio', 'statisticien']}><CarteSIG /></ProtectedRoute>} />
       <Route path="/utilisateurs" element={<ProtectedRoute allowedRoles={['admin']}><Utilisateurs /></ProtectedRoute>} />
       <Route path="/audit" element={<ProtectedRoute allowedRoles={['admin', 'pharmacie']}><AuditLogs /></ProtectedRoute>} />
       <Route path="/parametres" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire', 'anapath', 'pharmacie', 'pharmacien']}><AdminSettings /></ProtectedRoute>} />
 
-      <Route path="/validations" element={<ProtectedRoute allowedRoles={['admin', 'epidemiologiste']}><Validations /></ProtectedRoute>} />
+      <Route path="/validations" element={<ProtectedRoute allowedRoles={['admin', 'epidemiologiste', 'epidemio']}><Validations /></ProtectedRoute>} />
 
       {/* Partagés */}
-      <Route path="/statistiques" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'epidemiologiste', 'statisticien']}><Statistiques /></ProtectedRoute>} />
+      <Route path="/statistiques" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'epidemiologiste', 'epidemio', 'statisticien']}><Statistiques /></ProtectedRoute>} />
       <Route path="/laboratoire" element={<ProtectedRoute allowedRoles={['admin', 'medecin', 'laboratoire']}><Laboratoire /></ProtectedRoute>} />
 
       <Route path="/analyses-biologie" element={<ProtectedRoute allowedRoles={['admin', 'medecin']}><AnalysesBiologie /></ProtectedRoute>} />
