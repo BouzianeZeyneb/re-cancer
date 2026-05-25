@@ -298,10 +298,10 @@ const initDynamicTables = async () => {
         champ_id VARCHAR(36) NOT NULL,
         valeur TEXT,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-        INDEX idx_record (record_id),
         FOREIGN KEY (champ_id) REFERENCES champs_dynamiques(id) ON DELETE CASCADE
       )
     `);
+    try { await conn.execute(`CREATE INDEX IF NOT EXISTS idx_record ON valeurs_dynamiques(record_id)`); } catch(e) {}
 
     // Paramètres globaux (cancers, localités, antécédents, comorbidités, effets indésirables)
     await conn.execute(`
@@ -724,7 +724,7 @@ const initMedicalTables = async () => {
     try { await conn.execute(`ALTER TABLE medicaments_stock ADD COLUMN seuil_rupture INT DEFAULT 0`); } catch (e) { }
     try { await conn.execute(`ALTER TABLE medicaments_stock ADD COLUMN prix DECIMAL(10,2) DEFAULT 0.00`); } catch (e) { }
     try { await conn.execute(`ALTER TABLE medicaments_stock ADD COLUMN date_expiration DATE`); } catch (e) { }
-    try { await conn.execute(`ALTER TABLE medicaments_stock ADD UNIQUE INDEX idx_nom_dci (nom_dci)`); } catch (e) { }
+    try { await conn.execute(`ALTER TABLE medicaments_stock ADD CONSTRAINT idx_nom_dci UNIQUE (nom_dci)`); } catch (e) { }
 
     // Fixed Alternatives Table
     await conn.execute(`
