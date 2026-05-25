@@ -44,13 +44,9 @@ export const deletePatient = (id) => api.delete(`/patients/${id}`);
 export const mergePatients = (sourceId, targetId) => api.post('/patients/merge', { sourceId, targetId });
 export const checkDuplicate = (data) => api.post('/patients/check-duplicate', data);
 
-// Public endpoints — use the browser's current hostname so QR links work from phones on the LAN
-const getPublicApiUrl = () => {
-  const host = window.location.hostname; // e.g. "10.157.34.225" on the phone
-  return `http://${host}:5000/api`;
-};
-export const getPublicPatient = (id) => axios.get(`${getPublicApiUrl()}/public/patients/${id}`);
-export const submitPublicHabitudes = (id, data) => axios.put(`${getPublicApiUrl()}/public/patients/${id}/habitudes`, data);
+// Public endpoints
+export const getPublicPatient = (id) => axios.get(`${API_URL}/public/patients/${id}`);
+export const submitPublicHabitudes = (id, data) => axios.put(`${API_URL}/public/patients/${id}/habitudes`, data);
 
 // Cases
 export const getCases = (params) => api.get('/cases', { params });

@@ -46,7 +46,7 @@ export default function RCPDetail() {
   useEffect(() => {
     if (id && user) {
       fetchMessages();
-      const socket = io('http://localhost:5000');
+      const socket = io(require('../utils/api').BASE_URL);
       socket.emit('join_rcp', id);
       socket.on('new_rcp_message', (msg) => {
         setMessages(prev => [...prev, msg]);
