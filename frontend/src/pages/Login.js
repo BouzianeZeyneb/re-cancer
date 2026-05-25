@@ -124,13 +124,13 @@ export default function Login() {
               <div style={{ fontSize: 10, fontWeight: 900, color: '#64748b', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: 16 }}>Test Environments</div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
-                  { role: 'Admin', email: 'admin@registre-cancer.dz', pw: 'admin123' },
+                  { role: 'Admin', email: 'admin@registre-cancer.dz', pw: 'Admin@2024' },
                   { role: 'Médecin', email: 'medecin@hospital.dz', pw: 'password123' },
                   { role: 'Anapath', email: 'anapath@hospital.dz', pw: 'password123' },
                   { role: 'Laboratoire', email: 'labo@hospital.dz', pw: 'password123' },
-                  { role: 'Épidémiologiste', email: 'epidemio@registre-cancer.dz', pw: 'Epidemio2024!' },
-                  { role: 'Statisticien', email: 'stats@registre-cancer.dz', pw: 'Stats2024!' },
-                  { role: 'Pharmacien', email: 'pharmacie@hospital.dz', pw: 'Pharmacie2024!' }
+                  { role: 'Épidémiologiste', email: 'epidemio@registre-cancer.dz', pw: 'password123' },
+                  { role: 'Statisticien', email: 'stats@registre-cancer.dz', pw: 'password123' },
+                  { role: 'Pharmacien', email: 'pharmacie@hospital.dz', pw: 'password123' }
                 ].map(acc => (
                   <div key={acc.email} onClick={() => setForm({ email: acc.email, password: acc.pw })} style={{ display: 'flex', justifyContent: 'space-between', padding: '12px 20px', background: 'rgba(255,255,255,0.02)', borderRadius: 12, border: '1.5px solid rgba(255,255,255,0.03)', cursor: 'pointer' }}>
                     <span style={{ fontSize: 12, fontWeight: 800, color: '#3b82f6' }}>{acc.role}</span>
