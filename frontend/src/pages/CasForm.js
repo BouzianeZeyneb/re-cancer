@@ -225,8 +225,8 @@ export default function CasForm() {
   const adminLocalites = parametres.filter(p => p.categorie === 'localite').map(p => p.valeur);
   const ALL_CANCER_TYPES = Array.from(new Set([...CANCER_TYPES.filter(t => t !== 'Autre'), ...adminCancers]));
 
-  const currentType = showCustomType ? customType : form.type_cancer;
-  const cancerInfo = CANCER_DATA[currentType] || null;
+  const currentType = showCustomType ? customType : form.sous_type;
+  const cancerInfo = CANCER_DATA[currentType] || CANCER_DATA['Autre'];
   const baseLocalisations = cancerInfo?.localisations || [];
   const ALL_LOCALISATIONS = Array.from(new Set([...baseLocalisations, ...adminLocalites]));
 
@@ -608,35 +608,39 @@ export default function CasForm() {
               </div>
             </div>
 
-            <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: '1fr 1fr 1fr 1fr', gap: 20 }}>
+            <div style={{ marginTop: 28, display: 'grid', gridTemplateColumns: currentType === 'Cancer du Sein' ? '1fr 1fr 1fr 1fr' : '1fr', gap: 20 }}>
                 <div className="form-group">
                     <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Taille Tumeur (cm)</label>
                     <input type="number" step="0.1" className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} placeholder="0.0" value={form.taille_cancer} onChange={e => set('taille_cancer', e.target.value)} />
                 </div>
-                <div className="form-group">
-                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Récepteur Œstrogène (ER)</label>
-                    <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.recepteur_er} onChange={e => set('recepteur_er', e.target.value)}>
-                        <option value="Inconnu">Inconnu</option>
-                        <option value="Positif">Positif (+)</option>
-                        <option value="Négatif">Négatif (-)</option>
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Récepteur Progestérone (PR)</label>
-                    <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.recepteur_pr} onChange={e => set('recepteur_pr', e.target.value)}>
-                        <option value="Inconnu">Inconnu</option>
-                        <option value="Positif">Positif (+)</option>
-                        <option value="Négatif">Négatif (-)</option>
-                    </select>
-                </div>
-                <div className="form-group">
-                    <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>HER2 (Statut IHC)</label>
-                    <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.her2} onChange={e => set('her2', e.target.value)}>
-                        <option value="Inconnu">Inconnu</option>
-                        <option value="Positif">Positif (+)</option>
-                        <option value="Négatif">Négatif (-)</option>
-                    </select>
-                </div>
+                {currentType === 'Cancer du Sein' && (
+                  <>
+                    <div className="form-group">
+                        <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Récepteur Œstrogène (ER)</label>
+                        <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.recepteur_er} onChange={e => set('recepteur_er', e.target.value)}>
+                            <option value="Inconnu">Inconnu</option>
+                            <option value="Positif">Positif (+)</option>
+                            <option value="Négatif">Négatif (-)</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>Récepteur Progestérone (PR)</label>
+                        <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.recepteur_pr} onChange={e => set('recepteur_pr', e.target.value)}>
+                            <option value="Inconnu">Inconnu</option>
+                            <option value="Positif">Positif (+)</option>
+                            <option value="Négatif">Négatif (-)</option>
+                        </select>
+                    </div>
+                    <div className="form-group">
+                        <label className="form-label" style={{ fontSize: 11, fontWeight: 900, textTransform: 'uppercase', color: '#94a3b8' }}>HER2 (Statut IHC)</label>
+                        <select className="form-control" style={{ height: 48, borderRadius: 12, fontWeight: 700 }} value={form.her2} onChange={e => set('her2', e.target.value)}>
+                            <option value="Inconnu">Inconnu</option>
+                            <option value="Positif">Positif (+)</option>
+                            <option value="Négatif">Négatif (-)</option>
+                        </select>
+                    </div>
+                  </>
+                )}
             </div>
         </div>
 

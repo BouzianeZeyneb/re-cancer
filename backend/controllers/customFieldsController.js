@@ -102,7 +102,7 @@ exports.saveValue = async (req, res) => {
     const uuid = uuidv4();
     await pool.execute(
       `INSERT INTO valeurs_dynamiques (id, champ_id, record_id, valeur, created_at) VALUES (?,?,?,?, CURRENT_TIMESTAMP)
-       ON DUPLICATE KEY UPDATE valeur = VALUES(valeur)`,
+       ON CONFLICT (id) DO UPDATE SET valeur = EXCLUDED.valeur`,
       [uuid, id, recordId, valeur]
     );
     res.json({ message: 'Valeur enregistrée' });

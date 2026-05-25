@@ -329,8 +329,8 @@ router.post('/validations/:caseId/approuver', authMiddleware, requireRole('admin
     await pool.execute(
       `INSERT INTO validations_epidemio (case_id, statut, commentaire, validated_by, validated_at)
        VALUES (?, 'approuve', ?, ?, NOW())
-       ON DUPLICATE KEY UPDATE statut='approuve', commentaire=?, validated_by=?, validated_at=NOW()`,
-      [req.params.caseId, commentaire || null, userId, commentaire || null, userId]
+       ON CONFLICT (case_id) DO UPDATE SET statut='approuve', commentaire=EXCLUDED.commentaire, validated_by=EXCLUDED.validated_by, validated_at=NOW()`,
+      [req.params.caseId, commentaire || null, userId]
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ message: e.message }); }
@@ -344,8 +344,8 @@ router.post('/validations/:caseId/rejeter', authMiddleware, requireRole('admin',
     await pool.execute(
       `INSERT INTO validations_epidemio (case_id, statut, commentaire, validated_by, validated_at)
        VALUES (?, 'rejete', ?, ?, NOW())
-       ON DUPLICATE KEY UPDATE statut='rejete', commentaire=?, validated_by=?, validated_at=NOW()`,
-      [req.params.caseId, commentaire, userId, commentaire, userId]
+       ON CONFLICT (case_id) DO UPDATE SET statut='rejete', commentaire=EXCLUDED.commentaire, validated_by=EXCLUDED.validated_by, validated_at=NOW()`,
+      [req.params.caseId, commentaire, userId]
     );
     res.json({ success: true });
   } catch (e) { res.status(500).json({ message: e.message }); }

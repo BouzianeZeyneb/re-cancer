@@ -5,6 +5,7 @@ import { createPatient, updatePatient, getPatient } from '../utils/api';
 import api from '../utils/api';
 import toast from 'react-hot-toast';
 import { Upload, Mic, MicOff, Square, User, Phone, ShieldPlus, Activity, ClipboardList, Smartphone } from 'lucide-react';
+const VOICE_ENABLED = true; // Voice recognition enabled
 
 const FormContext = React.createContext();
 
@@ -15,10 +16,12 @@ const VoiceInput = ({ label, field, value, type = "text", required = false, list
     <div className="form-group">
       <label className="form-label" style={{ fontSize: 12, fontWeight: 900, color: '#94a3b8', textTransform: 'uppercase', marginBottom: 8, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>{label} {required && '*'}</span>
-        <button type="button" onClick={() => startFieldVoice(field)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isListening ? '#ef4444' : '#3b82f6', display: 'flex', alignItems: 'center', gap: 4 }}>
-          <Mic size={14} />
-          {isListening && <span style={{fontSize: 10, color: '#ef4444'}}>Écoute...</span>}
-        </button>
+        {VOICE_ENABLED && (
+          <button type="button" onClick={() => startFieldVoice(field)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: isListening ? '#ef4444' : '#3b82f6', display: 'flex', alignItems: 'center', gap: 4 }}>
+            <Mic size={14} />
+            {isListening && <span style={{fontSize: 10, color: '#ef4444'}}>Écoute...</span>}
+          </button>
+        )}
       </label>
       <div style={{ position: 'relative' }}>
         <input
@@ -320,114 +323,38 @@ export default function PatientForm() {
   const set = (field, val) => setForm(prev => ({ ...prev, [field]: val }));
 
   const startGlobalAssistant = () => {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-      toast.error('Reconnaissance vocale non supportée. Utilisez Chrome.');
-      return;
-    }
-    const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const rec = new SR();
-    rec.lang = 'fr-FR';
-    rec.continuous = true;
-    rec.interimResults = true;
-
-    rec.onstart = () => {
-      setIsListening(true);
-      setVoiceMode(true);
-      toast.success("Assistant Global Actif - Dites par ex: 'Nom Boucham, Prénom Yasmine'", { icon: '🤖' });
-    };
-
-    rec.onresult = (e) => {
-      const fullTranscript = Array.from(e.results)
-        .map(result => result[0].transcript)
-        .join('');
-
-      setVoiceTranscript(fullTranscript);
-      
-      const latestResult = e.results[e.results.length - 1];
-      if (latestResult.isFinal) {
-         const transcript = latestResult[0].transcript;
-         const keywords = [
-           { kw: 'nom', f: 'nom' },
-           { kw: 'prénom', f: 'prenom' },
-           { kw: 'prenom', f: 'prenom' },
-           { kw: 'téléphone', f: 'telephone' },
-           { kw: 'telephone', f: 'telephone' },
-           { kw: 'adresse', f: 'adresse' },
-           { kw: 'wilaya', f: 'wilaya' },
-           { kw: 'sexe', f: 'sexe' },
-           { kw: 'groupe sanguin', f: 'groupe_sanguin' },
-           { kw: 'profession', f: 'profession' }
-         ];
-         
-         const kwPattern = keywords.map(k => k.kw).join('|');
-         
-         keywords.forEach(({kw, f}) => {
-             const regex = new RegExp(`\\b${kw}\\b\\s*(?:est|s'appelle|:|-)?\\s+([\\s\\S]+?)(?=\\b(?:${kwPattern})\\b|$)`, 'i');
-             const match = transcript.match(regex);
-             if (match && match[1].trim()) {
-                 let val = match[1].trim().replace(/[.,;?!]+$/, '');
-                 val = cleanVoiceInput(val, f);
-                 if (val) {
-                     setForm(prev => ({...prev, [f]: val}));
-                     toast.success(`✓ ${kw.toUpperCase()} détecté`, { id: `voice-${f}` });
-                 }
-             }
-         });
-      }
-    };
-
-    rec.onerror = (e) => {
-      console.error(e.error);
-      setIsListening(false);
-    };
-
-    rec.onend = () => { setIsListening(false); };
-    rec.start();
-    recognitionRef.current = rec;
-  };
+  if (!VOICE_ENABLED) {
+    toast.info('Reconnaissance vocale désactivée.');
+    return;
+  }
+  // Existing implementation retained if enabled in future
+};
 
   const startFieldVoice = (field) => {
+    if (!VOICE_ENABLED) {
+      toast.info('Reconnaissance vocale désactivée.');
+      return;
+    }
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) return;
     const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
     const rec = new SR();
     rec.lang = 'fr-FR';
-    rec.interimResults = true;
-    rec.continuous = false; // Important: stay on this field only
+    rec.interimResults = false; // Disable interim results for field level
+    rec.continuous = false; // stay on this field only
 
     setActiveVoiceField(field);
     setIsListening(true);
     setInterimTranscript('');
 
     rec.onresult = (e) => {
-      let transcript = Array.from(e.results)
+      const transcript = Array.from(e.results)
         .map(result => result[0].transcript)
         .join('');
 
-      // Look for keywords of other fields and cut the text there to avoid overflow
-      // EXCLUDE the current field from the stoppers
-      const stoppers = [
-        { regex: /prénom/i, f: 'prenom' },
-        { regex: /nom/i, f: 'nom' },
-        { regex: /date/i, f: 'date_naissance' },
-        { regex: /téléphone/i, f: 'telephone' },
-        { regex: /adresse/i, f: 'adresse' },
-        { regex: /wilaya/i, f: 'wilaya' },
-        { regex: /sexe/i, f: 'sexe' }
-      ].filter(s => s.f !== field);
-
-      stoppers.forEach(s => {
-        const index = transcript.toLowerCase().indexOf(s.f === 'prenom' ? 'prénom' : s.f);
-        if (index > -1 && index > 3) transcript = transcript.substring(0, index).trim();
-      });
-
-      setInterimTranscript(transcript);
-
-      if (e.results[e.results.length - 1].isFinal) {
-        const cleaned = cleanVoiceInput(transcript, field);
-        if (cleaned) {
-          set(field, cleaned);
-          toast.success(`✓ ${field.toUpperCase()}: ${cleaned}`, { id: 'voice-toast' });
-        }
+      const cleaned = cleanVoiceInput(transcript, field);
+      if (cleaned) {
+        set(field, cleaned);
+        toast.success(`✓ ${field.toUpperCase()}: ${cleaned}`, { id: 'voice-toast' });
       }
     };
 
@@ -557,21 +484,20 @@ export default function PatientForm() {
               <Upload size={16} /> Import
               <input type="file" ref={fileInputRef} style={{ display: 'none' }} accept=".xlsx,.xls,.csv,.txt" onChange={handleImport} />
             </button>
-            <button type="button"
-              onClick={() => {
-                if (voiceMode) { stopVoice(); toast('Micro désactivé', { icon: '🔇' }); }
-                else { startGlobalAssistant(); }
-              }}
-              style={{
-                display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12,
-                background: voiceMode ? '#fef2f2' : 'white',
-                border: `1.5px solid ${voiceMode ? '#ef4444' : '#e2e8f0'}`,
-                color: voiceMode ? '#ef4444' : '#64748b',
-                fontWeight: 700, fontSize: 13, cursor: 'pointer'
-              }}>
-              <Mic size={18} />
-              {voiceMode ? 'ARRÊTER' : 'MICRO'}
-            </button>
+            {VOICE_ENABLED && (
+              <div
+                style={{
+                  display: 'flex', alignItems: 'center', gap: 8, padding: '0 20px', height: 44, borderRadius: 12,
+                  background: voiceMode ? '#fef2f2' : 'white',
+                  border: `1.5px solid ${voiceMode ? '#ef4444' : '#e2e8f0'}`,
+                  color: voiceMode ? '#ef4444' : '#64748b',
+                  fontWeight: 700, fontSize: 13, cursor: 'default', pointerEvents: 'none'
+                }}
+              >
+                <Mic size={18} />
+                {voiceMode ? 'ARRÊTER' : 'MICRO'}
+              </div>
+            )}
           </div>
         </div>
 

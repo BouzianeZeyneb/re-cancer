@@ -316,9 +316,9 @@ export default function Dashboard() {
 
                <div style={{ position: 'relative', zIndex: 1, display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                   <div>
-                     <h1 style={{ fontSize: 44, fontWeight: 900, color: 'white', margin: '0 0 16px 0', fontFamily: 'Outfit', letterSpacing: '-1.5px' }}>
-                        Bonjour, <span style={{ color: '#38bdf8' }}>Dr. Admin</span> 👋
-                     </h1>
+                  <h1 style={{ fontSize: 44, fontWeight: 900, color: 'white', margin: '0 0 16px 0', fontFamily: 'Outfit', letterSpacing: '-1.5px' }}>
+                    Bonjour, <span style={{ color: '#38bdf8' }}>Dr. Admin</span>
+                  </h1>
                      <p style={{ fontSize: 18, color: 'rgba(255,255,255,0.6)', margin: 0, fontWeight: 500, maxWidth: 500 }}>
                         Voici l'état actuel de la surveillance épidémiologique au niveau national.
                      </p>

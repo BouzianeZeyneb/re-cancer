@@ -1,18 +1,57 @@
-const mysql = require('mysql2/promise');
+const { Pool } = require('pg');
 
-const pool = mysql.createPool({
-  host: process.env.DB_HOST || 'localhost',
-  user: process.env.DB_USER || 'root',
-  password: process.env.DB_PASSWORD || '',
-  database: process.env.DB_NAME || 'cancer_registry',
-  port: process.env.DB_PORT || 3307,
-  waitForConnections: true,
-  connectionLimit: 10,
-  queueLimit: 0
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL || `postgresql://${process.env.DB_USER || 'postgres'}:${process.env.DB_PASSWORD || ''}@${process.env.DB_HOST || 'localhost'}:${process.env.DB_PORT || 5432}/${process.env.DB_NAME || 'cancer_registry'}`
 });
 
+const convertQuery = (sql) => {
+  let i = 1;
+  let pgSql = sql.replace(/\?/g, () => `$${i++}`);
+  pgSql = pgSql.replace(/`/g, '"');
+
+  if (pgSql.toUpperCase().includes('CREATE TABLE') || pgSql.toUpperCase().includes('ALTER TABLE')) {
+    pgSql = pgSql.replace(/INT AUTO_INCREMENT/gi, 'SERIAL');
+    pgSql = pgSql.replace(/AUTO_INCREMENT/gi, '');
+    pgSql = pgSql.replace(/ON UPDATE CURRENT_TIMESTAMP/gi, '');
+    pgSql = pgSql.replace(/ENUM\([^)]+\)/gi, 'VARCHAR(255)');
+    pgSql = pgSql.replace(/DATETIME/gi, 'TIMESTAMP');
+  }
+  return pgSql;
+};
+
+const wrapQuery = async (client, sql, params = []) => {
+  const pgSql = convertQuery(sql);
+  try {
+    const res = await client.query(pgSql, params);
+    const result = res.rows || [];
+    result.affectedRows = res.rowCount;
+    return [result, res.fields];
+  } catch (err) {
+    if (err.code === '42701') return [[]]; // Duplicate column
+    if (err.code === '42P07') return [[]]; // Duplicate table
+    throw err;
+  }
+};
+
+const wrappedPool = {
+  getConnection: async () => {
+    const client = await pool.connect();
+    return {
+      execute: async (sql, params) => wrapQuery(client, sql, params),
+      query: async (sql, params) => wrapQuery(client, sql, params),
+      release: () => client.release(),
+      beginTransaction: () => client.query('BEGIN'),
+      commit: () => client.query('COMMIT'),
+      rollback: () => client.query('ROLLBACK')
+    };
+  },
+  execute: async (sql, params) => wrapQuery(pool, sql, params),
+  query: async (sql, params) => wrapQuery(pool, sql, params),
+  end: () => pool.end()
+};
+
 const initDatabase = async () => {
-  const conn = await pool.getConnection();
+  const conn = await wrappedPool.getConnection();
   try {
     // Users table
     await conn.execute(`
@@ -235,7 +274,7 @@ const initDatabase = async () => {
 
 
 const initDynamicTables = async () => {
-  const conn = await pool.getConnection();
+  const conn = await wrappedPool.getConnection();
   try {
     // Universal Dynamic Fields Table (Entity-Attribute-Value)
     await conn.execute(`
@@ -302,7 +341,7 @@ const initDynamicTables = async () => {
 };
 
 const initMedicalTables = async () => {
-  const conn = await pool.getConnection();
+  const conn = await wrappedPool.getConnection();
   try {
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS localisation VARCHAR(200)`);
     await conn.execute(`ALTER TABLE cancer_cases ADD COLUMN IF NOT EXISTS topographie_icdo3 VARCHAR(20)`);
@@ -758,4 +797,4 @@ const initMedicalTables = async () => {
   }
 };
 
-module.exports = { pool, initDatabase, initDynamicTables, initMedicalTables };
+module.exports = { pool: wrappedPool, initDatabase, initDynamicTables, initMedicalTables };

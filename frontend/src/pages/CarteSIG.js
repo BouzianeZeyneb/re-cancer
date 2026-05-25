@@ -46,18 +46,24 @@ const WILAYA_COORDS = {
 };
 
 const PROFESSION_COLORS = {
-  'Agriculteur / Ouvrier agricole': '#10b981',
+  // Industrial / Exposed
+  'Ouvrier Chimique': '#ef4444',
+  'Soudeur': '#f97316',
+  'Technicien Électronique': '#f59e0b',
+  // Non-industrial
+  'Agriculteur': '#10b981',
+  'Professeur': '#8b5cf6',
+  'Médecin': '#ec4899',
+  'Conducteur de Bus': '#14b8a6',
+  'Employé Administratif': '#64748b',
+  // Legacy / Fallback
   'Ouvrier industriel / Usine': '#f97316',
   'Mineur / Extraction': '#78716c',
   'Pêcheur / Maritime': '#0ea5e9',
   'Enseignant / Éducation': '#8b5cf6',
   'Personnel de santé': '#ec4899',
-  'Informatique / Bureautique': '#6366f1',
   'Commerce / Vente': '#f59e0b',
-  'Artisan / Menuisier / Forgeron': '#a16207',
-  'Chauffeur / Transport': '#14b8a6',
   'Fonctionnaire / Administration': '#64748b',
-  'Militaire / Police': '#1e40af',
   'Retraité': '#9ca3af',
   'Sans emploi / Chômeur': '#d1d5db'
 };
@@ -68,6 +74,66 @@ const RISK_LEVELS = {
   high: { color: '#f97316', label: 'Élevé' },
   critical: { color: '#ef4444', label: 'Critique' }
 };
+
+// Pre-built industrial zones for Algeria (loaded if localStorage is empty)
+const DEFAULT_ZONES = [
+  {
+    id: 'zone_arzew', name: 'Zone Industrielle Arzew', wilaya: 'Oran', city: 'Arzew',
+    type: 'factory', risk: 'critical', shapeType: 'circle',
+    center: [35.822, -0.317], radius: 12000,
+    notes: 'Complexe pétrochimique GL1Z/GL2Z – Raffinerie et liquéfaction GNL',
+    linkedProfs: ['Ouvrier Chimique', 'Ouvrier Pétrochimie', 'Soudeur']
+  },
+  {
+    id: 'zone_rouiba', name: 'Zone Industrielle Rouïba-Réghaia', wilaya: 'Alger', city: 'Rouïba',
+    type: 'factory', risk: 'high', shapeType: 'circle',
+    center: [36.733, 3.283], radius: 8000,
+    notes: 'Plus grande zone industrielle d\'Algérie – SNVI, Electro-Industries, Cabel',
+    linkedProfs: ['Soudeur', 'Technicien Électronique', 'Ouvrier Chimique']
+  },
+  {
+    id: 'zone_hassi', name: 'Champ Pétrolier Hassi Messaoud', wilaya: 'Ouargla', city: 'Hassi Messaoud',
+    type: 'factory', risk: 'critical', shapeType: 'circle',
+    center: [31.68, 6.07], radius: 25000,
+    notes: 'Plus grand gisement pétrolier d\'Algérie – Sonatrach, Schlumberger, Halliburton',
+    linkedProfs: ['Ouvrier Pétrochimie', 'Soudeur', 'Mineur']
+  },
+  {
+    id: 'zone_annaba', name: 'Complexe Sidérurgique El Hadjar', wilaya: 'Annaba', city: 'El Hadjar',
+    type: 'factory', risk: 'high', shapeType: 'circle',
+    center: [36.795, 7.735], radius: 6000,
+    notes: 'Aciérie ArcelorMittal – Production acier, cokerie, hauts fourneaux',
+    linkedProfs: ['Soudeur', 'Mineur', 'Ouvrier Chimique']
+  },
+  {
+    id: 'zone_skikda', name: 'Complexe Pétrochimique Skikda', wilaya: 'Skikda', city: 'Skikda',
+    type: 'factory', risk: 'critical', shapeType: 'circle',
+    center: [36.88, 6.95], radius: 8000,
+    notes: 'Raffinerie RA1K, unités de plastiques, terminal GNL',
+    linkedProfs: ['Ouvrier Pétrochimie', 'Ouvrier Chimique', 'Soudeur']
+  },
+  {
+    id: 'zone_setif', name: 'Zone Industrielle Sétif', wilaya: 'Sétif', city: 'Sétif',
+    type: 'factory', risk: 'medium', shapeType: 'circle',
+    center: [36.175, 5.430], radius: 5000,
+    notes: 'Zone industrielle – Textiles, agroalimentaire, électronique ENIE',
+    linkedProfs: ['Technicien Électronique', 'Ouvrier Chimique']
+  },
+  {
+    id: 'zone_constantine', name: 'Zone Industrielle Ain Smara', wilaya: 'Constantine', city: 'Ain Smara',
+    type: 'factory', risk: 'medium', shapeType: 'circle',
+    center: [36.282, 6.508], radius: 5000,
+    notes: 'Tracteurs ETRAG, cimenterie, industries mécaniques',
+    linkedProfs: ['Soudeur', 'Ouvrier Cimenterie']
+  },
+  {
+    id: 'zone_blida', name: 'Zone Industrielle Boufarik-Blida', wilaya: 'Blida', city: 'Boufarik',
+    type: 'agriculture', risk: 'medium', shapeType: 'circle',
+    center: [36.435, 2.910], radius: 7000,
+    notes: 'Plaine de la Mitidja – utilisation intensive de pesticides agricoles',
+    linkedProfs: ['Agriculteur']
+  },
+];
 
 const ZONE_TYPES = [
   { id: 'factory', label: 'Zone industrielle', icon: Pentagon },
@@ -120,7 +186,7 @@ function detectWilaya(centerCoords) {
 // --- MAIN COMPONENT ---
 export default function CarteSIG() {
   // State: Layers & Filters
-  const [activeLayers, setActiveLayers] = useState({ cancer: true, risk: true, profession: false, fusion: false });
+  const [activeLayers, setActiveLayers] = useState({ cancer: true, risk: true, profession: true, fusion: false });
   const [filters, setFilters] = useState({ cancerType: '', gender: 'Tous', ageMin: '', ageMax: '', wilaya: '', profession: '' });
   const [appliedFilters, setAppliedFilters] = useState({ ...filters });
   const [isMapReady, setIsMapReady] = useState(false);
@@ -130,7 +196,13 @@ export default function CarteSIG() {
   const [cancerStats, setCancerStats] = useState([]);
   const [zones, setZones] = useState(() => {
     const saved = localStorage.getItem(STORAGE_KEY);
-    return saved ? JSON.parse(saved) : [];
+    if (saved) {
+      const parsed = JSON.parse(saved);
+      if (parsed.length > 0) return parsed;
+    }
+    // Pre-populate with default industrial zones
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_ZONES));
+    return DEFAULT_ZONES;
   });
   const [selectedZone, setSelectedZone] = useState(null);
 

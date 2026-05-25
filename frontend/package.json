@@ -34,7 +34,9 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build"
+    "build": "react-scripts build",
+    "populate-db": "node scripts/populate_db.js",
+    "populate-pharmacy": "node scripts/populate_pharmacy_stock.js"
   },
   "proxy": "http://localhost:5000",
   "browserslist": {

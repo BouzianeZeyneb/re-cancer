@@ -58,6 +58,11 @@ export default function CasDetail() {
     { label: 'Type Histologique', value: cas.type_histologique },
     { label: 'Grade Histologique', value: cas.grade_histologique },
     { label: 'Taille Tumeur', value: cas.taille_cancer ? `${cas.taille_cancer} cm` : '—' },
+    ...(cas.sous_type === 'Cancer du Sein' ? [
+      { label: 'Récepteur Œstrogène (ER)', value: cas.recepteur_er },
+      { label: 'Récepteur Progestérone (PR)', value: cas.recepteur_pr },
+      { label: 'HER2', value: cas.her2 },
+    ] : []),
     { label: 'Médecin Traitant', value: cas.medecin_nom ? `Dr. ${cas.medecin_nom}` : '—' },
     { label: 'Statut Patient', value: cas.statut_patient },
   ];
