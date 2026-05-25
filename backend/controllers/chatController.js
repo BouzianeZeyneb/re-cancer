@@ -21,7 +21,7 @@ const initChatTables = async () => {
         sender_id VARCHAR(36) NOT NULL,
         type ENUM('text','audio') DEFAULT 'text',
         content TEXT,
-        audio_data LONGTEXT,
+        audio_data TEXT,
         lu BOOLEAN DEFAULT false,
         created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
         FOREIGN KEY (conversation_id) REFERENCES conversations(id) ON DELETE CASCADE,
